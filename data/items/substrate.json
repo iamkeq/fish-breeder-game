@@ -1,0 +1,6 @@
+{
+	"items": [
+		{ "id": "fine_sand", "name": "Fine Sand", "category": "substrate", "cost": 6, "price": 10, "tags": ["natural"], "color": "#e3d5b0" },
+		{ "id": "planted_soil", "name": "Planted Soil", "category": "substrate", "cost": 9, "price": 15, "tags": ["planted"], "color": "#5b4636" }
+	]
+}

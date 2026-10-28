@@ -1,0 +1,9 @@
+{
+	"id": "stocked_tank",
+	"species": "guppy",
+	"theme_tags": ["planted", "rocky", "natural", "colorful"],
+	"fish_count": [1, 3],
+	"constraints": ["variety", "sex"],
+	"constraint_count": [1, 2],
+	"base_reward": 60
+}

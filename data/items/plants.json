@@ -1,0 +1,7 @@
+{
+	"items": [
+		{ "id": "dwarf_sag", "name": "Dwarf Sagittaria", "category": "plant", "cost": 3, "price": 6, "tags": ["planted"], "height": "short", "color": "#7cc46b" },
+		{ "id": "java_fern", "name": "Java Fern", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "medium", "color": "#3f8f4a" },
+		{ "id": "vallisneria", "name": "Vallisneria", "category": "plant", "cost": 4, "price": 8, "tags": ["planted"], "height": "tall", "color": "#5fb35a" }
+	]
+}

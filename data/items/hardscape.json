@@ -1,0 +1,7 @@
+{
+	"items": [
+		{ "id": "river_stone", "name": "River Stone", "category": "rock", "cost": 3, "price": 6, "tags": ["rocky", "natural"], "height": "short", "color": "#8d9399" },
+		{ "id": "dragon_stone", "name": "Dragon Stone", "category": "rock", "cost": 7, "price": 12, "tags": ["rocky"], "height": "medium", "color": "#a0794f" },
+		{ "id": "spider_wood", "name": "Spider Wood", "category": "driftwood", "cost": 10, "price": 18, "tags": ["natural", "planted"], "height": "tall", "color": "#7a5230" }
+	]
+}

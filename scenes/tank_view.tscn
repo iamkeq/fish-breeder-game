@@ -1,0 +1,11 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/tank_view.gd" id="1_tank"]
+
+[node name="TankView" type="Control"]
+custom_minimum_size = Vector2(360, 260)
+layout_mode = 3
+anchors_preset = 0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_tank")

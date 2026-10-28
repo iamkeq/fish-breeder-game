@@ -1,0 +1,71 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/fish_market.gd" id="1_market"]
+
+[node name="FishMarket" type="ColorRect"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.15, 0.1, 0.08, 0.45)
+script = ExtResource("1_market")
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+custom_minimum_size = Vector2(820, 600)
+layout_mode = 2
+
+[node name="Box" type="VBoxContainer" parent="Center/Panel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Header" type="HBoxContainer" parent="Center/Panel/Box"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="Center/Panel/Box/Header"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Market"
+
+[node name="MarketMoney" type="Label" parent="Center/Panel/Box/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 4
+theme_override_font_sizes/font_size = 18
+text = "You have $0"
+
+[node name="Spacer" type="Control" parent="Center/Panel/Box/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="CloseMarket" type="Button" parent="Center/Panel/Box/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close"
+
+[node name="Scroll" type="ScrollContainer" parent="Center/Panel/Box"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="Tiers" type="VBoxContainer" parent="Center/Panel/Box/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="MarketStatus" type="Label" parent="Center/Panel/Box"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(780, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+autowrap_mode = 3

@@ -1,0 +1,73 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/back_room.gd" id="1_back"]
+[ext_resource type="PackedScene" path="res://scenes/tank_view.tscn" id="2_tank"]
+
+[node name="BackRoom" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_back")
+
+[node name="Columns" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+
+[node name="TankColumn" type="VBoxContainer" parent="Columns"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="TankTitle" type="Label" parent="Columns/TankColumn"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Breeding tank"
+horizontal_alignment = 1
+
+[node name="TankView" parent="Columns/TankColumn" instance=ExtResource("2_tank")]
+layout_mode = 2
+location = "breeding"
+
+[node name="BroodInfo" type="Label" parent="Columns/TankColumn"]
+unique_name_in_owner = true
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="FishPanel" type="PanelContainer" parent="Columns"]
+custom_minimum_size = Vector2(430, 0)
+layout_mode = 2
+
+[node name="FishBox" type="VBoxContainer" parent="Columns/FishPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="Columns/FishPanel/FishBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Your fish"
+
+[node name="Scroll" type="ScrollContainer" parent="Columns/FishPanel/FishBox"]
+layout_mode = 2
+size_flags_vertical = 3
+horizontal_scroll_mode = 0
+
+[node name="FishRows" type="VBoxContainer" parent="Columns/FishPanel/FishBox/Scroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="Status" type="Label" parent="Columns/FishPanel/FishBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(380, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+autowrap_mode = 3

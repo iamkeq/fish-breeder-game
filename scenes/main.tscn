@@ -1,0 +1,123 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scenes/main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://scenes/shop_floor.tscn" id="2_shop"]
+[ext_resource type="PackedScene" path="res://scenes/back_room.tscn" id="3_back"]
+[ext_resource type="PackedScene" path="res://scenes/ui/fish_market.tscn" id="4_market"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_main")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.96, 0.93, 0.87, 1)
+
+[node name="Margin" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 14
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 10
+
+[node name="Layout" type="VBoxContainer" parent="Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TopBarPanel" type="PanelContainer" parent="Margin/Layout"]
+layout_mode = 2
+
+[node name="TopBar" type="HBoxContainer" parent="Margin/Layout/TopBarPanel"]
+layout_mode = 2
+theme_override_constants/separation = 22
+
+[node name="ShopName" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Fig Tree Fish Breeder"
+
+[node name="DayLabel" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Day 1"
+
+[node name="ClockLabel" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(70, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "09:00"
+
+[node name="MoneyLabel" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "$0"
+
+[node name="Spacer" type="Control" parent="Margin/Layout/TopBarPanel/TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MarketButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Market"
+
+[node name="ShopButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "Shop floor"
+
+[node name="BackRoomButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "Back room"
+
+[node name="CloseButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Close shop"
+
+[node name="Rooms" type="Control" parent="Margin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ShopFloor" parent="Margin/Layout/Rooms" instance=ExtResource("2_shop")]
+unique_name_in_owner = true
+layout_mode = 1
+
+[node name="BackRoom" parent="Margin/Layout/Rooms" instance=ExtResource("3_back")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+
+[node name="Hint" type="Label" parent="Margin/Layout"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.29, 0.23, 0.19, 0.55)
+theme_override_font_sizes/font_size = 13
+text = "Debug: hold F to fast-forward the clock."
+
+[node name="FishMarket" parent="." instance=ExtResource("4_market")]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+

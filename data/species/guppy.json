@@ -1,0 +1,75 @@
+{
+	"id": "guppy",
+	"name": "Guppy",
+	"plural_name": "Guppies",
+	"base_price": 10,
+	"days_to_adult": 3,
+	"brood_size": [2, 4],
+	"days_between_broods": 2,
+	"mutation_chance": 0.03,
+	"rare_value_multiplier": 1.5,
+	"traits": {
+		"variety": {
+			"common": ["normal", "red", "blue", "yellow", "black", "white", "grass"],
+			"rare": ["orange", "purple", "pink", "turquoise", "gold", "sunset", "pastel", "half_black",
+				"tuxedo", "dalmatian", "koi", "leopard", "snakeskin", "mosaic", "neon", "albino", "glass"],
+			"mutations": ["albino", "glass"]
+		}
+	},
+	"recipe_chance": 0.3,
+	"recipes": {
+		"variety": [
+			{ "parents": ["red", "yellow"], "child": "orange" },
+			{ "parents": ["red", "blue"], "child": "purple" },
+			{ "parents": ["red", "white"], "child": "pink" },
+			{ "parents": ["blue", "grass"], "child": "turquoise" },
+			{ "parents": ["yellow", "black"], "child": "leopard" },
+			{ "parents": ["grass", "black"], "child": "snakeskin" },
+			{ "parents": ["black", "white"], "child": "dalmatian" },
+			{ "parents": ["black", "red"], "child": "half_black" },
+			{ "parents": ["normal", "blue"], "child": "mosaic" },
+			{ "parents": ["orange", "yellow"], "child": "gold" },
+			{ "parents": ["orange", "red"], "child": "sunset" },
+			{ "parents": ["orange", "white"], "child": "koi" },
+			{ "parents": ["pink", "white"], "child": "pastel" },
+			{ "parents": ["half_black", "black"], "child": "tuxedo" },
+			{ "parents": ["turquoise", "blue"], "child": "neon" }
+		]
+	},
+	"value_multipliers": {
+		"variety": {
+			"orange": 1.4, "purple": 1.4, "pink": 1.4, "turquoise": 1.4,
+			"leopard": 1.7, "snakeskin": 1.7, "dalmatian": 1.7, "half_black": 1.7, "mosaic": 1.7,
+			"gold": 2.0, "sunset": 2.0, "koi": 2.0, "pastel": 2.0,
+			"tuxedo": 2.4, "neon": 2.4,
+			"albino": 3.0, "glass": 3.0
+		}
+	},
+	"sprites": {
+		"sheet": "res://assets/fish/guppy_sheet.png",
+		"trait": "variety",
+		"scale": 0.8,
+		"fps": 10,
+		"varieties": {
+			"normal": [24, 474, 85, 42], "red": [123, 469, 79, 46], "blue": [218, 469, 77, 46],
+			"yellow": [311, 469, 78, 45], "orange": [400, 469, 76, 46], "black": [487, 466, 77, 48],
+			"white": [583, 469, 78, 47], "albino": [676, 469, 73, 45], "gold": [761, 467, 75, 47],
+			"koi": [849, 471, 75, 45], "dalmatian": [937, 468, 78, 46], "mosaic": [1027, 465, 78, 50],
+			"tuxedo": [25, 561, 82, 45], "half_black": [120, 560, 80, 45], "pastel": [211, 560, 78, 44],
+			"neon": [306, 559, 76, 45], "leopard": [395, 559, 78, 46], "snakeskin": [486, 558, 77, 48],
+			"glass": [578, 560, 76, 45], "sunset": [672, 559, 74, 46], "grass": [759, 559, 74, 46],
+			"purple": [846, 559, 76, 46], "pink": [942, 559, 74, 46], "turquoise": [1027, 559, 76, 46]
+		},
+		"animations": {
+			"normal": {
+				"swim_right": [[135, 11, 86, 47], [254, 11, 88, 47], [374, 11, 92, 48], [497, 11, 92, 47],
+					[620, 8, 89, 50], [743, 9, 91, 48], [866, 9, 91, 48], [992, 10, 87, 46]],
+				"swim_left": [[129, 65, 96, 49], [254, 67, 95, 49], [377, 66, 94, 48], [500, 66, 96, 52],
+					[625, 65, 94, 48], [747, 64, 94, 51], [868, 64, 94, 50], [984, 65, 91, 47]],
+				"idle": [[127, 124, 93, 51], [252, 125, 91, 50], [374, 124, 93, 51], [498, 124, 92, 49],
+					[624, 125, 89, 49], [743, 125, 91, 49], [866, 125, 91, 50], [987, 124, 92, 51]]
+			}
+		},
+		"fry": [[82, 698, 40, 21], [140, 697, 41, 22], [199, 692, 47, 25]]
+	}
+}

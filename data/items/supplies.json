@@ -1,0 +1,6 @@
+{
+	"items": [
+		{ "id": "fish_food", "name": "Fish Food", "category": "food", "cost": 2, "price": 4, "tags": [], "color": "#c2703d" },
+		{ "id": "tank_20l", "name": "20L Tank", "category": "tank", "cost": 25, "price": 40, "tags": [], "capacity": 6, "color": "#bfe3f2" }
+	]
+}

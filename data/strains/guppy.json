@@ -1,0 +1,30 @@
+{
+	"strains": [
+		{ "id": "normal", "name": "Normal", "species": "guppy", "tier": 1, "stars": 2, "traits": { "variety": "normal" },
+			"blurb": "The classic multicoloured guppy. Hardy and cheerful." },
+		{ "id": "red", "name": "Red", "species": "guppy", "tier": 1, "stars": 2, "traits": { "variety": "red" },
+			"blurb": "Bright red all over. Mixes well with yellow, blue and white." },
+		{ "id": "yellow", "name": "Yellow", "species": "guppy", "tier": 1, "stars": 2, "traits": { "variety": "yellow" },
+			"blurb": "Sunny yellow. Try it with red or black." },
+		{ "id": "blue", "name": "Blue", "species": "guppy", "tier": 1, "stars": 2, "traits": { "variety": "blue" },
+			"blurb": "Deep blue. A good partner for red, grass or Normal guppies." },
+		{ "id": "white", "name": "White", "species": "guppy", "tier": 2, "stars": 3, "traits": { "variety": "white" },
+			"blurb": "Clean and pale. Brings out soft colours in its babies." },
+		{ "id": "black", "name": "Black", "species": "guppy", "tier": 2, "stars": 3, "traits": { "variety": "black" },
+			"blurb": "Inky black. The key to many patterned varieties." },
+		{ "id": "grass", "name": "Grass", "species": "guppy", "tier": 2, "stars": 3, "traits": { "variety": "grass" },
+			"blurb": "Fresh green. Pairs with blue or black." },
+		{ "id": "orange", "name": "Orange", "species": "guppy", "tier": 3, "stars": 3, "traits": { "variety": "orange" },
+			"blurb": "A bred colour, sold as breeding stock." },
+		{ "id": "koi", "name": "Koi", "species": "guppy", "tier": 3, "stars": 4, "traits": { "variety": "koi" },
+			"blurb": "White with orange patches, like a tiny koi carp." },
+		{ "id": "leopard", "name": "Leopard", "species": "guppy", "tier": 3, "stars": 4, "traits": { "variety": "leopard" },
+			"blurb": "Golden with dark leopard spots." },
+		{ "id": "tuxedo", "name": "Tuxedo", "species": "guppy", "tier": 4, "stars": 4, "traits": { "variety": "tuxedo" },
+			"blurb": "Dressed for dinner: a dark back half and a bright front." },
+		{ "id": "neon", "name": "Neon", "species": "guppy", "tier": 4, "stars": 5, "traits": { "variety": "neon" },
+			"blurb": "Electric colours that glow under the tank light." },
+		{ "id": "albino", "name": "Albino", "species": "guppy", "tier": 4, "stars": 5, "traits": { "variety": "albino" },
+			"blurb": "Pale with ruby eyes. Only ever appears by mutation." }
+	]
+}

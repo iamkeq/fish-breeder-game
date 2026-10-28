@@ -1,0 +1,6 @@
+{
+	"items": [
+		{ "id": "treasure_chest", "name": "Treasure Chest", "category": "decor", "cost": 6, "price": 11, "tags": ["colorful"], "height": "short", "color": "#d4a017" },
+		{ "id": "ceramic_castle", "name": "Ceramic Castle", "category": "decor", "cost": 12, "price": 20, "tags": ["colorful"], "height": "tall", "color": "#c98bb9" }
+	]
+}
