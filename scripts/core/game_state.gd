@@ -32,6 +32,9 @@ var minutes_to_customer: float = 0.0
 var backorders: Array = []
 ## What happened today, for the end-of-day summary. Reset when the shop opens.
 var day_log: Dictionary = {}
+## "Closed for restock": no customers, and the clock runs faster (see
+## restock_speed()) so breeding builds up stock. Stays on across days.
+var restocking: bool = false
 
 
 static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator) -> GameState:
@@ -412,6 +415,29 @@ func cancel_order(order_index: int) -> bool:
 	return true
 
 
+# --- Closed for restock ------------------------------------------------------
+
+## How much faster the clock runs while closed for restock (0 = feature off).
+func restock_speed() -> float:
+	return float(db.economy["clock"].get("restock_speed", 0))
+
+
+## Turns "Closed for restock" on or off. Turning it on sends any waiting
+## customer home (no penalty). Returns false if the feature is switched off in data.
+func set_restocking(on: bool) -> bool:
+	if on and restock_speed() <= 0.0:
+		return false
+	restocking = on
+	if on and not customer.is_empty():
+		_customer_leaves()
+	return true
+
+
+## How fast the clock should run right now (1 normally).
+func time_scale() -> float:
+	return restock_speed() if restocking else 1.0
+
+
 # --- Customers ---------------------------------------------------------------
 
 func shop_appeal() -> float:
@@ -423,7 +449,7 @@ func shop_appeal() -> float:
 ## Moves customer timers on by `minutes` of in-game time while the shop is open.
 ## Returns true if someone arrived at or left the counter.
 func tick_customers(minutes: float) -> bool:
-	if minutes <= 0.0 or not clock.is_open:
+	if minutes <= 0.0 or not clock.is_open or restocking:
 		return false
 	if not customer.is_empty():
 		customer["waited"] += minutes

@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.4.1** (see the [changelog](CHANGELOG.md)).
+Current version: **0.5.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -46,6 +46,8 @@ Current version: **0.4.1** (see the [changelog](CHANGELOG.md)).
   prettier tanks sell for more.
 - **Wholesaler:** any fish, even fry, can be sold instantly for less than a
   customer would pay, to make room or clear out a line you don't like.
+- **Restock** (top bar) closes the shop to customers and runs time 4× faster to
+  build up stock by breeding; press **Reopen** to go back to normal.
 - In the back room, a bell rings and the **● Shop floor** button lights up
   when someone's waiting at the counter.
 
@@ -84,7 +86,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.4.1
+.\tools\publish_web.ps1 0.5.0
 ```
 
 ## Project layout

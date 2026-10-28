@@ -55,7 +55,7 @@ func show_summary(s: Dictionary) -> void:
 	_add_money(s)
 	_add_back_room(s)
 	_add_tomorrow(s)
-	_open_button.text = "Open shop for Day %d" % Game.state.day
+	_open_button.text = ("Start Day %d (still closed for restock)" if Game.state.restocking else "Open shop for Day %d") % Game.state.day
 	visible = true
 
 

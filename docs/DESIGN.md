@@ -375,3 +375,8 @@ reputation. The design keeps room for all of these.
   `due_day` 2–3 days ahead (`backorders.breed_wait_days`) and `keep_id`. It can
   be handed over from the due day with any matching adult in holding, display
   or a breeding tank, except the kept fish and each tank's breeding pair.
+- **2026-10-28 (v0.5.0), Closed for restock (playtesting):** `GameState.restocking`
+  stops new customers (anyone waiting leaves, no penalty) and `time_scale()`
+  returns `clock.restock_speed` (4), which the Game autoload multiplies into
+  the clock. It persists across days until turned off. `restock_speed: 0`
+  hides the button. It may be removed later.

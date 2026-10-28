@@ -770,3 +770,35 @@ func test_wrong_sex_or_look_does_not_match() -> void:
 	gs.inventory.add_fish(F.fish(Fish.MALE, "red", 3, 3, "delta"))
 	gs.inventory.add_fish(F.fish(Fish.FEMALE, "red", 3, 3, "round"))
 	assert_eq(gs.backorder_fish(gs.backorders[0]), null)
+
+
+# --- Closed for restock
+
+func test_restocking_runs_time_faster_and_stops_customers() -> void:
+	assert_eq(gs.time_scale(), 1.0)
+	assert_true(gs.set_restocking(true))
+	assert_eq(gs.time_scale(), 4.0)
+	assert_false(gs.tick_customers(500.0), "nobody comes in while closed for restock")
+	assert_true(gs.customer.is_empty())
+	gs.set_restocking(false)
+	assert_eq(gs.time_scale(), 1.0)
+
+
+func test_restocking_sends_a_waiting_customer_home() -> void:
+	gs.customer = {"kind": "item", "item_id": "fern", "name": "Mabel", "waited": 0.0, "patience": 60.0}
+	gs.set_restocking(true)
+	assert_true(gs.customer.is_empty())
+	assert_eq(gs.money, 100, "no penalty")
+
+
+func test_restocking_stays_on_across_days() -> void:
+	gs.set_restocking(true)
+	gs.end_day()
+	gs.open_day()
+	assert_true(gs.restocking)
+
+
+func test_restock_can_be_switched_off_in_data() -> void:
+	gs.db.economy["clock"]["restock_speed"] = 0
+	assert_false(gs.set_restocking(true))
+	assert_false(gs.restocking)

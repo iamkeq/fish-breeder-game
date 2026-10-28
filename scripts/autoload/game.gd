@@ -38,9 +38,9 @@ func _process(delta: float) -> void:
 	var clock := state.clock
 	if not clock.is_open:
 		return
-	var speed := 1.0
+	var speed := state.time_scale()
 	if OS.is_debug_build() and Input.is_key_pressed(KEY_F):
-		speed = FAST_FORWARD
+		speed *= FAST_FORWARD
 	var minutes := clock.advance(delta * speed)
 	if minutes > 0.0:
 		clock_ticked.emit()
@@ -230,4 +230,14 @@ func breed_order_for_customer() -> bool:
 	if ok:
 		changed.emit()
 		customer_changed.emit()
+	return ok
+
+
+## "Closed for restock": no customers, clock runs faster (for playtesting breeding).
+func set_restocking(on: bool) -> bool:
+	var ok := state.set_restocking(on)
+	if ok:
+		changed.emit()
+		customer_changed.emit()
+		clock_ticked.emit()
 	return ok

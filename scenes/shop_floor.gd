@@ -119,6 +119,8 @@ func _refresh_counter() -> void:
 	_counter.add_child(_title("Counter"))
 	if not state.clock.is_open:
 		_counter.add_child(_wrapped("The shop is closed."))
+	elif state.restocking:
+		_counter.add_child(_wrapped("Closed for restock: no customers while you build up stock. Time runs %d× faster. Press Reopen (top bar) when you're ready." % int(state.restock_speed())))
 	elif state.customer.is_empty():
 		_counter.add_child(_wrapped("Nobody at the counter right now. Someone will be along soon."))
 	else:

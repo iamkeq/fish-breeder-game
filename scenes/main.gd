@@ -20,6 +20,7 @@ const BELL_TEXT := "● Shop floor"
 @onready var _hint: Label = %Hint
 @onready var _market_button: Button = %MarketButton
 @onready var _fish_market: ColorRect = %FishMarket
+@onready var _restock_button: Button = %RestockButton
 
 var _tank_editor: ColorRect
 var _day_summary: ColorRect
@@ -44,6 +45,9 @@ func _ready() -> void:
 	_close_button.pressed.connect(_on_close_pressed)
 	_market_button.pressed.connect(func(): _fish_market.open())
 	_shop_floor.edit_tank_requested.connect(func(): _tank_editor.open())
+	_restock_button.toggled.connect(func(on: bool): Game.set_restocking(on))
+	_restock_button.visible = Game.state.restock_speed() > 0.0
+	_restock_button.tooltip_text = "Closed for restock: no customers, and the clock runs %dx faster so breeding builds up stock. Stays on until you press Reopen." % int(Game.state.restock_speed())
 
 	Game.clock_ticked.connect(_update_top_bar)
 	Game.changed.connect(_update_top_bar)
@@ -65,6 +69,10 @@ func _update_top_bar() -> void:
 	var state := Game.state
 	_day_label.text = "Day %d" % state.day
 	_clock_label.text = state.clock.time_string() if state.clock.is_open else "Closed"
+	if state.restocking:
+		_clock_label.text += "  ×%d" % int(state.restock_speed())
+	_restock_button.set_pressed_no_signal(state.restocking)
+	_restock_button.text = "Reopen" if state.restocking else "Restock"
 	_money_label.text = "$%d" % state.money
 	var can_close := Game.can_close_shop()
 	_close_button.disabled = not can_close

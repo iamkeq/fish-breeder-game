@@ -2,6 +2,16 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.5.0] - 2026-10-28
+
+### Added
+- **Closed for restock** (playtesting aid): the **Restock** button in the top
+  bar closes the shop to customers and runs the clock **4× faster**, so broods
+  and fry growth build up stock quickly. Anyone waiting at the counter leaves
+  with no penalty. It stays on across days until you press **Reopen**; the
+  clock shows "×4" while it's on. Set `clock.restock_speed` to 0 in
+  `data/economy.json` to remove the button.
+
 ## [0.4.1] - 2026-10-28
 
 ### Added

@@ -26,7 +26,8 @@
 		"open_hour": 9,
 		"min_open_hours": 4,
 		"hard_close_hour": 21,
-		"real_seconds_per_hour": 48
+		"real_seconds_per_hour": 48,
+		"restock_speed": 4
 	},
 	"customers": {
 		"spawn_interval_minutes": [30, 90],

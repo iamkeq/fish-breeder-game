@@ -44,7 +44,7 @@ layout_mode = 2
 
 [node name="TopBar" type="HBoxContainer" parent="Margin/Layout/TopBarPanel"]
 layout_mode = 2
-theme_override_constants/separation = 22
+theme_override_constants/separation = 16
 
 [node name="ShopName" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
 layout_mode = 2
@@ -90,6 +90,12 @@ unique_name_in_owner = true
 layout_mode = 2
 toggle_mode = true
 text = "Back room"
+
+[node name="RestockButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "Restock"
 
 [node name="CloseButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
 unique_name_in_owner = true
