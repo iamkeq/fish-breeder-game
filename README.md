@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.2.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.3.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -19,8 +19,9 @@ Current version: **0.2.0** (see the [changelog](CHANGELOG.md)).
 
 ## How to play
 
-- **Open the shop** each morning. The clock runs from 09:00, and you can close
-  once you've been open 4 hours (or stay open until 21:00).
+- **Open the shop** each morning. The clock runs from 09:00 (an in-game hour is
+  48 real seconds), and you can close once you've been open 4 hours (or stay
+  open until 21:00).
 - **Customers** come to the counter and ask for a fish, a shelf item, or your
   whole display tank. Sell, or say "Not today" (there's never a penalty).
   - Better and rarer fish on display bring customers in more often.
@@ -28,11 +29,15 @@ Current version: **0.2.0** (see the [changelog](CHANGELOG.md)).
     Accept it, build it, then deliver it for the tank's value plus a bonus.
   - If they want something you don't have, you can **order it in** for them
     at 10% off and hand it over later.
-- **The back room** holds your breeding tank. Put in an adult male and female;
-  every couple of nights they have a brood of fry. Feed them (fish food) and
-  they grow up in 3 days, revealing their star rating (1–5).
-- **The Market** sells breeding stock (named guppy strains in four price tiers)
-  and supplies: plants, rocks, driftwood, decor, substrate, food and tanks.
+- **The back room** holds your breeding tanks: one to start, up to four if you
+  buy more. Put an adult male and female in a tank and every couple of nights
+  they have a brood of fry. Feed them (fish food) and they grow up in 3 days,
+  revealing their star rating (1–5). Fish only breed with others in the same
+  tank, so you can keep lines apart.
+- **Move ▾** on any fish sends it to the display tank, a breeding tank or holding.
+- **The Market** has three tabs: **Fish** (named guppy strains in four price
+  tiers), **Decorations** (plants, rocks, driftwood, decor) and **Supplies**
+  (tanks, fish food, substrate).
 - **The tank editor** lets you place substrate and six items (back, middle,
   front). A live looks score and tips show how to make it prettier, and
   prettier tanks sell for more.
@@ -76,7 +81,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.2.0
+.\tools\publish_web.ps1 0.3.0
 ```
 
 ## Project layout

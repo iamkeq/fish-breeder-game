@@ -11,9 +11,15 @@ static func small_button(text: String, tooltip: String = "") -> Button:
 	b.text = text
 	b.tooltip_text = tooltip
 	b.focus_mode = Control.FOCUS_NONE
+	_compact(b)
+	return b
+
+
+## Gives any button (Button, MenuButton) the theme's button look, compact size.
+static func _compact(b: BaseButton) -> void:
 	b.add_theme_font_size_override("font_size", 13)
 	for state in BUTTON_STATES:
-		var sb = b.get_theme_stylebox(state)
+		var sb = b.get_theme_stylebox(state, "Button")
 		if sb is StyleBoxFlat:
 			sb = sb.duplicate()
 			sb.content_margin_left = 9
@@ -21,7 +27,43 @@ static func small_button(text: String, tooltip: String = "") -> Button:
 			sb.content_margin_top = 3
 			sb.content_margin_bottom = 3
 			b.add_theme_stylebox_override(state, sb)
-	return b
+	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_hover_pressed_color"]:
+		b.add_theme_color_override(color_name, Color.WHITE)
+
+
+static func location_name(location: String) -> String:
+	if location == Fish.DISPLAY:
+		return "Display tank"
+	if location == Fish.HOLDING:
+		return "Holding"
+	return "Breeding tank %d" % (Fish.breeding_index(location) + 1)
+
+
+## A "Move ▾" menu listing everywhere this fish could go: the display tank,
+## each breeding tank you own, and holding. Places it can't go are greyed out
+## with the reason as a tooltip. Calls `on_move` with the chosen location.
+static func move_menu(state: GameState, f: Fish, on_move: Callable, text: String = "Move ▾") -> MenuButton:
+	var menu := MenuButton.new()
+	menu.text = text
+	menu.flat = false
+	menu.focus_mode = Control.FOCUS_NONE
+	_compact(menu)
+	var popup := menu.get_popup()
+	var places := [Fish.DISPLAY]
+	for i in state.breeding_tanks.size():
+		places.append(Fish.breeding_location(i))
+	places.append(Fish.HOLDING)
+	for place in places:
+		if place == f.location:
+			continue
+		var index := popup.item_count
+		popup.add_item(location_name(place), index)
+		popup.set_item_metadata(index, place)
+		var blocker := state.move_blocker(f.id, place)
+		popup.set_item_disabled(index, blocker != "")
+		popup.set_item_tooltip(index, blocker)
+	popup.id_pressed.connect(func(id: int): on_move.call(popup.get_item_metadata(popup.get_item_index(id))))
+	return menu
 
 
 ## A small box with a gently animated fish in it (it doesn't swim around).

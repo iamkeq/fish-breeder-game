@@ -3,8 +3,29 @@ extends RefCounted
 ## A single fish. Plain data plus small helpers; no scene dependencies.
 
 const HOLDING := "holding"
+## The first breeding tank. Further ones are "breeding2", "breeding3", ...
+## (see breeding_location()).
 const BREEDING := "breeding"
 const DISPLAY := "display"
+
+
+## Location name of breeding tank `index` (0-based): "breeding", "breeding2", ...
+static func breeding_location(index: int) -> String:
+	return BREEDING if index == 0 else "%s%d" % [BREEDING, index + 1]
+
+
+## Which breeding tank a location is (0-based), or -1 if it isn't one.
+static func breeding_index(location: String) -> int:
+	if location == BREEDING:
+		return 0
+	var suffix := location.trim_prefix(BREEDING)
+	if suffix != location and suffix.is_valid_int() and int(suffix) >= 2:
+		return int(suffix) - 1
+	return -1
+
+
+static func is_breeding(location: String) -> bool:
+	return breeding_index(location) >= 0
 
 const MALE := "male"
 const FEMALE := "female"

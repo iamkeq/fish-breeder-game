@@ -20,7 +20,8 @@ const WATER_BOTTOM := Color("#5fa9c4")
 const EMPTY_TEXT := Color("#7a6e64")
 const SUBSTRATE_HEIGHT := 22.0
 
-@export_enum("display", "breeding") var location: String = "display"
+## Fish.DISPLAY, or a breeding tank location ("breeding", "breeding2", ...).
+@export var location: String = "display"
 ## Editor preview: faint markers on empty slots, and a pulsing ring on
 ## `highlight_slot` (-1 = the substrate, -2 = nothing).
 ## Emitted in editor mode when a slot marker (or the substrate, -1) is clicked.
@@ -232,3 +233,14 @@ func _draw_item_sprite(item: Dictionary, base: Vector2, water_height: float, sca
 	var water := water_rect()
 	dest.position.x = clampf(dest.position.x, water.position.x, maxf(water.position.x, water.end.x - w))
 	draw_texture_rect_region(UI.sheet_texture(item["sheet"]), dest, src)
+
+
+## Show a different tank (e.g. switching breeding-tank tabs).
+func set_location(new_location: String) -> void:
+	if new_location == location:
+		return
+	location = new_location
+	for sprite in _sprites.values():
+		sprite.queue_free()
+	_sprites.clear()
+	refresh()

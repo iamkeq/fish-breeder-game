@@ -597,3 +597,94 @@ func test_summary_lists_grown_fish() -> void:
 	var s := gs.end_day()
 	assert_eq(s["grown_ids"], [fry.id])
 	assert_between(fry.stars, 2, 4)
+
+
+# --- Multiple breeding tanks
+
+func test_breeding_locations() -> void:
+	assert_eq(Fish.breeding_location(0), "breeding")
+	assert_eq(Fish.breeding_location(2), "breeding3")
+	assert_eq(Fish.breeding_index("breeding"), 0)
+	assert_eq(Fish.breeding_index("breeding4"), 3)
+	assert_eq(Fish.breeding_index("breeding1"), -1, "the first tank is plain 'breeding'")
+	assert_eq(Fish.breeding_index("display"), -1)
+	assert_true(Fish.is_breeding("breeding2"))
+	assert_false(Fish.is_breeding("holding"))
+
+
+func test_start_with_one_breeding_tank_and_buy_more() -> void:
+	assert_eq(gs.breeding_tanks.size(), 1)
+	assert_eq(gs.next_breeding_tank_cost(), 20)
+	assert_true(gs.buy_breeding_tank())
+	assert_eq(gs.money, 80)
+	assert_eq(gs.next_breeding_tank_cost(), 30)
+	assert_true(gs.buy_breeding_tank())
+	assert_true(gs.buy_breeding_tank())
+	assert_eq(gs.breeding_tanks.size(), 4)
+	assert_eq(gs.money, 100 - 20 - 30 - 40)
+	assert_eq(gs.next_breeding_tank_cost(), -1, "four is the most")
+	assert_false(gs.buy_breeding_tank())
+	assert_eq(gs.breeding_tanks[3].capacity, 8)
+
+
+func test_cannot_buy_a_tank_without_money() -> void:
+	gs.money = 5
+	assert_false(gs.buy_breeding_tank())
+	assert_eq(gs.breeding_tanks.size(), 1)
+
+
+func test_cannot_move_into_a_tank_you_dont_have() -> void:
+	assert_eq(gs.move_blocker(_male().id, "breeding2"), "You don't have that breeding tank yet.")
+	gs.buy_breeding_tank()
+	assert_true(gs.move_fish(_male().id, "breeding2"))
+	assert_eq(gs.breeding_tanks[1].fish_ids, [_male().id])
+	assert_eq(_male().location, "breeding2")
+
+
+func test_fish_in_different_tanks_never_breed() -> void:
+	gs.inventory.add("food", 20)
+	gs.buy_breeding_tank()
+	gs.move_fish(_female().id, Fish.BREEDING)
+	gs.move_fish(_male().id, "breeding2")
+	assert_eq(gs.nights_until_brood(0), -1)
+	assert_eq(gs.nights_until_brood(1), -1)
+	for i in 6:
+		assert_eq(gs.end_day()["fry_born"], 0, "separated, so no fry")
+
+
+func test_each_tank_breeds_its_own_pair() -> void:
+	gs.buy_breeding_tank()
+	var red := gs.inventory.add_fish(F.fish(Fish.MALE, "orange", 3))
+	var red_f := gs.inventory.add_fish(F.fish(Fish.FEMALE, "orange", 3))
+	_pair_in_breeding_tank()                      # grey female x orange male in tank 1
+	gs.move_fish(red.id, "breeding2")             # orange x orange in tank 2
+	gs.move_fish(red_f.id, "breeding2")
+	gs.end_day()
+	var s := gs.end_day()
+	var tank2: Array = gs.tank_fish(gs.breeding_tanks[1]).filter(func(f): return not gs.is_adult(f))
+	assert_true(tank2.size() >= 2, "tank 2 had its own brood")
+	for fry in tank2:
+		assert_eq(fry.location, "breeding2")
+		assert_eq(fry.traits["body_color"] in ["orange", "red"], true, "only tank 2's parents (plus mutations)")
+	assert_eq(s["brood_outlook"].size(), 2)
+	assert_eq(s["fry_in_tank"], gs.breeding_fish().filter(func(f): return not gs.is_adult(f)).size())
+
+
+func test_each_tank_with_fry_uses_its_own_food() -> void:
+	gs.inventory.remove("food", gs.inventory.count("food"))
+	gs.inventory.add("food", 1)
+	gs.buy_breeding_tank()
+	var a := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	var b := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	gs.move_fish(a.id, Fish.BREEDING)
+	gs.move_fish(b.id, "breeding2")
+	var s := gs.end_day()
+	assert_eq(s["food_used"], 1, "only one portion left")
+	assert_eq(s["fry_unfed"], 1, "the second tank went hungry, but its fry are fine")
+	assert_eq(a.age_days + b.age_days, 1)
+
+
+func test_breeding_fish_counts_every_tank_for_appeal() -> void:
+	gs.buy_breeding_tank()
+	gs.move_fish(_male().id, "breeding2")
+	assert_eq(gs.breeding_fish().size(), 1)

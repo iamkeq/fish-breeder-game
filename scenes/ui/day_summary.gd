@@ -116,11 +116,20 @@ func _add_back_room(s: Dictionary) -> void:
 
 func _add_tomorrow(s: Dictionary) -> void:
 	_heading("Tomorrow")
-	var nights: int = s["nights_until_brood"]
-	if nights < 0:
-		_line("No breeding pair in the back room. Pair an adult male and female to get fry.")
+	var outlook: Array = s.get("brood_outlook", [s["nights_until_brood"]])
+	if outlook.size() == 1:
+		var nights: int = outlook[0]
+		if nights < 0:
+			_line("No breeding pair in the back room. Pair an adult male and female to get fry.")
+		else:
+			_line("Next brood in %d night%s." % [nights, "" if nights == 1 else "s"])
 	else:
-		_line("Next brood in %d night%s." % [nights, "" if nights == 1 else "s"])
+		var parts := PackedStringArray()
+		for i in outlook.size():
+			var nights: int = outlook[i]
+			parts.append("Tank %d: %s" % [i + 1, "no pair" if nights < 0 else
+				"brood in %d night%s" % [nights, "" if nights == 1 else "s"]])
+		_line("   ·   ".join(parts))
 	var food := _line("Fish food: %d left" % s["food_left"])
 	if s["fry_in_tank"] > 0 and s["food_left"] < 2:
 		food.text += ". Running low! Fry only grow on nights they're fed."

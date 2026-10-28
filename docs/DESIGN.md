@@ -361,3 +361,10 @@ reputation. The design keeps room for all of these.
   Items carry `sheet` + `sprite` [x, y, w, h]. The tank draws them sized by
   height class, and lists show them as icons. Substrate, food and tanks keep
   their colour swatches (they're not on the sheet).
+- **2026-10-28 (v0.3.0):**
+  - **Up to 4 breeding tanks** (`economy.breeding_tanks`: max 4, extra costs
+    $75/$100/$150). Locations are "breeding", "breeding2" ... "breeding4".
+    Each tank pairs, breeds, feeds and counts brood nights on its own, so
+    there's no cross-breeding between tanks.
+  - **Market tabs:** Fish / Decorations / Supplies.
+  - **Clock:** 48 real seconds per in-game hour (25% faster).

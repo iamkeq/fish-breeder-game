@@ -14,7 +14,7 @@ const TEMPLATE_FIELDS := ["id", "species", "theme_tags", "fish_count", "constrai
 	"constraint_count", "base_reward"]
 const STRAIN_FIELDS := ["id", "name", "species", "tier", "stars", "traits"]
 const ECONOMY_FIELDS := ["quality_multipliers", "offspring_quality_nudge", "tank_pricing",
-	"aesthetics", "breeding_tank_capacity", "clock", "customers", "requests", "backorders", "wholesale",
+	"aesthetics", "breeding_tank_capacity", "breeding_tanks", "clock", "customers", "requests", "backorders", "wholesale",
 	"fish_market", "starting_state"]
 
 var species: Dictionary = {}
@@ -168,6 +168,10 @@ func _validate_template(t: Dictionary) -> void:
 func _validate_economy() -> void:
 	if not _require(economy, ECONOMY_FIELDS, "economy"):
 		return
+	var tanks: Dictionary = economy["breeding_tanks"]
+	if _require(tanks, ["max", "extra_costs"], "economy/breeding_tanks") \
+			and tanks["extra_costs"].size() < int(tanks["max"]) - 1:
+		errors.append("economy/breeding_tanks: needs a cost for each extra tank (%d)" % (int(tanks["max"]) - 1))
 	var start: Dictionary = economy["starting_state"]
 	if not _require(start, ["money", "display_tank", "items", "fish"], "economy/starting_state"):
 		return
@@ -180,7 +184,8 @@ func _validate_economy() -> void:
 	for f in start["fish"]:
 		if not species.has(f.get("species_id", "")):
 			errors.append("economy/starting_state: fish has unknown species '%s'" % f.get("species_id", ""))
-		if not f.get("location", Fish.HOLDING) in [Fish.HOLDING, Fish.BREEDING, Fish.DISPLAY]:
+		var where: String = f.get("location", Fish.HOLDING)
+		if not (where in [Fish.HOLDING, Fish.DISPLAY] or Fish.is_breeding(where)):
 			errors.append("economy/starting_state: fish has unknown location '%s'" % f["location"])
 	var layout: Dictionary = start.get("display_tank_layout", {})
 	var substrate: String = layout.get("substrate", "")

@@ -197,7 +197,7 @@ func cancel_backorder(index: int) -> void:
 		changed.emit()
 
 
-# --- Aquascaping (tank is a location: Fish.DISPLAY or Fish.BREEDING) ----------
+# --- Aquascaping (tank is a location: Fish.DISPLAY or a breeding tank) -------
 
 func place_item(location: String, slot: int, item_id: String) -> bool:
 	return _changed_if(state.place_item(state.tank_at(location), slot, item_id))
@@ -219,3 +219,7 @@ func _changed_if(ok: bool) -> bool:
 	if ok:
 		changed.emit()
 	return ok
+
+
+func buy_breeding_tank() -> bool:
+	return _changed_if(state.buy_breeding_tank())

@@ -1,6 +1,7 @@
 extends ColorRect
-## Market: breeding fish (named strains grouped by price tier, all always
-## visible) and supplies (substrate, decor, plants, food, tanks).
+## Market, in three tabs: Fish (named strains grouped by price tier, all always
+## visible), Decorations (plants, rocks, driftwood, decor) and Supplies (tanks,
+## fish food, substrate).
 ## Pauses the shop clock while open. Bought fish go to the holding tanks.
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
@@ -9,10 +10,15 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 @onready var _money: Label = %MarketMoney
 @onready var _status: Label = %MarketStatus
 
+const TABS := ["Fish", "Decorations", "Supplies"]
+var _tab := 0
+var _tab_buttons: Array[Button] = []
+
 
 func _ready() -> void:
 	visible = false
 	%CloseMarket.pressed.connect(close)
+	_build_tabs()
 	Game.changed.connect(func(): if visible: _refresh())
 
 
@@ -38,11 +44,50 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
+func _build_tabs() -> void:
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	var group := ButtonGroup.new()
+	for i in TABS.size():
+		var b := Button.new()
+		b.text = TABS[i]
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.button_pressed = i == _tab
+		b.pressed.connect(_select_tab.bind(i))
+		tabs.add_child(b)
+		_tab_buttons.append(b)
+	# Just under the header row.
+	var box: VBoxContainer = %Tiers.get_parent().get_parent()
+	box.add_child(tabs)
+	box.move_child(tabs, 1)
+
+
+func _select_tab(index: int) -> void:
+	_tab = index
+	_refresh()
+	%Tiers.get_parent().scroll_vertical = 0
+
+
 func _refresh() -> void:
 	var state := Game.state
 	_money.text = "You have $%d" % state.money
+	for i in _tab_buttons.size():
+		_tab_buttons[i].set_pressed_no_signal(i == _tab)
 	for child in _tiers.get_children():
 		child.queue_free()
+	match _tab:
+		1:
+			_add_item_sections(DECOR_SECTIONS)
+		2:
+			_add_item_sections(SUPPLY_SECTIONS)
+		_:
+			_add_fish_tiers()
+
+
+func _add_fish_tiers() -> void:
+	var state := Game.state
 	for tier in state.market_tiers():
 		var ids := state.strains_in_tier(int(tier["tier"]))
 		if ids.is_empty():
@@ -54,7 +99,6 @@ func _refresh() -> void:
 		for id in ids:
 			_tiers.add_child(_strain_row(id))
 		_tiers.add_child(HSeparator.new())
-	_add_supplies()
 
 
 func _strain_row(strain_id: String) -> Control:
@@ -135,18 +179,26 @@ func _looks_text(strain: Dictionary, species: Dictionary) -> String:
 	return " · ".join(parts)
 
 
-const CATEGORY_ORDER := ["tank", "food", "substrate", "rock", "driftwood", "plant", "decor"]
+## Item sections per tab: [heading, categories].
+const DECOR_SECTIONS := [["Plants", ["plant"]], ["Rocks", ["rock"]], ["Driftwood", ["driftwood"]], ["Decor", ["decor"]]]
+const SUPPLY_SECTIONS := [["Tanks", ["tank"]], ["Fish food", ["food"]], ["Substrate", ["substrate"]]]
 
 
-func _add_supplies() -> void:
-	var state := Game.state
-	var header := Label.new()
-	header.text = "Supplies"
-	header.add_theme_font_size_override("font_size", 19)
-	_tiers.add_child(header)
-	for category in CATEGORY_ORDER:
-		for id in Game.db.items_in_category(category):
+func _add_item_sections(sections: Array) -> void:
+	for section in sections:
+		var ids := []
+		for category in section[1]:
+			ids.append_array(Game.db.items_in_category(category))
+		if ids.is_empty():
+			continue
+		ids.sort_custom(func(a, b): return Game.db.items[a]["name"] < Game.db.items[b]["name"])
+		var header := Label.new()
+		header.text = "%s  (%d)" % [section[0], ids.size()]
+		header.add_theme_font_size_override("font_size", 19)
+		_tiers.add_child(header)
+		for id in ids:
 			_tiers.add_child(_supply_row(id))
+		_tiers.add_child(HSeparator.new())
 
 
 func _supply_row(item_id: String) -> Control:

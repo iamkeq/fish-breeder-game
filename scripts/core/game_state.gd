@@ -11,11 +11,18 @@ var earned_today: int = 0
 var inventory := Inventory.new()
 ## The shop-floor display tank. null when it has been sold and not replaced yet.
 var display_tank: Tank = null
-var breeding_tank: Tank
+## Back-room breeding tanks (1 to start, more can be bought). Each is separate:
+## fish only breed with others in the same tank.
+var breeding_tanks: Array[Tank] = []
+## Nights since each breeding tank's pair last had a brood.
+var brood_nights: Array[int] = []
+## The first breeding tank.
+var breeding_tank: Tank:
+	get:
+		return breeding_tanks[0]
 var clock: GameClock
 ## Accepted customer requests (Dictionaries from RequestGenerator). No deadlines.
 var orders: Array = []
-var nights_since_brood: int = 0
 ## The customer at the counter ({} when nobody is there). See Customers.make_walk_in.
 var customer: Dictionary = {}
 ## In-game minutes until the next customer walks in.
@@ -36,7 +43,7 @@ static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator) -> GameState:
 	for item_id in start["items"]:
 		s.inventory.add(item_id, int(start["items"][item_id]))
 	s.display_tank = s._make_tank(start["display_tank"])
-	s.breeding_tank = Tank.new("", int(p_db.economy["breeding_tank_capacity"]))
+	s._add_breeding_tank()
 	s._apply_starter_layout(s.display_tank, start.get("display_tank_layout", {}))
 	for fish_data in start["fish"]:
 		var f := Fish.from_dict(fish_data)
@@ -86,12 +93,49 @@ func tank_price(tank: Tank, include_fish: bool) -> int:
 
 
 func tank_at(location: String) -> Tank:
-	match location:
-		Fish.BREEDING:
-			return breeding_tank
-		Fish.DISPLAY:
-			return display_tank
+	if location == Fish.DISPLAY:
+		return display_tank
+	var index := Fish.breeding_index(location)
+	if index >= 0 and index < breeding_tanks.size():
+		return breeding_tanks[index]
 	return null
+
+
+## Every fish in any breeding tank.
+func breeding_fish() -> Array[Fish]:
+	var result: Array[Fish] = []
+	for tank in breeding_tanks:
+		result.append_array(tank_fish(tank))
+	return result
+
+
+# --- Breeding tanks ------------------------------------------------------------
+
+func max_breeding_tanks() -> int:
+	return int(db.economy["breeding_tanks"]["max"])
+
+
+## Price of the next breeding tank, or -1 if you already have the most.
+func next_breeding_tank_cost() -> int:
+	var index := breeding_tanks.size() - 1  # extra_costs[0] is the 2nd tank
+	var costs: Array = db.economy["breeding_tanks"]["extra_costs"]
+	if breeding_tanks.size() >= max_breeding_tanks() or index >= costs.size():
+		return -1
+	return int(costs[index])
+
+
+func buy_breeding_tank() -> bool:
+	var cost := next_breeding_tank_cost()
+	if cost < 0 or not can_afford(cost):
+		return false
+	_spend(cost)
+	_add_breeding_tank()
+	return true
+
+
+func _add_breeding_tank() -> void:
+	breeding_tanks.append(Tank.new("", int(db.economy["breeding_tank_capacity"])))
+	brood_nights.append(0)
 
 
 # --- Buying ------------------------------------------------------------------
@@ -293,7 +337,7 @@ func move_blocker(fish_id: int, to: String) -> String:
 	var target := tank_at(to)
 	if to != Fish.HOLDING:
 		if target == null:
-			return "There's no tank on display."
+			return "There's no tank on display." if to == Fish.DISPLAY else "You don't have that breeding tank yet."
 		if not target.has_room_for_fish():
 			return "That tank is full (%d fish)." % target.capacity
 	return ""
@@ -372,7 +416,7 @@ func cancel_order(order_index: int) -> bool:
 func shop_appeal() -> float:
 	var looks := tank_aesthetics(display_tank) if display_tank != null else 0
 	return Customers.shop_appeal(inventory.fish_list(Fish.DISPLAY), inventory.fish_list(Fish.HOLDING),
-		inventory.fish_list(Fish.BREEDING), looks, db.species, db.economy["customers"])
+		breeding_fish(), looks, db.species, db.economy["customers"])
 
 
 ## Moves customer timers on by `minutes` of in-game time while the shop is open.
@@ -607,21 +651,26 @@ func end_day() -> Dictionary:
 		"log": day_log.duplicate(true), "money_end": money,
 		"born_ids": [], "grown_ids": [], "mutations": [],
 	}
-	_night_feed_and_grow(summary)
-	_night_breed(summary)
+	# Each breeding tank is separate: its own food, growth and pair.
+	for i in breeding_tanks.size():
+		_night_feed_and_grow(summary, i)
+		_night_breed(summary, i)
 	day += 1
 	# Looking ahead to tomorrow.
 	summary["nights_until_brood"] = nights_until_brood()
+	summary["brood_outlook"] = []
+	for i in breeding_tanks.size():
+		summary["brood_outlook"].append(nights_until_brood(i))
 	summary["food_left"] = food_count()
-	summary["fry_in_tank"] = tank_fish(breeding_tank).filter(func(f): return not is_adult(f)).size()
+	summary["fry_in_tank"] = breeding_fish().filter(func(f): return not is_adult(f)).size()
 	summary["orders"] = orders.size()
 	summary["backorders"] = backorders.size()
 	return summary
 
 
-func _night_feed_and_grow(summary: Dictionary) -> void:
+func _night_feed_and_grow(summary: Dictionary, tank_index: int) -> void:
 	var fry: Array[Fish] = []
-	for f in tank_fish(breeding_tank):
+	for f in tank_fish(breeding_tanks[tank_index]):
 		if not is_adult(f):
 			fry.append(f)
 	if fry.is_empty():
@@ -642,22 +691,23 @@ func _night_feed_and_grow(summary: Dictionary) -> void:
 			summary["grown_ids"].append(f.id)
 
 
-func _night_breed(summary: Dictionary) -> void:
-	var pair := breeding_pair()
+func _night_breed(summary: Dictionary, tank_index: int) -> void:
+	var tank := breeding_tanks[tank_index]
+	var pair := breeding_pair(tank_index)
 	if pair.is_empty():
-		nights_since_brood = 0
+		brood_nights[tank_index] = 0
 		return
 	var species := species_of(pair[0])
-	nights_since_brood += 1
-	if nights_since_brood < int(species["days_between_broods"]):
+	brood_nights[tank_index] += 1
+	if brood_nights[tank_index] < int(species["days_between_broods"]):
 		return
-	nights_since_brood = 0
+	brood_nights[tank_index] = 0
 	for fry in Genetics.breed(pair[0], pair[1], species, rng):
-		if not breeding_tank.has_room_for_fish():
+		if not tank.has_room_for_fish():
 			break
-		fry.location = Fish.BREEDING
+		fry.location = Fish.breeding_location(tank_index)
 		inventory.add_fish(fry)
-		breeding_tank.add_fish(fry.id)
+		tank.add_fish(fry.id)
 		summary["fry_born"] += 1
 		summary["born_ids"].append(fry.id)
 		for trait_name in fry.traits:
@@ -671,9 +721,10 @@ func _night_breed(summary: Dictionary) -> void:
 					"source": source, "parents": [mum, dad]})
 
 
-## [mother, father]: the first adult female and an adult male of the same species. [] if none.
-func breeding_pair() -> Array:
-	var adults := tank_fish(breeding_tank).filter(func(f): return is_adult(f))
+## [mother, father] in breeding tank `tank_index`: the first adult female and an
+## adult male of the same species. [] if none. Fish never pair across tanks.
+func breeding_pair(tank_index: int = 0) -> Array:
+	var adults := tank_fish(breeding_tanks[tank_index]).filter(func(f): return is_adult(f))
 	for mother in adults:
 		if mother.sex != Fish.FEMALE:
 			continue
@@ -683,12 +734,12 @@ func breeding_pair() -> Array:
 	return []
 
 
-## Nights until the next brood, or -1 if the breeding tank has no pair.
-func nights_until_brood() -> int:
-	var pair := breeding_pair()
+## Nights until breeding tank `tank_index` has its next brood, or -1 if it has no pair.
+func nights_until_brood(tank_index: int = 0) -> int:
+	var pair := breeding_pair(tank_index)
 	if pair.is_empty():
 		return -1
-	return int(species_of(pair[0])["days_between_broods"]) - nights_since_brood
+	return int(species_of(pair[0])["days_between_broods"]) - brood_nights[tank_index]
 
 
 func food_count() -> int:

@@ -1,19 +1,19 @@
 extends Control
-## Back room: the breeding tank, plus every fish you own (breeding tank,
-## display tank, holding) with buttons to move them or sell them to the wholesaler.
+## Back room: the breeding tanks (one tab each, more can be bought), plus every
+## fish you own (breeding tanks, display tank, holding) with a menu to move
+## them and a button to sell them to the wholesaler.
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
 
-const SECTIONS := [
-	[Fish.BREEDING, "Breeding tank"],
-	[Fish.DISPLAY, "Display tank (shop floor)"],
-	[Fish.HOLDING, "Holding tanks"],
-]
-const MOVE_LABELS := {Fish.DISPLAY: "To display", Fish.BREEDING: "To breeding", Fish.HOLDING: "To holding"}
-
+@onready var _tank_tabs: HBoxContainer = %TankTabs
+@onready var _tank_title: Label = %TankTitle
+@onready var _tank_view: Control = %TankView
 @onready var _brood_info: Label = %BroodInfo
 @onready var _fish_rows: VBoxContainer = %FishRows
 @onready var _status: Label = %Status
+
+## Which breeding tank the big view shows (0-based).
+var _selected_tank := 0
 
 
 func _ready() -> void:
@@ -23,11 +23,50 @@ func _ready() -> void:
 
 func refresh() -> void:
 	var state := Game.state
-	_brood_info.text = _brood_text(state) + "   ·   Fish food: %d" % state.food_count()
+	_selected_tank = mini(_selected_tank, state.breeding_tanks.size() - 1)
+	_tank_view.set_location(Fish.breeding_location(_selected_tank))
+	_refresh_tabs(state)
+	_tank_title.text = "Breeding tank %d" % (_selected_tank + 1)
+	_brood_info.text = _brood_text(state, _selected_tank) + "   ·   Fish food: %d" % state.food_count()
 	for child in _fish_rows.get_children():
 		child.queue_free()
-	for section in SECTIONS:
-		_add_section(section[0], section[1])
+	for i in state.breeding_tanks.size():
+		_add_section(Fish.breeding_location(i), "Breeding tank %d" % (i + 1))
+	_add_section(Fish.DISPLAY, "Display tank (shop floor)")
+	_add_section(Fish.HOLDING, "Holding tanks")
+
+
+func _refresh_tabs(state: GameState) -> void:
+	for child in _tank_tabs.get_children():
+		child.queue_free()
+	for i in state.breeding_tanks.size():
+		var tank := state.breeding_tanks[i]
+		var tab := UI.small_button("Tank %d  (%d)" % [i + 1, tank.fish_ids.size()],
+			"Breeding tank %d: %d of %d fish" % [i + 1, tank.fish_ids.size(), tank.capacity])
+		tab.toggle_mode = true
+		tab.button_pressed = i == _selected_tank
+		tab.pressed.connect(_select_tank.bind(i))
+		_tank_tabs.add_child(tab)
+	var cost := state.next_breeding_tank_cost()
+	if cost >= 0:
+		var add := UI.small_button("+ Add tank $%d" % cost,
+			"Another breeding tank, so you can keep pairs apart and stop cross-breeding."
+			if state.can_afford(cost) else "You need $%d more." % (cost - state.money))
+		add.disabled = not state.can_afford(cost)
+		add.pressed.connect(_on_add_tank)
+		_tank_tabs.add_child(add)
+
+
+func _select_tank(index: int) -> void:
+	_selected_tank = index
+	refresh()
+
+
+func _on_add_tank() -> void:
+	if Game.buy_breeding_tank():
+		_selected_tank = Game.state.breeding_tanks.size() - 1
+		_status.text = "New breeding tank set up! Fish only breed with others in the same tank."
+		refresh()
 
 
 func _add_section(location: String, title: String) -> void:
@@ -74,14 +113,7 @@ func _fish_entry(f: Fish) -> Control:
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 4)
-	for to in [Fish.DISPLAY, Fish.BREEDING, Fish.HOLDING]:
-		if to == f.location:
-			continue
-		var blocker := state.move_blocker(f.id, to)
-		var b := UI.small_button(MOVE_LABELS[to], blocker)
-		b.disabled = blocker != ""
-		b.pressed.connect(_on_move.bind(f.id, to))
-		buttons.add_child(b)
+	buttons.add_child(UI.move_menu(state, f, _on_move.bind(f.id)))
 	var price := state.wholesale_price(f)
 	var sell := UI.small_button("Sell $%d" % price,
 		"Sell to the wholesaler right away. Customers would pay more (%s)." %
@@ -93,11 +125,11 @@ func _fish_entry(f: Fish) -> Control:
 	return entry
 
 
-func _on_move(fish_id: int, to: String) -> void:
+func _on_move(to: String, fish_id: int) -> void:
 	var f: Fish = Game.state.inventory.get_fish(fish_id)
 	var name := Game.state.fish_display_name(f) if Game.state.is_adult(f) else "fry"
 	if Game.move_fish(fish_id, to):
-		_status.text = "Moved the %s to %s." % [name, MOVE_LABELS[to].trim_prefix("To ")]
+		_status.text = "Moved the %s to %s." % [name, UI.location_name(to).to_lower()]
 
 
 ## Two clicks to sell, so a stray click never loses a fish.
@@ -113,8 +145,8 @@ func _on_sell_pressed(button: Button, fish_id: int, price: int) -> void:
 		_status.text = "Sold the %s to the wholesaler for $%d." % [name, earned]
 
 
-func _brood_text(state: GameState) -> String:
-	var nights := state.nights_until_brood()
+func _brood_text(state: GameState, tank_index: int) -> String:
+	var nights := state.nights_until_brood(tank_index)
 	if nights < 0:
 		return "Needs an adult male and female to breed."
 	return "Next brood in %d night%s." % [nights, "" if nights == 1 else "s"]

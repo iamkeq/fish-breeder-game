@@ -99,12 +99,11 @@ func _display_card(f: Fish) -> Control:
 	box.add_child(top)
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 4)
-	for pair in [[Fish.HOLDING, "To back room"], [Fish.BREEDING, "To breeding"]]:
-		var blocker := state.move_blocker(f.id, pair[0])
-		var b := UI.small_button(pair[1], blocker)
-		b.disabled = blocker != ""
-		b.pressed.connect(func(): Game.move_fish(f.id, pair[0]))
-		buttons.add_child(b)
+	var back := UI.small_button("To back room", state.move_blocker(f.id, Fish.HOLDING))
+	back.pressed.connect(func(): Game.move_fish(f.id, Fish.HOLDING))
+	buttons.add_child(back)
+	# Breeding tanks and anywhere else, as a menu (there can be up to 4 tanks).
+	buttons.add_child(UI.move_menu(state, f, func(to: String): Game.move_fish(f.id, to)))
 	box.add_child(buttons)
 	card.add_child(box)
 	return card

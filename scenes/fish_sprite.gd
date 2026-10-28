@@ -100,6 +100,8 @@ func _process(delta: float) -> void:
 		return
 	_alive += delta
 	if _needs_spawn:
+		if not is_visible_in_tree():
+			return  # wait until the tank is on screen and has its real size
 		_needs_spawn = false
 		_alive = 0.0
 		position = _random_point()

@@ -2,6 +2,28 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.3.0] - 2026-10-28
+
+### Added
+- **Up to 4 breeding tanks.** You start with one; buy more from the back room
+  with **+ Add tank** ($75, $100, $150). Each tank is completely separate: fish
+  only breed with others in the same tank, so different lines never mix. Each
+  tank has its own brood countdown, and each tank with fry uses its own fish food.
+- Back room tabs (Tank 1–4) to switch the big view between breeding tanks.
+- **Move ▾** menu on every fish (back room and shop floor) listing the display
+  tank, each breeding tank you own, and holding. Places a fish can't go are
+  greyed out, with the reason.
+- **Market tabs:** Fish, Decorations (plants, rocks, driftwood, decor) and
+  Supplies (tanks, fish food, substrate).
+
+### Changed
+- The clock runs 25% faster: an in-game hour is now 48 real seconds (was 60),
+  so the shortest day is about 3 minutes.
+- The end-of-day summary lists the brood outlook for every breeding tank.
+
+### Fixed
+- Fish in the back room no longer start bunched in one corner of the tank.
+
 ## [0.2.0] - 2026-10-28
 
 ### Added
