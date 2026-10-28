@@ -59,3 +59,45 @@ static func traits_text(f: Fish) -> String:
 		var v := pretty(f.traits[trait_name])
 		parts.append(v + " tail" if trait_name == "tail_shape" else v)
 	return " · ".join(parts)
+
+
+static var _sheets := {}
+
+
+## A sprite sheet texture, loaded once and shared.
+static func sheet_texture(path: String) -> Texture2D:
+	if not _sheets.has(path):
+		_sheets[path] = load(path)
+	return _sheets[path]
+
+
+## The item's sprite cut from its sheet, or null if it has no art.
+static func item_texture(item: Dictionary) -> Texture2D:
+	if not item.has("sprite"):
+		return null
+	var r: Array = item["sprite"]
+	var tex := AtlasTexture.new()
+	tex.atlas = sheet_texture(item["sheet"])
+	tex.region = Rect2(r[0], r[1], r[2], r[3])
+	return tex
+
+
+## A small picture of an item for lists: its sprite, or a colour swatch.
+static func item_icon(item: Dictionary, box: Vector2 = Vector2(36, 30)) -> Control:
+	var tex := item_texture(item)
+	if tex == null:
+		var swatch := ColorRect.new()
+		swatch.color = Color(item.get("color", "#999999"))
+		swatch.custom_minimum_size = Vector2(box.y, box.y) * 0.7
+		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var holder := CenterContainer.new()
+		holder.custom_minimum_size = box
+		holder.add_child(swatch)
+		return holder
+	var icon := TextureRect.new()
+	icon.texture = tex
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = box
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	return icon

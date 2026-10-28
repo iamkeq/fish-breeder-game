@@ -155,10 +155,7 @@ func _supply_row(item_id: String) -> Control:
 	var cost := int(item["cost"])
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
-	var swatch := ColorRect.new()
-	swatch.color = Color(item.get("color", "#999999"))
-	swatch.custom_minimum_size = Vector2(22, 22)
-	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var swatch := UI.item_icon(item, Vector2(48, 40))
 	row.add_child(swatch)
 	var name := Label.new()
 	name.text = "%s   (%s, have %d)" % [item["name"], item["category"], state.inventory.count(item_id)]

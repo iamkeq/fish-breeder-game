@@ -353,3 +353,11 @@ reputation. The design keeps room for all of these.
     are livebearers). Species without `sprites` still use the vector fish.
   - **Names:** fish are named "<Variety> Guppy". The summary celebrates
     "🎨 New variety!" (recipe) apart from "✨ Rare mutation!".
+- **2026-10-27, decor sprite sheet:** every plant, rock, driftwood and decor
+  item now comes from `assets/decor/decor_sheet.png` (cut and repacked from
+  your sheet by `tools/cut_sheet.gd`). There are 45 items: 9 tall, 10 medium
+  and 10 short plants, 10 rocks and pebble piles, 3 driftwood, and 3 decor
+  (Coconut Hut, Clay Pot, Ruined Arch). Red plants are tagged "colorful".
+  Items carry `sheet` + `sprite` [x, y, w, h]. The tank draws them sized by
+  height class, and lists show them as icons. Substrate, food and tanks keep
+  their colour swatches (they're not on the sheet).

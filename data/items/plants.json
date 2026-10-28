@@ -1,7 +1,33 @@
 {
 	"items": [
-		{ "id": "dwarf_sag", "name": "Dwarf Sagittaria", "category": "plant", "cost": 3, "price": 6, "tags": ["planted"], "height": "short", "color": "#7cc46b" },
-		{ "id": "java_fern", "name": "Java Fern", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "medium", "color": "#3f8f4a" },
-		{ "id": "vallisneria", "name": "Vallisneria", "category": "plant", "cost": 4, "price": 8, "tags": ["planted"], "height": "tall", "color": "#5fb35a" }
+		{"id": "vallisneria", "name": "Vallisneria", "category": "plant", "cost": 4, "price": 8, "tags": ["planted", "natural"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [6, 6, 111, 192]},
+		{"id": "jungle_val", "name": "Jungle Val", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [123, 6, 99, 189]},
+		{"id": "hornwort", "name": "Hornwort", "category": "plant", "cost": 4, "price": 8, "tags": ["planted", "natural"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [228, 6, 124, 194]},
+		{"id": "red_ludwigia", "name": "Red Ludwigia", "category": "plant", "cost": 7, "price": 13, "tags": ["planted", "colorful"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [358, 6, 117, 183]},
+		{"id": "bacopa", "name": "Bacopa", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [481, 6, 107, 186]},
+		{"id": "rotala", "name": "Rotala", "category": "plant", "cost": 6, "price": 11, "tags": ["planted", "colorful"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [594, 6, 120, 194]},
+		{"id": "amazon_sword", "name": "Amazon Sword", "category": "plant", "cost": 7, "price": 12, "tags": ["planted", "natural"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [720, 6, 202, 182]},
+		{"id": "giant_sword", "name": "Giant Sword", "category": "plant", "cost": 9, "price": 15, "tags": ["planted", "natural"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [928, 6, 173, 203]},
+		{"id": "scarlet_alternanthera", "name": "Scarlet Alternanthera", "category": "plant", "cost": 8, "price": 14, "tags": ["planted", "colorful"], "height": "tall", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [6, 215, 111, 203]},
+		{"id": "pennywort", "name": "Pennywort", "category": "plant", "cost": 3, "price": 6, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [123, 215, 104, 110]},
+		{"id": "moneywort", "name": "Moneywort", "category": "plant", "cost": 3, "price": 6, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [233, 215, 61, 114]},
+		{"id": "java_fern", "name": "Java Fern", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [300, 215, 166, 119]},
+		{"id": "anubias", "name": "Anubias", "category": "plant", "cost": 6, "price": 10, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [472, 215, 109, 83]},
+		{"id": "hygrophila", "name": "Hygrophila", "category": "plant", "cost": 4, "price": 7, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [587, 215, 114, 111]},
+		{"id": "sagittaria", "name": "Sagittaria", "category": "plant", "cost": 3, "price": 6, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [707, 215, 111, 111]},
+		{"id": "crypt_wendtii", "name": "Crypt Wendtii", "category": "plant", "cost": 6, "price": 11, "tags": ["planted", "colorful"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [824, 215, 149, 101]},
+		{"id": "pearlweed", "name": "Pearlweed", "category": "plant", "cost": 3, "price": 6, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [979, 215, 113, 118]},
+		{"id": "ambulia", "name": "Ambulia", "category": "plant", "cost": 4, "price": 7, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [6, 424, 90, 121]},
+		{"id": "staurogyne", "name": "Staurogyne", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [102, 424, 110, 84]},
+		{"id": "monte_carlo", "name": "Monte Carlo", "category": "plant", "cost": 4, "price": 7, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [218, 424, 131, 66]},
+		{"id": "java_moss", "name": "Java Moss", "category": "plant", "cost": 3, "price": 5, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [355, 424, 120, 63]},
+		{"id": "christmas_moss", "name": "Christmas Moss", "category": "plant", "cost": 4, "price": 7, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [481, 424, 119, 61]},
+		{"id": "dwarf_hairgrass", "name": "Dwarf Hairgrass", "category": "plant", "cost": 3, "price": 6, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [606, 424, 101, 68]},
+		{"id": "marsilea", "name": "Marsilea", "category": "plant", "cost": 3, "price": 6, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [713, 424, 90, 67]},
+		{"id": "mini_alternanthera", "name": "Mini Alternanthera", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "colorful"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [809, 424, 101, 66]},
+		{"id": "baby_tears", "name": "Dwarf Baby Tears", "category": "plant", "cost": 5, "price": 8, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [916, 424, 128, 59]},
+		{"id": "crypt_parva", "name": "Crypt Parva", "category": "plant", "cost": 4, "price": 7, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [6, 551, 70, 70]},
+		{"id": "glossostigma", "name": "Glossostigma", "category": "plant", "cost": 4, "price": 7, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [82, 551, 81, 52]},
+		{"id": "anubias_nana", "name": "Anubias Nana", "category": "plant", "cost": 5, "price": 9, "tags": ["planted", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [169, 551, 107, 69]}
 	]
 }

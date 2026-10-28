@@ -6,7 +6,6 @@ extends Control
 signal edit_tank_requested
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
-const SWATCH_SIZE := Vector2(18, 18)
 const TEXT_WIDTH := 262.0
 
 @onready var _items: VBoxContainer = %Items
@@ -44,10 +43,7 @@ func _refresh_shelf() -> void:
 		var item: Dictionary = Game.db.items[id]
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 8)
-		var swatch := ColorRect.new()
-		swatch.color = Color(item.get("color", "#999999"))
-		swatch.custom_minimum_size = SWATCH_SIZE
-		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var swatch := UI.item_icon(item, Vector2(34, 28))
 		var name := _label("%s ×%d" % [item["name"], stock[id]])
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var price := _label("$%d" % Pricing.item_price(item))

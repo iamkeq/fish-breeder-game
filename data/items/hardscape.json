@@ -1,7 +1,17 @@
 {
 	"items": [
-		{ "id": "river_stone", "name": "River Stone", "category": "rock", "cost": 3, "price": 6, "tags": ["rocky", "natural"], "height": "short", "color": "#8d9399" },
-		{ "id": "dragon_stone", "name": "Dragon Stone", "category": "rock", "cost": 7, "price": 12, "tags": ["rocky"], "height": "medium", "color": "#a0794f" },
-		{ "id": "spider_wood", "name": "Spider Wood", "category": "driftwood", "cost": 10, "price": 18, "tags": ["natural", "planted"], "height": "tall", "color": "#7a5230" }
+		{"id": "seiryu_stone", "name": "Seiryu Stone", "category": "rock", "cost": 7, "price": 12, "tags": ["rocky", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [282, 551, 147, 86]},
+		{"id": "mountain_rock", "name": "Mountain Rock", "category": "rock", "cost": 7, "price": 12, "tags": ["rocky"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [435, 551, 125, 86]},
+		{"id": "rock_cave", "name": "Rock Cave", "category": "rock", "cost": 10, "price": 18, "tags": ["rocky"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [566, 551, 151, 95]},
+		{"id": "holey_rock", "name": "Holey Rock", "category": "rock", "cost": 8, "price": 14, "tags": ["rocky", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [723, 551, 153, 94]},
+		{"id": "lava_rock", "name": "Lava Rock", "category": "rock", "cost": 7, "price": 12, "tags": ["rocky"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [882, 551, 137, 88]},
+		{"id": "mossy_slate", "name": "Mossy Slate Stack", "category": "rock", "cost": 9, "price": 16, "tags": ["rocky", "planted"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [6, 652, 131, 84]},
+		{"id": "seiryu_spire", "name": "Seiryu Spire", "category": "rock", "cost": 8, "price": 14, "tags": ["rocky", "natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [143, 652, 127, 84]},
+		{"id": "slate_stack", "name": "Slate Stack", "category": "rock", "cost": 5, "price": 9, "tags": ["rocky"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [276, 652, 116, 62]},
+		{"id": "mossy_driftwood", "name": "Mossy Driftwood", "category": "driftwood", "cost": 10, "price": 18, "tags": ["natural", "planted"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [398, 652, 183, 104]},
+		{"id": "spider_wood", "name": "Spider Wood", "category": "driftwood", "cost": 9, "price": 16, "tags": ["natural"], "height": "medium", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [587, 652, 162, 90]},
+		{"id": "hollow_log", "name": "Hollow Log", "category": "driftwood", "cost": 10, "price": 18, "tags": ["natural", "planted"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [755, 652, 161, 75]},
+		{"id": "zen_stones", "name": "Zen Stones", "category": "rock", "cost": 5, "price": 9, "tags": ["rocky", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [164, 762, 114, 74]},
+		{"id": "mixed_pebbles", "name": "Mixed Pebbles", "category": "rock", "cost": 4, "price": 7, "tags": ["rocky", "colorful"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [284, 762, 145, 67]}
 	]
 }

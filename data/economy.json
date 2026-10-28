@@ -68,11 +68,11 @@
 		"display_tank": "tank_20l",
 		"display_tank_layout": {
 			"substrate": "fine_sand",
-			"slots": ["vallisneria", "", "java_fern", "", "river_stone", ""]
+			"slots": ["vallisneria", "", "java_fern", "", "slate_stack", ""]
 		},
 		"items": {
 			"fine_sand": 2,
-			"river_stone": 3,
+			"slate_stack": 3,
 			"java_fern": 2,
 			"vallisneria": 2,
 			"fish_food": 6,

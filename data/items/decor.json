@@ -1,6 +1,7 @@
 {
 	"items": [
-		{ "id": "treasure_chest", "name": "Treasure Chest", "category": "decor", "cost": 6, "price": 11, "tags": ["colorful"], "height": "short", "color": "#d4a017" },
-		{ "id": "ceramic_castle", "name": "Ceramic Castle", "category": "decor", "cost": 12, "price": 20, "tags": ["colorful"], "height": "tall", "color": "#c98bb9" }
+		{"id": "coconut_hut", "name": "Coconut Hut", "category": "decor", "cost": 6, "price": 11, "tags": ["natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [922, 652, 94, 77]},
+		{"id": "clay_pot", "name": "Clay Pot", "category": "decor", "cost": 6, "price": 11, "tags": ["colorful", "natural"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [1022, 652, 88, 76]},
+		{"id": "ruined_arch", "name": "Ruined Arch", "category": "decor", "cost": 12, "price": 22, "tags": ["rocky"], "height": "short", "sheet": "res://assets/decor/decor_sheet.png", "sprite": [6, 762, 152, 71]}
 	]
 }

@@ -144,6 +144,12 @@ func _validate_item(item: Dictionary) -> void:
 		errors.append("%s: placeable items need 'height' (short/medium/tall)" % ctx)
 	if category == "tank" and not item.has("capacity"):
 		errors.append("%s: tanks need 'capacity'" % ctx)
+	if item.has("sprite"):
+		var rect = item["sprite"]
+		if not rect is Array or rect.size() != 4:
+			errors.append("%s: 'sprite' must be [x, y, w, h]" % ctx)
+		if not ResourceLoader.exists(item.get("sheet", "")):
+			errors.append("%s: sprite sheet '%s' not found" % [ctx, item.get("sheet", "")])
 
 
 func _validate_template(t: Dictionary) -> void:

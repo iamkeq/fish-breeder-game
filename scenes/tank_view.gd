@@ -3,12 +3,15 @@ extends Control
 ## swimming fish sprite for every fish inside it. Placeholder art only.
 
 const FishSprite := preload("res://scenes/fish_sprite.gd")
+const UI := preload("res://scenes/ui/ui_kit.gd")
 
 ## Back row first so the front row is drawn on top. x is a fraction of the water width.
 const SLOT_X := [0.24, 0.74, 0.1, 0.52, 0.34, 0.88]
 const ROW_LIFT := {"back": 14.0, "mid": 6.0, "front": -2.0}
 const ROW_SCALE := {"back": 0.85, "mid": 0.95, "front": 1.0}
 const HEIGHT_FRACTION := {"short": 0.16, "medium": 0.36, "tall": 0.62}
+## Sprite items: how tall each height class is drawn, as a share of the water.
+const SPRITE_HEIGHT := {"short": 0.2, "medium": 0.34, "tall": 0.6}
 
 const GLASS := Color("#d7eef5")
 const FRAME := Color("#5b6b73")
@@ -127,6 +130,9 @@ func _draw_substrate(t: Tank, w: Rect2) -> void:
 
 
 func _draw_item(item: Dictionary, base: Vector2, water_height: float, scale_: float) -> void:
+	if item.has("sprite"):
+		_draw_item_sprite(item, base, water_height, scale_)
+		return
 	var color := Color(item.get("color", "#999999"))
 	var h: float = water_height * HEIGHT_FRACTION.get(item.get("height", "short"), 0.2) * scale_
 	match item["category"]:
@@ -207,3 +213,22 @@ func _gui_input(event: InputEvent) -> void:
 		if best != -2:
 			slot_clicked.emit(best)
 			accept_event()
+
+
+## Draws an item's sprite standing on `base`, sized by its height class
+## (aspect ratio kept, never wider than 40% of the tank).
+func _draw_item_sprite(item: Dictionary, base: Vector2, water_height: float, scale_: float) -> void:
+	var r: Array = item["sprite"]
+	var src := Rect2(r[0], r[1], r[2], r[3])
+	var h: float = water_height * SPRITE_HEIGHT.get(item.get("height", "short"), 0.2) * scale_
+	var w := h * src.size.x / src.size.y
+	var max_w := size.x * 0.4
+	if w > max_w:
+		h *= max_w / w
+		w = max_w
+	# Sink the bottom slightly into the substrate so it looks planted.
+	var dest := Rect2(base.x - w * 0.5, base.y - h * 0.94, w, h)
+	# Keep it inside the glass, even for wide plants in the edge slots.
+	var water := water_rect()
+	dest.position.x = clampf(dest.position.x, water.position.x, maxf(water.position.x, water.end.x - w))
+	draw_texture_rect_region(UI.sheet_texture(item["sheet"]), dest, src)

@@ -67,7 +67,7 @@ func _build() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(1200, 640)
+	panel.custom_minimum_size = Vector2(1180, 640)
 	center.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -108,6 +108,8 @@ func _build() -> void:
 	_tank_view.slot_clicked.connect(_select)
 	left.add_child(_tank_view)
 	_breakdown = _small_label()
+	_breakdown.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_breakdown.custom_minimum_size = Vector2(520, 0)
 	left.add_child(_breakdown)
 	_tips = _small_label()
 	_tips.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -145,7 +147,7 @@ func _build() -> void:
 
 	# Right: what you can place.
 	var right := VBoxContainer.new()
-	right.custom_minimum_size = Vector2(340, 0)
+	right.custom_minimum_size = Vector2(320, 0)
 	right.add_theme_constant_override("separation", 6)
 	right.add_child(_section_label("Your stock"))
 	var scroll := ScrollContainer.new()
@@ -257,16 +259,16 @@ func _item_row(item_id: String, ideal_height: String) -> Control:
 	var item: Dictionary = Game.db.items[item_id]
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var swatch := ColorRect.new()
-	swatch.color = Color(item.get("color", "#999999"))
-	swatch.custom_minimum_size = Vector2(22, 22)
-	swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var swatch := UI.item_icon(item, Vector2(48, 40))
 	row.add_child(swatch)
 	var info := VBoxContainer.new()
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	info.add_theme_constant_override("separation", 0)
 	var name := Label.new()
 	name.text = "%s  ×%d" % [item["name"], Game.state.inventory.count(item_id)]
+	# Long names and tag lists shrink with "…" instead of widening the editor.
+	name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name.custom_minimum_size.x = 60
 	info.add_child(name)
 	var details := PackedStringArray()
 	if item.has("height"):
@@ -278,6 +280,10 @@ func _item_row(item_id: String, ideal_height: String) -> Control:
 		details.append(", ".join(item["tags"]))
 	var sub := _small_label()
 	sub.text = " · ".join(details)
+	sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	sub.custom_minimum_size.x = 60
+	sub.tooltip_text = sub.text
+	sub.mouse_filter = Control.MOUSE_FILTER_PASS
 	sub.modulate = Color(1, 1, 1, 0.75)
 	info.add_child(sub)
 	row.add_child(info)
