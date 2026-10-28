@@ -2,6 +2,13 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.4.1] - 2026-10-28
+
+### Added
+- Each breeding tank's tab in the back room now has a small list of what's in
+  it (e.g. "♂ Red ★★, ♀ Yellow ★★, + 2 fry"), so you can see every tank at
+  a glance without switching tabs.
+
 ## [0.4.0] - 2026-10-28
 
 ### Added

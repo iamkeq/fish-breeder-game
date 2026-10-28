@@ -12,6 +12,11 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 @onready var _fish_rows: VBoxContainer = %FishRows
 @onready var _status: Label = %Status
 
+## Width of each tank tab and its little fish list.
+const TAB_WIDTH := 112
+## Adults listed under a tab before it says "+ N more".
+const MAX_LISTED := 4
+
 ## Which breeding tank the big view shows (0-based).
 var _selected_tank := 0
 
@@ -41,20 +46,53 @@ func _refresh_tabs(state: GameState) -> void:
 		child.queue_free()
 	for i in state.breeding_tanks.size():
 		var tank := state.breeding_tanks[i]
+		var column := VBoxContainer.new()
+		column.add_theme_constant_override("separation", 2)
+		column.custom_minimum_size = Vector2(TAB_WIDTH, 0)
 		var tab := UI.small_button("Tank %d  (%d)" % [i + 1, tank.fish_ids.size()],
 			"Breeding tank %d: %d of %d fish" % [i + 1, tank.fish_ids.size(), tank.capacity])
 		tab.toggle_mode = true
 		tab.button_pressed = i == _selected_tank
 		tab.pressed.connect(_select_tank.bind(i))
-		_tank_tabs.add_child(tab)
+		column.add_child(tab)
+		column.add_child(_tank_contents(state, tank))
+		_tank_tabs.add_child(column)
 	var cost := state.next_breeding_tank_cost()
 	if cost >= 0:
 		var add := UI.small_button("+ Add tank $%d" % cost,
 			"Another breeding tank, so you can keep pairs apart and stop cross-breeding."
 			if state.can_afford(cost) else "You need $%d more." % (cost - state.money))
 		add.disabled = not state.can_afford(cost)
+		add.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		add.pressed.connect(_on_add_tank)
 		_tank_tabs.add_child(add)
+
+
+## A small list under a tank's tab: each adult ("♂ Red ★★"), then fry as a count.
+func _tank_contents(state: GameState, tank: Tank) -> Label:
+	var adults := []
+	var fry := 0
+	for f in state.tank_fish(tank):
+		if state.is_adult(f):
+			adults.append(f)
+		else:
+			fry += 1
+	var lines := PackedStringArray()
+	for f in adults.slice(0, MAX_LISTED):
+		lines.append("%s %s %s" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars)])
+	if adults.size() > MAX_LISTED:
+		lines.append("+ %d more" % (adults.size() - MAX_LISTED))
+	if fry > 0:
+		lines.append("+ %d fry" % fry)
+	if lines.is_empty():
+		lines.append("(empty)")
+	var label := Label.new()
+	label.text = "\n".join(lines)
+	label.add_theme_font_size_override("font_size", 11)
+	label.modulate = Color(1, 1, 1, 0.8)
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.custom_minimum_size = Vector2(TAB_WIDTH, 0)
+	return label
 
 
 func _select_tank(index: int) -> void:
