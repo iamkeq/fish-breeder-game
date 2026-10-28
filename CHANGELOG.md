@@ -2,6 +2,15 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.6.1] - 2026-10-28
+
+### Changed
+- **Reverted the Market price cut from 0.6.0.** Market fish cost 130% of what
+  customers pay again, so buying and reselling can't become an endless money
+  loop. Profit comes from breeding: bred fish cost nothing and sell for the
+  full customer price. The **Breed one** option appears again whenever a
+  customer wants a fish you bought. The fry art and tank lists from 0.6.0 stay.
+
 ## [0.6.0] - 2026-10-28
 
 ### Changed

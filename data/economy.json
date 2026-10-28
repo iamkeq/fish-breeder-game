@@ -61,7 +61,7 @@
 		"fry_price": 1
 	},
 	"fish_market": {
-		"price_multiplier": 0.7,
+		"price_multiplier": 1.3,
 		"tiers": [
 			{ "tier": 1, "name": "Starter" },
 			{ "tier": 2, "name": "Hobbyist" },

@@ -50,9 +50,8 @@ static func tank_price(tank: Tank, items: Dictionary, aesthetics_score: int, fis
 	return roundi(total)
 
 
-## What the Fish Market charges for an adult of a named strain: the customer
-## price times fish_market.price_multiplier (below 1, so reselling makes a
-## profit). Only the traits the strain fixes count (unlisted ones are random).
+## What the Fish Market charges for an adult of a named strain. Only the traits
+## the strain fixes count (unlisted ones are random common values).
 static func strain_cost(strain: Dictionary, species: Dictionary, economy: Dictionary) -> int:
 	var f := Fish.new()
 	f.species_id = species["id"]

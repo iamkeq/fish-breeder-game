@@ -51,15 +51,15 @@ func test_empty_tank_is_worth_its_retail_price() -> void:
 func test_strain_cost_counts_only_fixed_traits() -> void:
 	var wild := {"stars": 2, "traits": {}}
 	var red_delta := {"stars": 4, "traits": {"body_color": "red", "tail_shape": "delta"}}
-	assert_eq(Pricing.strain_cost(wild, species, economy), 6)
-	assert_eq(Pricing.strain_cost(red_delta, species, economy), 24)
+	assert_eq(Pricing.strain_cost(wild, species, economy), 12)
+	assert_eq(Pricing.strain_cost(red_delta, species, economy), 51)
 
 
-func test_market_fish_resell_at_a_profit() -> void:
+func test_strains_cost_more_than_customers_pay() -> void:
 	var strain := {"stars": 3, "traits": {"body_color": "orange"}}
 	var same_fish := F.fish(Fish.MALE, "orange", 3)
-	assert_true(Pricing.strain_cost(strain, species, economy) < Pricing.fish_price(same_fish, species, economy),
-		"a fish bought from the Market sells to customers for more")
+	assert_true(Pricing.strain_cost(strain, species, economy) > Pricing.fish_price(same_fish, species, economy),
+		"profit should come from breeding, not reselling")
 
 
 func test_wholesale_price() -> void:

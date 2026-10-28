@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.6.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.6.1** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -39,7 +39,7 @@ Current version: **0.6.0** (see the [changelog](CHANGELOG.md)).
   tank, so you can keep lines apart. Each tank's tab lists the fish inside.
 - **Move ▾** on any fish sends it to the display tank, a breeding tank or holding.
 - **The Market** has three tabs: **Fish** (named guppy strains in four price
-  tiers, sold at 70% of what customers pay, so reselling always makes a profit), **Decorations** (plants, rocks, driftwood, decor) and **Supplies**
+  tiers; they cost more than customers pay, so the profit is in breeding them), **Decorations** (plants, rocks, driftwood, decor) and **Supplies**
   (tanks, fish food, substrate).
 - **The tank editor** lets you place substrate and six items (back, middle,
   front). A live looks score and tips show how to make it prettier, and
@@ -86,7 +86,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.6.0
+.\tools\publish_web.ps1 0.6.1
 ```
 
 ## Project layout
