@@ -5,6 +5,9 @@ extends Control
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
 
+## The player wants to open the breeding book.
+signal book_requested
+
 @onready var _tank_tabs: HBoxContainer = %TankTabs
 @onready var _tank_title: Label = %TankTitle
 @onready var _tank_view: Control = %TankView
@@ -66,6 +69,13 @@ func _refresh_tabs(state: GameState) -> void:
 		add.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		add.pressed.connect(_on_add_tank)
 		_tank_tabs.add_child(add)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_tank_tabs.add_child(spacer)
+	var book := UI.small_button("Breeding book", "Recipes and mutations you've discovered.")
+	book.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	book.pressed.connect(func(): book_requested.emit())
+	_tank_tabs.add_child(book)
 
 
 ## A small list under a tank's tab: each adult ("♂ Red ★★"), then the fry

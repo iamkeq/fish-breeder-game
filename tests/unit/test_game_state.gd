@@ -838,3 +838,58 @@ func test_unfed_fry_in_holding_pause_but_are_fine() -> void:
 	assert_eq(s["fry_unfed"], 1)
 	assert_eq(fry.age_days, 1)
 	assert_true(gs.inventory.has_fish(fry.id))
+
+
+# --- Breeding book
+
+func _recipe_species() -> Dictionary:
+	var species: Dictionary = gs.db.species["guppy"]
+	species["recipes"] = {"body_color": [{"parents": ["orange", "grey"], "child": "red"}]}
+	species["recipe_chance"] = 1.0
+	species["mutation_chance"] = 0.0
+	return species
+
+
+func test_book_starts_empty() -> void:
+	_recipe_species()
+	var recipes := gs.book_recipes("guppy")
+	assert_eq(recipes.size(), 1)
+	assert_false(recipes[0]["discovered"])
+	for m in gs.book_mutations("guppy"):
+		assert_false(m["discovered"])
+
+
+func test_breeding_a_recipe_baby_fills_in_the_book() -> void:
+	_recipe_species()
+	_pair_in_breeding_tank()   # grey female x orange male
+	gs.end_day()
+	var s := gs.end_day()
+	assert_eq(s["discoveries"].size(), 1, "announced once, even with several recipe babies")
+	assert_eq(s["discoveries"][0]["value"], "red")
+	var entry: Dictionary = gs.book_recipes("guppy")[0]
+	assert_true(entry["discovered"])
+	assert_eq(entry["day"], 2)
+	for i in 2:
+		assert_eq(gs.end_day()["discoveries"], [], "already in the book")
+
+
+func test_mutations_fill_in_the_book() -> void:
+	var species: Dictionary = gs.db.species["guppy"]
+	species["mutation_chance"] = 1.0
+	_pair_in_breeding_tank()
+	gs.end_day()
+	var s := gs.end_day()
+	assert_true(s["discoveries"].size() >= 1)
+	var found := gs.book_mutations("guppy").filter(func(m): return m["discovered"])
+	assert_true(found.size() >= 1)
+
+
+func test_book_key_ignores_parent_order() -> void:
+	assert_eq(GameState.book_key("variety", "red", "yellow"), GameState.book_key("variety", "yellow", "red"))
+
+
+func test_buying_does_not_fill_in_the_book() -> void:
+	gs.money = 500
+	gs.buy_strain("red_delta", Fish.MALE)
+	for m in gs.book_mutations("guppy"):
+		assert_false(m["discovered"])

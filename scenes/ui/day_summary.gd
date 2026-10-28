@@ -106,6 +106,11 @@ func _add_back_room(s: Dictionary) -> void:
 		else:
 			text = "✦ Rare mutation! A fry was born %s, which neither parent is." % look
 		_line(text).modulate = GOOD
+	for d in s.get("discoveries", []):
+		var what := UI.pretty(d["value"])
+		if d["source"] == "recipe":
+			what = "%s × %s → %s" % [UI.pretty(d["parents"][0]), UI.pretty(d["parents"][1]), what]
+		_line("✎ New in your breeding book: %s" % what).modulate = GOOD
 	var grown := _existing_fish(s["grown_ids"])
 	if not grown.is_empty():
 		_line("Grown up: %d (now ready to sell or breed)" % grown.size())

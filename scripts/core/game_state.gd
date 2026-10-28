@@ -35,6 +35,10 @@ var day_log: Dictionary = {}
 ## "Closed for restock": no customers, and the clock runs faster (see
 ## restock_speed()) so breeding builds up stock. Stays on across days.
 var restocking: bool = false
+## Breeding book: recipes ("variety:red+yellow") and mutations ("variety:albino")
+## you've bred at least once, with the day they were first bred.
+var discovered_recipes: Dictionary = {}
+var discovered_mutations: Dictionary = {}
 
 
 static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator) -> GameState:
@@ -735,7 +739,7 @@ func end_day() -> Dictionary:
 		"day": day, "earned": earned_today, "food_used": 0,
 		"fry_unfed": 0, "fry_grown_up": 0, "fry_born": 0,
 		"log": day_log.duplicate(true), "money_end": money,
-		"born_ids": [], "grown_ids": [], "mutations": [],
+		"born_ids": [], "grown_ids": [], "mutations": [], "discoveries": [],
 	}
 	# Each breeding tank is separate: its own food, growth and pair.
 	for i in breeding_tanks.size():
@@ -811,6 +815,54 @@ func _night_breed(summary: Dictionary, tank_index: int) -> void:
 				var source := "recipe" if Genetics.recipe_child(species, trait_name, mum, dad) == value else "mutation"
 				summary["mutations"].append({"fish_id": fry.id, "trait": trait_name, "value": value,
 					"source": source, "parents": [mum, dad]})
+				_discover(summary, source, trait_name, value, [mum, dad])
+
+
+## Records a first-time recipe or mutation in the breeding book.
+func _discover(summary: Dictionary, source: String, trait_name: String, value: String, parents: Array) -> void:
+	var book := discovered_recipes if source == "recipe" else discovered_mutations
+	var key := book_key(trait_name, parents[0], parents[1]) if source == "recipe" else "%s:%s" % [trait_name, value]
+	if book.has(key):
+		return
+	book[key] = day
+	summary["discoveries"].append({"source": source, "trait": trait_name, "value": value, "parents": parents})
+
+
+# --- Breeding book -------------------------------------------------------------
+
+## Book key for a recipe: the trait and both parent values, in either order.
+static func book_key(trait_name: String, a: String, b: String) -> String:
+	var pair := [a, b]
+	pair.sort()
+	return "%s:%s+%s" % [trait_name, pair[0], pair[1]]
+
+
+## Every recipe of a species, discovered or not:
+## [{trait, parents, child, discovered (bool), day (first bred, or 0)}]
+func book_recipes(species_id: String) -> Array:
+	var result := []
+	var recipes: Dictionary = db.species[species_id].get("recipes", {})
+	for trait_name in recipes:
+		for recipe in recipes[trait_name]:
+			var key := book_key(trait_name, recipe["parents"][0], recipe["parents"][1])
+			result.append({"trait": trait_name, "parents": recipe["parents"], "child": recipe["child"],
+				"discovered": discovered_recipes.has(key), "day": discovered_recipes.get(key, 0)})
+	return result
+
+
+## Every mutation of a species, discovered or not:
+## [{trait, value, weight, discovered (bool), day}]
+func book_mutations(species_id: String) -> Array:
+	var result := []
+	var species: Dictionary = db.species[species_id]
+	for trait_name in species["traits"]:
+		var t: Dictionary = species["traits"][trait_name]
+		for value in Genetics.mutation_pool(species, trait_name):
+			var key := "%s:%s" % [trait_name, value]
+			result.append({"trait": trait_name, "value": value,
+				"weight": float(t.get("mutation_weights", {}).get(value, 1.0)),
+				"discovered": discovered_mutations.has(key), "day": discovered_mutations.get(key, 0)})
+	return result
 
 
 ## [mother, father] in breeding tank `tank_index`: the first adult female and an

@@ -2,6 +2,17 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.8.0] - 2026-10-28
+
+### Added
+- **Breeding book.** A **Breeding book** button in the back room opens a book of
+  every recipe and mutation. Each one stays hidden ("? × ? → ?") until you've
+  bred it once; then it shows the parents and the result as fish, the day you
+  first bred it, and what it's worth. Undiscovered mutations only show how rare
+  they are. Progress is shown at the top (e.g. "Recipes 3/15 · Mutations 1/6").
+  Buying a fish doesn't count; only breeding does.
+- The end-of-day summary announces new book entries.
+
 ## [0.7.0] - 2026-10-28
 
 ### Added

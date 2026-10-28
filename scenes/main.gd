@@ -5,6 +5,7 @@ extends Control
 const DaySummary := preload("res://scenes/ui/day_summary.gd")
 const TankEditor := preload("res://scenes/ui/tank_editor.gd")
 const ShopBell := preload("res://scenes/ui/shop_bell.gd")
+const BreedingBook := preload("res://scenes/ui/breeding_book.gd")
 
 const SHOP_FLOOR_TEXT := "Shop floor"
 const BELL_TEXT := "● Shop floor"
@@ -25,11 +26,14 @@ const BELL_TEXT := "● Shop floor"
 var _tank_editor: ColorRect
 var _day_summary: ColorRect
 var _bell: AudioStreamPlayer
+var _book: ColorRect
 
 
 func _ready() -> void:
 	_tank_editor = TankEditor.new()
 	add_child(_tank_editor)
+	_book = BreedingBook.new()
+	add_child(_book)
 	_day_summary = DaySummary.new()
 	add_child(_day_summary)
 	_bell = AudioStreamPlayer.new()
@@ -45,6 +49,7 @@ func _ready() -> void:
 	_close_button.pressed.connect(_on_close_pressed)
 	_market_button.pressed.connect(func(): _fish_market.open())
 	_shop_floor.edit_tank_requested.connect(func(): _tank_editor.open())
+	_back_room.book_requested.connect(func(): _book.open())
 	_restock_button.toggled.connect(func(on: bool): Game.set_restocking(on))
 	_restock_button.visible = Game.state.restock_speed() > 0.0
 	_restock_button.tooltip_text = "Closed for restock: no customers, and the clock runs %dx faster so breeding builds up stock. Stays on until you press Reopen." % int(Game.state.restock_speed())
@@ -100,5 +105,6 @@ func _on_close_pressed() -> void:
 func _on_day_ended(summary: Dictionary) -> void:
 	_fish_market.close()
 	_tank_editor.close()
+	_book.close()
 	_day_summary.show_summary(summary)
 	_update_top_bar()

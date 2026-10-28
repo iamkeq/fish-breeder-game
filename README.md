@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.7.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.8.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -63,7 +63,9 @@ There are 24 guppy varieties. Each baby takes mum's or dad's variety, but:
   **Glass** most often, **Lavender** or **Platinum** less often, and very
   rarely **Galaxy** or **Dragon**, the most valuable fish in the game. They're never sold in the Market.
 
-The end-of-day summary celebrates new varieties and mutations.
+The end-of-day summary celebrates new varieties and mutations, and each
+first-time recipe or mutation is added to your **breeding book** (back room),
+which keeps everything hidden until you've bred it yourself.
 
 ## Running the project
 
@@ -88,7 +90,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.7.0
+.\tools\publish_web.ps1 0.8.0
 ```
 
 ## Project layout

@@ -383,6 +383,11 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-10-28 (v0.8.0), breeding book:** `GameState.discovered_recipes` /
+  `discovered_mutations` hold the first day each recipe (keyed by trait + sorted
+  parents) or mutation was bred. Entries are added in `_night_breed` and listed
+  by `book_recipes()` / `book_mutations()`. The UI is `scenes/ui/breeding_book.gd`.
+  Only breeding unlocks entries.
 - **2026-10-28 (v0.7.0):** four new mutation-only varieties (Lavender,
   Platinum, Galaxy, Dragon). `traits.variety.mutation_weights` weights the pick
   (3/3/2/2/1/1); the overall chance is still `mutation_chance` (3%).
