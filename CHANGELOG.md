@@ -2,6 +2,28 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.6.0] - 2026-10-28
+
+### Changed
+- **Market fish are now cheaper than customers pay**, so reselling a bought
+  fish always makes a profit. The Market charges 70% of the customer price
+  (it used to charge 130%). For example, a 3★ Black costs $7 and sells for $10,
+  and a 5★ Neon costs $38 and sells for $54. Fish you breed sell for the same
+  price as the same fish from the Market, and cost you nothing.
+- **Fry now look like their own variety**: a small copy of the adult that
+  grows to full size over 3 days, instead of one generic silver baby sprite.
+  You can see at a glance what each tank's parents produced, and a real Albino
+  or Glass mutation stands out.
+- Each breeding tank's tab now lists its fry varieties too, e.g.
+  "+ 6 fry (Red, Orange)".
+
+### Notes
+- Checked: each tank's fry come only from that tank's own pair, and mutations
+  stay at 3% (3,617 simulated fry). The "same mutated fry in every tank" look
+  came from the shared baby sprite, which is now gone.
+- Because Market fish now resell at a profit, the **Breed one** option (offered
+  only when a sale would be below cost) will rarely appear.
+
 ## [0.5.1] - 2026-10-28
 
 ### Changed

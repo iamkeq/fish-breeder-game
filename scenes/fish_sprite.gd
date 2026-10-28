@@ -555,7 +555,8 @@ func _setup_sprite() -> void:
 	_update_sprite(0.0)
 
 
-## Picks the frame (fry / animation / still), then applies facing, the turn
+## Picks the frame (animation or still) for the fish's own variety, then
+## applies facing, size (fry are small copies of their variety), the turn
 ## squash, tilt and the tail wave.
 func _update_sprite(delta: float) -> void:
 	var data: Dictionary = species["sprites"]
@@ -566,17 +567,13 @@ func _update_sprite(delta: float) -> void:
 	var rect: Array = data["varieties"].get(look, data["varieties"].values()[0])
 	var tail_right := false
 	var animated := false
-	if _grown() < 1.0 and data.has("fry"):
-		var fry_frames: Array = data["fry"]
-		rect = fry_frames[mini(fish.age_days, fry_frames.size() - 1)]
-	else:
-		var anims: Dictionary = data.get("animations", {}).get(look, {})
-		var anim := "idle" if (_rest > 0.0 or not swims) else ("swim_right" if facing_right else "swim_left")
-		if anims.has(anim):
-			var frames: Array = anims[anim]
-			rect = frames[int(_anim_time * float(data.get("fps", 10))) % frames.size()]
-			animated = true
-			tail_right = anim == "swim_left"
+	var anims: Dictionary = data.get("animations", {}).get(look, {})
+	var anim := "idle" if (_rest > 0.0 or not swims) else ("swim_right" if facing_right else "swim_left")
+	if anims.has(anim):
+		var frames: Array = anims[anim]
+		rect = frames[int(_anim_time * float(data.get("fps", 10))) % frames.size()]
+		animated = true
+		tail_right = anim == "swim_left"
 	_sprite.region_rect = Rect2(rect[0], rect[1], rect[2], rect[3])
 	# "swim_left" frames already face left; every other frame faces right.
 	_sprite.flip_h = not facing_right and not tail_right
@@ -595,7 +592,10 @@ func _update_sprite(delta: float) -> void:
 	var squash := maxf(absf(c), 0.45)
 	var stretch := 1.0 + (1.0 - absf(c)) * 0.12
 	var sex_scale := 1.05 if fish.sex == Fish.FEMALE else 0.92
-	_sprite.scale = Vector2(squash, stretch) * float(data.get("scale", 1.0)) * sex_scale
+	# Fry are a small copy of their own variety, growing to full size as they age,
+	# so you can see what each tank's parents produced.
+	var growth := lerpf(0.4, 1.0, _grown())
+	_sprite.scale = Vector2(squash, stretch) * float(data.get("scale", 1.0)) * sex_scale * growth
 	_sprite.rotation = _tilt * (1.0 if facing_right else -1.0)
 	_sprite.position = Vector2(0, sin(_wiggle * 0.25) * 1.2)
 	_sprite.modulate.a = lerpf(0.8, 1.0, _grown())

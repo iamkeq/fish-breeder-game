@@ -76,9 +76,9 @@ func test_cannot_buy_without_money() -> void:
 
 
 func test_strain_costs_come_from_traits_and_stars() -> void:
-	assert_eq(gs.strain_cost("wild"), 12, "2 stars: 8 * 1.5")
-	assert_eq(gs.strain_cost("orange"), 15, "3 stars: 10 * 1.5")
-	assert_eq(gs.strain_cost("red_delta"), 51, "4 stars, two rare traits: 34 * 1.5")
+	assert_eq(gs.strain_cost("wild"), 6, "2 stars: customers pay 8, the Market charges 70%")
+	assert_eq(gs.strain_cost("orange"), 7, "3 stars: 10 * 0.7")
+	assert_eq(gs.strain_cost("red_delta"), 24, "4 stars, two rare traits: 34 * 0.7")
 
 
 func test_strains_are_grouped_by_tier_cheapest_first() -> void:
@@ -91,7 +91,7 @@ func test_strains_are_grouped_by_tier_cheapest_first() -> void:
 func test_buy_strain() -> void:
 	var f := gs.buy_strain("red_delta", Fish.FEMALE)
 	assert_ne(f, null)
-	assert_eq(gs.money, 100 - 51)
+	assert_eq(gs.money, 100 - 24)
 	assert_eq(f.sex, Fish.FEMALE)
 	assert_eq(f.stars, 4)
 	assert_eq(f.traits["body_color"], "red")
@@ -104,9 +104,9 @@ func test_buy_strain() -> void:
 
 
 func test_cannot_buy_strain_without_money() -> void:
-	gs.money = 50
+	gs.money = 20
 	assert_eq(gs.buy_strain("red_delta", Fish.MALE), null)
-	assert_eq(gs.money, 50)
+	assert_eq(gs.money, 20)
 	assert_eq(gs.inventory.fish_list().size(), 2)
 
 
@@ -693,9 +693,11 @@ func test_breeding_fish_counts_every_tank_for_appeal() -> void:
 # --- Breed-to-order
 
 func _koi_customer() -> Fish:
-	# A bought 4-star red-delta (cost 51) that a customer only pays 34 for.
+	# A 4-star red-delta that a customer pays 34 for, but that cost you 51
+	# (Market fish normally cost less than customers pay; this one was pricey).
 	gs.money = 500
 	var f := gs.buy_strain("red_delta", Fish.FEMALE)
+	f.paid = 51
 	gs.move_fish(f.id, Fish.DISPLAY)
 	gs.customer = {"kind": "fish", "fish_id": f.id, "name": "Priya", "waited": 0.0, "patience": 60.0}
 	return f
@@ -704,7 +706,7 @@ func _koi_customer() -> Fish:
 func test_bought_fish_remember_what_you_paid() -> void:
 	gs.money = 500
 	var f := gs.buy_strain("red_delta", Fish.MALE)
-	assert_eq(gs.fish_paid(f), 51)
+	assert_eq(gs.fish_paid(f), 24)
 	assert_eq(gs.fish_paid(_male()), 0, "starting and bred fish cost nothing")
 
 

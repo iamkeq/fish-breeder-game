@@ -68,29 +68,34 @@ func _refresh_tabs(state: GameState) -> void:
 		_tank_tabs.add_child(add)
 
 
-## A small list under a tank's tab: each adult ("♂ Red ★★"), then fry as a count.
+## A small list under a tank's tab: each adult ("♂ Red ★★"), then the fry
+## as a count with their varieties ("+ 6 fry (Red, Orange)").
 func _tank_contents(state: GameState, tank: Tank) -> Label:
 	var adults := []
 	var fry := 0
+	var fry_looks := []
 	for f in state.tank_fish(tank):
 		if state.is_adult(f):
 			adults.append(f)
 		else:
 			fry += 1
+			var look := UI.traits_text(f)
+			if not look in fry_looks:
+				fry_looks.append(look)
 	var lines := PackedStringArray()
 	for f in adults.slice(0, MAX_LISTED):
 		lines.append("%s %s %s" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars)])
 	if adults.size() > MAX_LISTED:
 		lines.append("+ %d more" % (adults.size() - MAX_LISTED))
 	if fry > 0:
-		lines.append("+ %d fry" % fry)
+		lines.append("+ %d fry (%s)" % [fry, ", ".join(fry_looks)])
 	if lines.is_empty():
 		lines.append("(empty)")
 	var label := Label.new()
 	label.text = "\n".join(lines)
 	label.add_theme_font_size_override("font_size", 11)
 	label.modulate = Color(1, 1, 1, 0.8)
-	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size = Vector2(TAB_WIDTH, 0)
 	return label
 

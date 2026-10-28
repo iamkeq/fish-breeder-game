@@ -375,6 +375,14 @@ reputation. The design keeps room for all of these.
   `due_day` 2–3 days ahead (`backorders.breed_wait_days`) and `keep_id`. It can
   be handed over from the due day with any matching adult in holding, display
   or a breeding tank, except the kept fish and each tank's breeding pair.
+- **2026-10-28 (v0.6.0):**
+  - **Pricing:** `fish_market.price_multiplier` changed from 1.3 to 0.7. The
+    Market sells at 70% of the customer price, so bought fish resell at a
+    profit and bred fish are worth the same as Market ones (but are free).
+    This replaces the earlier rule that "profit comes from breeding, not
+    reselling". The breed-to-order offer still triggers only below cost.
+  - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
+    the sheet's generic baby frames are no longer used.
 - **2026-10-28 (v0.5.0), Closed for restock (playtesting):** `GameState.restocking`
   stops new customers (anyone waiting leaves, no penalty) and `time_scale()`
   returns `clock.restock_speed` (4), which the Game autoload multiplies into
