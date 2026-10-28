@@ -42,6 +42,9 @@ var _turn_from := 0.0
 var _turn_dir := 1.0                # +1 turns away from the viewer, -1 towards
 ## Pick the starting spot on the first frame, once the tank has its final size.
 var _needs_spawn := true
+## Seconds since this fish started swimming (used to re-place it if the tank
+## is resized right after it appeared).
+var _alive := 0.0
 ## Per-fish spot layout, so every spotted fish looks a little different.
 var _spots: Array[Vector3] = []
 ## Visual-only randomness; kept separate from the game RNG.
@@ -63,6 +66,9 @@ func setup(p_fish: Fish, p_species: Dictionary, p_bounds: Rect2) -> void:
 	fish = p_fish
 	species = p_species
 	_rng.randomize()
+	# Fish created in the same instant would otherwise share a time-based seed
+	# and swim in lockstep, so mix in something unique to each one.
+	_rng.seed = _rng.seed ^ (get_instance_id() * 2654435761) ^ (fish.id * 7919)
 	_wiggle = _rng.randf() * TAU
 	_make_spots()
 	if species.has("sprites"):
@@ -75,7 +81,10 @@ func set_bounds(p_bounds: Rect2) -> void:
 	bounds = p_bounds.grow(-margin)
 	if bounds.size.x <= 0 or bounds.size.y <= 0:
 		bounds = Rect2(p_bounds.get_center(), Vector2.ONE)
-	if swims and not _needs_spawn and not bounds.has_point(position):
+	if swims and not _needs_spawn and _alive < 0.5:
+		# Just appeared, then the tank got its real size: pick a fresh spot in it.
+		_needs_spawn = true
+	elif swims and not _needs_spawn and not bounds.has_point(position):
 		position = position.clamp(bounds.position, bounds.end)
 		_pick_target()
 
@@ -89,8 +98,10 @@ func _process(delta: float) -> void:
 			_update_sprite(delta)
 		queue_redraw()
 		return
+	_alive += delta
 	if _needs_spawn:
 		_needs_spawn = false
+		_alive = 0.0
 		position = _random_point()
 		_facing = 1.0 if _rng.randf() < 0.5 else -1.0
 		_phi = 0.0 if _facing > 0.0 else PI

@@ -1,0 +1,48 @@
+# Changelog
+
+All notable changes to Fish Breeder Job Simulator. Newest first.
+
+## [0.2.0] - 2026-10-28
+
+### Added
+- **Plant and rock art:** all 45 plants, rocks, driftwood and decorations now
+  come from the aquascape sprite sheet: 29 plants (tall, medium and carpeting),
+  10 rocks and pebble piles, 3 driftwood and 3 decorations (Coconut Hut, Clay
+  Pot, Ruined Arch). They show as pictures in the tank, on the shelf, in the
+  Market and in the tank editor.
+- itch.io cover image and screenshots (`docs/images`), rendered from the game's
+  own art by `tools/make_thumbnail.gd` and `tools/capture_screenshots.gd`.
+- This changelog and a full README.
+
+### Changed
+- The starter display tank now uses Vallisneria, Java Fern and Slate Stack.
+- `tools/cut_sheet.gd` replaces the guppy-only sheet tool. It can cut any
+  sprite sheet, and "repack" sprites that sit too close together.
+
+### Fixed
+- Slivers of neighbouring plants no longer show around some items.
+- The tank editor no longer spills off the screen with long item names.
+- Wide plants in the edge spots stay inside the glass.
+- Fish added to a tank no longer bunch up against one side at first.
+
+## [0.1.0] - 2026-10-27
+
+First playable version, published to itch.io as a web build.
+
+### Added
+- **Shop and day cycle:** shop floor with a display tank, retail shelf and
+  counter; a clock (close after 4 hours, or stay open until 21:00); an
+  end-of-day summary of sales, customers, new fry and mutations.
+- **Breeding:** a back-room breeding tank; fry grow over 3 days if fed and
+  reveal 1–5 star quality; 24 guppy varieties from the guppy sprite sheet,
+  15 mixing recipes and 2 mutation-only varieties.
+- **Customers:** walk-ins arrive more often the better your fish are. They buy
+  fish, shelf items or whole tanks; some bring requests (built and delivered for
+  a bonus), and some can be back-ordered at 10% off.
+- **Market:** named guppy strains in four price tiers, plus supplies.
+- **Tank editor:** a substrate slot and six placement slots with a live looks
+  score, breakdown and tips.
+- **Selling:** to customers, or to the wholesaler for less (fry too).
+- **Shop bell:** rings when a customer arrives while you're in the back room.
+- Pure, data-driven game logic with 167 headless unit tests.
+- Web export for itch.io and a one-command publish script.
