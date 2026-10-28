@@ -110,3 +110,13 @@ func test_missing_sprite_frames_are_reported() -> void:
 	var db := DataDB.from_dicts([s], F.items(), [F.template()], F.economy())
 	assert_has(db.errors, "species/guppy/sprites: sheet 'res://nope.png' not found")
 	assert_has(db.errors, "species/guppy/sprites: no frame [x, y, w, h] for body_color 'orange'")
+
+
+func test_market_never_sells_mutation_only_varieties() -> void:
+	var db := DataDB.load_from_dir("res://data")
+	for id in db.strains:
+		var strain: Dictionary = db.strains[id]
+		var species: Dictionary = db.species[strain["species"]]
+		for trait_name in strain["traits"]:
+			assert_false(Genetics.is_mutation(species, trait_name, strain["traits"][trait_name]),
+				"%s sells a mutation-only %s" % [id, trait_name])

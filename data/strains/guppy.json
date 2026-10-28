@@ -23,8 +23,6 @@
 		{ "id": "tuxedo", "name": "Tuxedo", "species": "guppy", "tier": 4, "stars": 4, "traits": { "variety": "tuxedo" },
 			"blurb": "Dressed for dinner: a dark back half and a bright front." },
 		{ "id": "neon", "name": "Neon", "species": "guppy", "tier": 4, "stars": 5, "traits": { "variety": "neon" },
-			"blurb": "Electric colours that glow under the tank light." },
-		{ "id": "albino", "name": "Albino", "species": "guppy", "tier": 4, "stars": 5, "traits": { "variety": "albino" },
-			"blurb": "Pale with ruby eyes. Only ever appears by mutation." }
+			"blurb": "Electric colours that glow under the tank light." }
 	]
 }

@@ -2,6 +2,12 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.5.1] - 2026-10-28
+
+### Changed
+- **Albino is now a mutation-only prize**, like Glass. It's no longer sold in
+  the Market; the only way to get one is a lucky 3% mutation when breeding.
+
 ## [0.5.0] - 2026-10-28
 
 ### Added
