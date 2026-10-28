@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.6.1** (see the [changelog](CHANGELOG.md)).
+Current version: **0.6.2** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -35,7 +35,8 @@ Current version: **0.6.1** (see the [changelog](CHANGELOG.md)).
 - **The back room** holds your breeding tanks: one to start, up to four if you
   buy more. Put an adult male and female in a tank and every couple of nights
   they have a brood of fry. Feed them (fish food) and they grow up in 3 days,
-  revealing their star rating (1–5). Fish only breed with others in the same
+  revealing their star rating (1–5). Fry keep growing if you move them to the
+  holding tanks, which is handy when a breeding tank gets crowded. Fish only breed with others in the same
   tank, so you can keep lines apart. Each tank's tab lists the fish inside.
 - **Move ▾** on any fish sends it to the display tank, a breeding tank or holding.
 - **The Market** has three tabs: **Fish** (named guppy strains in four price
@@ -86,7 +87,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.6.1
+.\tools\publish_web.ps1 0.6.2
 ```
 
 ## Project layout

@@ -739,8 +739,10 @@ func end_day() -> Dictionary:
 	}
 	# Each breeding tank is separate: its own food, growth and pair.
 	for i in breeding_tanks.size():
-		_night_feed_and_grow(summary, i)
+		_night_feed_and_grow(summary, tank_fish(breeding_tanks[i]))
 		_night_breed(summary, i)
+	# Fry moved out to holding (to make room) keep growing there too.
+	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING))
 	day += 1
 	# Looking ahead to tomorrow.
 	summary["nights_until_brood"] = nights_until_brood()
@@ -748,15 +750,19 @@ func end_day() -> Dictionary:
 	for i in breeding_tanks.size():
 		summary["brood_outlook"].append(nights_until_brood(i))
 	summary["food_left"] = food_count()
-	summary["fry_in_tank"] = breeding_fish().filter(func(f): return not is_adult(f)).size()
+	summary["fry_in_tank"] = (breeding_fish() + inventory.fish_list(Fish.HOLDING)) \
+		.filter(func(f): return not is_adult(f)).size()
 	summary["orders"] = orders.size()
 	summary["backorders"] = backorders.size()
 	return summary
 
 
-func _night_feed_and_grow(summary: Dictionary, tank_index: int) -> void:
+## Feeds one group of fish (a breeding tank, or holding): if it has fry, it
+## uses one portion of food and they all grow a day. No food = no growth
+## tonight, but no harm.
+func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
 	var fry: Array[Fish] = []
-	for f in tank_fish(breeding_tanks[tank_index]):
+	for f in group:
 		if not is_adult(f):
 			fry.append(f)
 	if fry.is_empty():

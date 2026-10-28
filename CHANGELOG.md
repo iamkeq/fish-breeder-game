@@ -2,6 +2,14 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.6.2] - 2026-10-28
+
+### Fixed
+- **Fry now keep growing in the holding tanks.** Before, a fry moved to holding
+  stopped aging. Now you can move fry out of a crowded breeding tank and they
+  carry on growing. Like a breeding tank, holding uses one portion of fish food
+  on nights it has fry; without food they just pause.
+
 ## [0.6.1] - 2026-10-28
 
 ### Changed

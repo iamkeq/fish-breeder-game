@@ -802,3 +802,39 @@ func test_restock_can_be_switched_off_in_data() -> void:
 	gs.db.economy["clock"]["restock_speed"] = 0
 	assert_false(gs.set_restocking(true))
 	assert_false(gs.restocking)
+
+
+# --- Fry in holding
+
+func test_fry_in_holding_keep_growing() -> void:
+	gs.inventory.add("food", 10)
+	var fry := gs.inventory.add_fish(F.fish(Fish.FEMALE, "grey", 0, 0))
+	fry.parent_stars = 3.0
+	assert_eq(fry.location, Fish.HOLDING)
+	for i in 3:
+		gs.end_day()
+	assert_true(gs.is_adult(fry), "grew up in holding")
+	assert_between(fry.stars, 2, 4)
+	assert_true(fry.fed_every_night)
+
+
+func test_holding_uses_its_own_food_portion() -> void:
+	gs.inventory.remove("food", gs.inventory.count("food"))
+	gs.inventory.add("food", 2)
+	var in_tank := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	gs.move_fish(in_tank.id, Fish.BREEDING)
+	var in_holding := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	var s := gs.end_day()
+	assert_eq(s["food_used"], 2, "one for the breeding tank, one for holding")
+	assert_eq(in_tank.age_days, 1)
+	assert_eq(in_holding.age_days, 1)
+	assert_eq(s["fry_in_tank"], 2, "the summary counts fry in holding too")
+
+
+func test_unfed_fry_in_holding_pause_but_are_fine() -> void:
+	gs.inventory.remove("food", gs.inventory.count("food"))
+	var fry := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 1))
+	var s := gs.end_day()
+	assert_eq(s["fry_unfed"], 1)
+	assert_eq(fry.age_days, 1)
+	assert_true(gs.inventory.has_fish(fry.id))
