@@ -2,6 +2,21 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.7.0] - 2026-10-28
+
+### Added
+- **Four new mutation-only varieties:** Lavender (×3.2), Platinum (×3.5),
+  Galaxy (×4.0) and Dragon (×4.0). They can turn up from any pair, like Albino
+  and Glass.
+- **Weighted mutations:** the overall mutation chance is still 3% per baby, but
+  which mutation appears is now weighted. Albino and Glass are the most common;
+  Lavender and Platinum are less common; Galaxy and Dragon are true jackpots
+  (about 1 baby in 400 each).
+- **Placeholder art:** until real sprites arrive, each new variety is drawn as
+  a tinted copy of an existing one (Lavender and Platinum from White, Galaxy
+  from Neon, Dragon from Half Black). Replace a placeholder by adding a real
+  frame to `sprites.varieties` in `data/species/guppy.json`.
+
 ## [0.6.2] - 2026-10-28
 
 ### Fixed

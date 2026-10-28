@@ -122,6 +122,12 @@ func _validate_species(s: Dictionary) -> void:
 		for v in t.get("mutations", []):
 			if not v in all_values:
 				errors.append("%s: mutation '%s' is not a %s value" % [ctx, v, trait_name])
+		var mutation_weights: Dictionary = t.get("mutation_weights", {})
+		for v in mutation_weights:
+			if not v in t.get("mutations", []):
+				errors.append("%s: mutation_weights lists '%s', which is not in mutations" % [ctx, v])
+			elif float(mutation_weights[v]) <= 0.0:
+				errors.append("%s: mutation weight for '%s' must be above 0" % [ctx, v])
 		for recipe in s.get("recipes", {}).get(trait_name, []):
 			for v in recipe.get("parents", []) + [recipe.get("child", "")]:
 				if not v in all_values:
@@ -261,7 +267,13 @@ func _validate_sprites(s: Dictionary, ctx: String) -> void:
 	if not ResourceLoader.exists(sprites["sheet"]):
 		errors.append("%s/sprites: sheet '%s' not found" % [ctx, sprites["sheet"]])
 	var t: Dictionary = s["traits"].get(sprites["trait"], {})
+	var placeholders: Dictionary = sprites.get("placeholders", {})
 	for v in t.get("common", []) + t.get("rare", []):
 		var rect = sprites["varieties"].get(v)
-		if not rect is Array or rect.size() != 4:
-			errors.append("%s/sprites: no frame [x, y, w, h] for %s '%s'" % [ctx, sprites["trait"], v])
+		if rect is Array and rect.size() == 4:
+			continue
+		# No art yet: a placeholder (a tinted copy of another variety) is fine.
+		var ph = placeholders.get(v)
+		if ph is Dictionary and sprites["varieties"].has(ph.get("base", "")) and ph.has("tint"):
+			continue
+		errors.append("%s/sprites: no frame [x, y, w, h] or placeholder for %s '%s'" % [ctx, sprites["trait"], v])

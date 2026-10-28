@@ -163,3 +163,27 @@ func test_mutations_come_only_from_the_mutation_pool() -> void:
 		assert_eq(v, "albino", "orange is recipe-only, so it never mutates in")
 	assert_true(Genetics.is_mutation(s, "variety", "albino"))
 	assert_false(Genetics.is_mutation(s, "variety", "orange"))
+
+
+func test_mutation_weights_make_some_mutations_rarer() -> void:
+	var s := _variety_species(0.0, 1.0)
+	s["traits"]["variety"]["rare"].append("galaxy")
+	s["traits"]["variety"]["mutations"] = ["albino", "galaxy"]
+	s["traits"]["variety"]["mutation_weights"] = {"albino": 3, "galaxy": 1}
+	var rng := F.rng(4)
+	var counts := {"albino": 0, "galaxy": 0}
+	for i in 4000:
+		counts[Genetics.pick_mutation(s, "variety", rng)] += 1
+	assert_between(counts["galaxy"], 850, 1150, "about 1 in 4")
+	assert_between(counts["albino"], 2850, 3150)
+
+
+func test_without_weights_mutations_are_equally_likely() -> void:
+	var s := _variety_species(0.0, 1.0)
+	s["traits"]["variety"]["mutations"] = ["albino", "orange"]
+	var rng := F.rng(5)
+	var albino := 0
+	for i in 2000:
+		if Genetics.pick_mutation(s, "variety", rng) == "albino":
+			albino += 1
+	assert_between(albino, 900, 1100)

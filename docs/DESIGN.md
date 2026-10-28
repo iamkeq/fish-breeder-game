@@ -383,6 +383,11 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-10-28 (v0.7.0):** four new mutation-only varieties (Lavender,
+  Platinum, Galaxy, Dragon). `traits.variety.mutation_weights` weights the pick
+  (3/3/2/2/1/1); the overall chance is still `mutation_chance` (3%).
+  `sprites.placeholders` draws a variety without art as a tinted copy of
+  another (`base` + `tint`) until its sprite exists.
 - **2026-10-28 (v0.6.2):** fry grow in holding as well as in breeding tanks.
   Holding is fed as one more group (1 food portion per night when it has fry).
 - **2026-10-28 (v0.6.1):** pricing reverted to `price_multiplier` 1.3.

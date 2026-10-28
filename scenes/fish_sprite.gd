@@ -564,6 +564,10 @@ func _update_sprite(delta: float) -> void:
 	var c := cos(_phi)
 	var facing_right := c >= 0.0
 	var look := fish.get_trait(data["trait"])
+	# Varieties without their own art yet use a tinted copy of another variety.
+	var placeholder: Dictionary = data.get("placeholders", {}).get(look, {}) if not data["varieties"].has(look) else {}
+	if not placeholder.is_empty():
+		look = placeholder["base"]
 	var rect: Array = data["varieties"].get(look, data["varieties"].values()[0])
 	var tail_right := false
 	var animated := false
@@ -598,4 +602,5 @@ func _update_sprite(delta: float) -> void:
 	_sprite.scale = Vector2(squash, stretch) * float(data.get("scale", 1.0)) * sex_scale * growth
 	_sprite.rotation = _tilt * (1.0 if facing_right else -1.0)
 	_sprite.position = Vector2(0, sin(_wiggle * 0.25) * 1.2)
+	_sprite.modulate = Color(placeholder.get("tint", "#ffffff")) if not placeholder.is_empty() else Color.WHITE
 	_sprite.modulate.a = lerpf(0.8, 1.0, _grown())

@@ -15,7 +15,7 @@ func _ready() -> void:
 	var next_id := 1
 
 	# Every variety, males on even cells and females on odd ones.
-	var cell := Vector2(205, 92)
+	var cell := Vector2(205, 82)
 	for i in values.size():
 		var at := Vector2(80 + (i % COLUMNS) * cell.x, 50 + (i / COLUMNS) * cell.y)
 		var f := _fish(next_id, Fish.MALE if i % 2 == 0 else Fish.FEMALE, {trait_name: values[i]}, species)

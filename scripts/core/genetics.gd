@@ -23,6 +23,24 @@ static func is_mutation(species: Dictionary, trait_name: String, value: String) 
 	return value in mutation_pool(species, trait_name)
 
 
+## Which mutation a baby gets, once it has mutated. Uses the trait's
+## "mutation_weights" if given (higher = more likely), otherwise all equal.
+static func pick_mutation(species: Dictionary, trait_name: String, rng: RandomNumberGenerator) -> String:
+	var pool := mutation_pool(species, trait_name)
+	var weights: Dictionary = species["traits"][trait_name].get("mutation_weights", {})
+	if weights.is_empty():
+		return pool[rng.randi_range(0, pool.size() - 1)]
+	var total := 0.0
+	for v in pool:
+		total += float(weights.get(v, 1.0))
+	var roll := rng.randf() * total
+	for v in pool:
+		roll -= float(weights.get(v, 1.0))
+		if roll < 0.0:
+			return v
+	return pool[-1]
+
+
 ## The value a recipe makes from these two parent values (either order), or "".
 static func recipe_child(species: Dictionary, trait_name: String, a: String, b: String) -> String:
 	for recipe in species.get("recipes", {}).get(trait_name, []):
@@ -36,7 +54,7 @@ static func inherit_trait(species: Dictionary, trait_name: String, mother_value:
 		father_value: String, rng: RandomNumberGenerator) -> String:
 	var pool := mutation_pool(species, trait_name)
 	if not pool.is_empty() and rng.randf() < float(species["mutation_chance"]):
-		return pool[rng.randi_range(0, pool.size() - 1)]
+		return pick_mutation(species, trait_name, rng)
 	var child := recipe_child(species, trait_name, mother_value, father_value)
 	if child != "" and rng.randf() < float(species.get("recipe_chance", 0.0)):
 		return child

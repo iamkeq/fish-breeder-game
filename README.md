@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.6.2** (see the [changelog](CHANGELOG.md)).
+Current version: **0.7.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -59,8 +59,9 @@ There are 24 guppy varieties. Each baby takes mum's or dad's variety, but:
 - **Recipes:** some pairs can make something new (about 30% of the time).
   Try **Red × Yellow**, **Red × Blue** or **Black × White** to start.
   There are 15 recipes to discover.
-- **Mutations:** very rarely a fry is born **Albino** or **Glass**, the most
-  valuable varieties of all. They're never sold in the Market.
+- **Mutations:** 3% of fry are born a mutation-only variety: **Albino** or
+  **Glass** most often, **Lavender** or **Platinum** less often, and very
+  rarely **Galaxy** or **Dragon**, the most valuable fish in the game. They're never sold in the Market.
 
 The end-of-day summary celebrates new varieties and mutations.
 
@@ -87,7 +88,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.6.2
+.\tools\publish_web.ps1 0.7.0
 ```
 
 ## Project layout
