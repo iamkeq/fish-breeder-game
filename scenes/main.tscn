@@ -91,6 +91,12 @@ layout_mode = 2
 toggle_mode = true
 text = "Back room"
 
+[node name="OrdersButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
+unique_name_in_owner = true
+layout_mode = 2
+toggle_mode = true
+text = "Orders"
+
 [node name="RestockButton" type="Button" parent="Margin/Layout/TopBarPanel/TopBar"]
 unique_name_in_owner = true
 layout_mode = 2

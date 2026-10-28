@@ -31,11 +31,14 @@ static func _compact(b: BaseButton) -> void:
 		b.add_theme_color_override(color_name, Color.WHITE)
 
 
-static func location_name(location: String) -> String:
+static func location_name(location: String, state: GameState = null) -> String:
 	if location == Fish.DISPLAY:
 		return "Display tank"
 	if location == Fish.HOLDING:
 		return "Holding"
+	if Fish.is_order(location):
+		var i := state.order_index_by_id(Fish.order_id(location)) if state != null else -1
+		return "Order tank for %s" % state.orders[i].get("customer", "a customer") if i >= 0 else "Order tank"
 	return "Breeding tank %d" % (Fish.breeding_index(location) + 1)
 
 
@@ -52,12 +55,15 @@ static func move_menu(state: GameState, f: Fish, on_move: Callable, text: String
 	var places := [Fish.DISPLAY]
 	for i in state.breeding_tanks.size():
 		places.append(Fish.breeding_location(i))
+	for order in state.orders:
+		if order.get("tank") != null:
+			places.append(Fish.order_location(order["id"]))
 	places.append(Fish.HOLDING)
 	for place in places:
 		if place == f.location:
 			continue
 		var index := popup.item_count
-		popup.add_item(location_name(place), index)
+		popup.add_item(location_name(place, state), index)
 		popup.set_item_metadata(index, place)
 		var blocker := state.move_blocker(f.id, place)
 		popup.set_item_disabled(index, blocker != "")

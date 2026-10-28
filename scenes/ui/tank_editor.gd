@@ -28,6 +28,10 @@ var _selected_label: Label
 var _remove_button: Button
 var _items: VBoxContainer
 var _status: Label
+var _title: Label
+## The order's request, shown when editing an order tank.
+var _request: Label
+var _fish_box: VBoxContainer
 
 
 func _ready() -> void:
@@ -38,9 +42,17 @@ func _ready() -> void:
 	Game.changed.connect(func(): if visible: _refresh())
 
 
-func open() -> void:
-	if visible or Game.state.tank_at(location) == null:
+## Opens the editor on a tank: Fish.DISPLAY, or an order tank (Fish.order_location(id)).
+func open(p_location: String = Fish.DISPLAY) -> void:
+	if visible or Game.state.tank_at(p_location) == null:
 		return
+	location = p_location
+	_tank_view.set_location(location)
+	var order := _order()
+	_title.text = "Aquascaping · Display tank" if order.is_empty() 		else "Order tank for %s" % order.get("customer", "a customer")
+	_request.visible = not order.is_empty()
+	if not order.is_empty():
+		_request.text = "They asked for: " + RequestGenerator.describe(order, Game.db.species[order["species_id"]])
 	visible = true
 	_status.text = "Pick a spot, then place something from your stock."
 	Game.push_pause()
@@ -75,10 +87,10 @@ func _build() -> void:
 
 	var header := HBoxContainer.new()
 	header.add_theme_constant_override("separation", 18)
-	var title := Label.new()
-	title.text = "Aquascaping · Display tank"
-	title.add_theme_font_size_override("font_size", 24)
-	header.add_child(title)
+	_title = Label.new()
+	_title.text = "Aquascaping · Display tank"
+	_title.add_theme_font_size_override("font_size", 24)
+	header.add_child(_title)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(spacer)
@@ -91,6 +103,11 @@ func _build() -> void:
 	close_button.pressed.connect(close)
 	header.add_child(close_button)
 	box.add_child(header)
+	_request = Label.new()
+	_request.add_theme_font_size_override("font_size", 15)
+	_request.modulate = Color(0.3, 0.45, 0.4)
+	_request.visible = false
+	box.add_child(_request)
 
 	var body := HBoxContainer.new()
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -143,6 +160,10 @@ func _build() -> void:
 	_remove_button.text = "Remove (back to stock)"
 	_remove_button.pressed.connect(_on_remove)
 	middle.add_child(_remove_button)
+	middle.add_child(_section_label("Fish"))
+	_fish_box = VBoxContainer.new()
+	_fish_box.add_theme_constant_override("separation", 4)
+	middle.add_child(_fish_box)
 	body.add_child(middle)
 
 	# Right: what you can place.
@@ -205,7 +226,16 @@ func _refresh() -> void:
 	var state := Game.state
 	var weights: Dictionary = Game.db.economy["aesthetics"]
 	_looks.text = "Looks %d/100" % state.tank_aesthetics(t)
-	_value.text = "Worth $%d" % state.tank_price(t, false)
+	var order := _order()
+	if order.is_empty():
+		_value.text = "Worth $%d" % state.tank_price(t, false)
+	else:
+		var p := state.preview_delivery(state.order_index_by_id(order["id"]), true)
+		_value.text = "Payout $%d" % p["payout"]
+		_value.tooltip_text = "Tank $%d + bonus $%d (match %d%%, fish %d%%, looks %d%%)" % [
+			p["tank_value"], p["bonus"], roundi(p["match"] * 100), roundi(p["quality"] * 100), roundi(p["looks"] * 100)]
+		_value.mouse_filter = Control.MOUSE_FILTER_PASS
+	_refresh_fish(t)
 	var parts := Aesthetics.breakdown(t, Game.db.items, weights)
 	var bits := PackedStringArray()
 	for key in BREAKDOWN_NAMES:
@@ -326,3 +356,52 @@ func _section_label(text: String) -> Label:
 	l.text = text
 	l.add_theme_font_size_override("font_size", 18)
 	return l
+
+
+
+## The order this editor is working on ({} for the display tank).
+func _order() -> Dictionary:
+	var i := Game.state.order_index_by_id(Fish.order_id(location))
+	return Game.state.orders[i] if i >= 0 else {}
+
+
+## Fish in this tank (with a button to send each back to holding) and a menu
+## to add adults from holding, the display tank or a breeding tank.
+func _refresh_fish(t: Tank) -> void:
+	for child in _fish_box.get_children():
+		child.queue_free()
+	var state := Game.state
+	for f in state.tank_fish(t):
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		var name := Label.new()
+		name.text = "%s %s %s" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars)]
+		name.add_theme_font_size_override("font_size", 13)
+		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name)
+		var out := UI.small_button("Remove", "Back to the holding tanks.")
+		out.pressed.connect(func(): Game.move_fish(f.id, Fish.HOLDING))
+		row.add_child(out)
+		_fish_box.add_child(row)
+	var add := MenuButton.new()
+	add.text = "Add fish ▾  (%d/%d)" % [t.fish_ids.size(), t.capacity]
+	add.flat = false
+	add.focus_mode = Control.FOCUS_NONE
+	UI._compact(add)
+	var popup := add.get_popup()
+	var candidates := []
+	for f in state.inventory.fish_list():
+		if f.location != location and state.is_adult(f) and not Fish.is_order(f.location):
+			candidates.append(f)
+	for f in candidates:
+		var index := popup.item_count
+		popup.add_item("%s %s %s  (%s)" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars),
+			UI.location_name(f.location, state).to_lower()], index)
+		popup.set_item_metadata(index, f.id)
+		var blocker := state.move_blocker(f.id, location)
+		popup.set_item_disabled(index, blocker != "")
+		popup.set_item_tooltip(index, blocker)
+	add.disabled = candidates.is_empty() or not t.has_room_for_fish()
+	add.tooltip_text = "No adult fish to add." if candidates.is_empty() else ("The tank is full." if not t.has_room_for_fish() else "")
+	popup.id_pressed.connect(func(id: int): Game.move_fish(popup.get_item_metadata(popup.get_item_index(id)), location))
+	_fish_box.add_child(add)

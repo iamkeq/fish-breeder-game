@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.8.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.9.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -26,7 +26,9 @@ Current version: **0.8.0** (see the [changelog](CHANGELOG.md)).
   whole display tank. Sell, or say "Not today" (there's never a penalty).
   - Better and rarer fish on display bring customers in more often.
   - Some customers have a **request** ("a planted tank with 2 orange guppies").
-    Accept it, build it, then deliver it for the tank's value plus a bonus.
+    Accept it, then build it in its own tank in the **Orders room** (or hand
+    over your display tank instead) and deliver it for the tank's value plus
+    a bonus.
   - If they want something you don't have, you can **order it in** for them
     at 10% off and hand it over later.
   - The counter shows what you paid for a fish and what they'll pay. If
@@ -90,7 +92,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.8.0
+.\tools\publish_web.ps1 0.9.0
 ```
 
 ## Project layout

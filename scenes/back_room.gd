@@ -41,6 +41,9 @@ func refresh() -> void:
 	for i in state.breeding_tanks.size():
 		_add_section(Fish.breeding_location(i), "Breeding tank %d" % (i + 1))
 	_add_section(Fish.DISPLAY, "Display tank (shop floor)")
+	for order in state.orders:
+		if order.get("tank") != null:
+			_add_section(Fish.order_location(order["id"]), "Order tank for %s" % order.get("customer", "a customer"))
 	_add_section(Fish.HOLDING, "Holding tanks")
 
 
@@ -189,7 +192,7 @@ func _on_move(to: String, fish_id: int) -> void:
 	var f: Fish = Game.state.inventory.get_fish(fish_id)
 	var name := Game.state.fish_display_name(f) if Game.state.is_adult(f) else "fry"
 	if Game.move_fish(fish_id, to):
-		_status.text = "Moved the %s to %s." % [name, UI.location_name(to).to_lower()]
+		_status.text = "Moved the %s to the %s." % [name, UI.location_name(to, Game.state).to_lower()]
 
 
 ## Two clicks to sell, so a stray click never loses a fish.

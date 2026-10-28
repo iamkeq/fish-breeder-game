@@ -2,6 +2,28 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.9.0] - 2026-10-28
+
+### Added
+- **Orders room** (top bar, shows how many orders you have). Each accepted
+  special order gets its own column with the request, and its own **order
+  tank** that you build separately from your display tank:
+  - **Set up order tank** uses an empty tank from your stock (buy more in the
+    Market's Supplies tab).
+  - **Edit tank** opens the tank editor on that order's tank, with the
+    customer's request at the top and a live payout preview.
+  - **Deliver** hands that tank and its fish to the customer.
+  - **Cancel order** is still free: a started tank, its decorations and its
+    fish all go back to your stock.
+- The tank editor has a **Fish** section: add adult fish from holding, the
+  display tank or a breeding tank, or send them back to holding.
+- Order tanks show up in the Move menu and the back room fish list. Their fish
+  are reserved, so walk-in customers can't buy them.
+
+### Changed
+- At the counter, each order offers **Build in Orders room** or **Give display
+  tank → $X** (delivering your display tank is still an option).
+
 ## [0.8.0] - 2026-10-28
 
 ### Added

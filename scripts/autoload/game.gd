@@ -151,8 +151,9 @@ func decline_customer() -> void:
 	customer_changed.emit()
 
 
-func deliver_order(order_index: int) -> Dictionary:
-	var result := state.deliver_order(order_index)
+## Delivers an order: its own order tank, or (from_order_tank = false) the display tank.
+func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionary:
+	var result := state.deliver_order(order_index, from_order_tank)
 	if not result.is_empty():
 		changed.emit()
 	return result
@@ -241,3 +242,7 @@ func set_restocking(on: bool) -> bool:
 		customer_changed.emit()
 		clock_ticked.emit()
 	return ok
+
+
+func start_order_tank(order_index: int) -> bool:
+	return _changed_if(state.start_order_tank(order_index))

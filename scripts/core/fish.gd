@@ -27,6 +27,23 @@ static func breeding_index(location: String) -> int:
 static func is_breeding(location: String) -> bool:
 	return breeding_index(location) >= 0
 
+
+## Location of the order tank for customer order `order_id`: "order1", "order2", ...
+static func order_location(order_id: int) -> String:
+	return "order%d" % order_id
+
+
+## Which order a location's tank belongs to, or -1 if it isn't an order tank.
+static func order_id(location: String) -> int:
+	var suffix := location.trim_prefix("order")
+	if suffix != location and suffix.is_valid_int():
+		return int(suffix)
+	return -1
+
+
+static func is_order(location: String) -> bool:
+	return order_id(location) >= 0
+
 const MALE := "male"
 const FEMALE := "female"
 

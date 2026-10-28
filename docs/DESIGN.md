@@ -383,6 +383,14 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-10-28 (v0.9.0), order tanks:** accepted orders get a stable `id`, a
+  `customer` name and an optional `tank` (an order tank at location
+  `Fish.order_location(id)`, set up from a spare tank item).
+  `deliver_order(i, from_order_tank)` delivers either that tank or the display
+  tank (an unused order tank then goes back to stock). Cancelling dismantles the
+  order tank back into stock. Order-tank fish aren't for sale and don't count
+  toward shop appeal. The UI is `scenes/orders_room.gd`, and the tank editor
+  now takes a location and has a Fish section.
 - **2026-10-28 (v0.8.0), breeding book:** `GameState.discovered_recipes` /
   `discovered_mutations` hold the first day each recipe (keyed by trait + sorted
   parents) or mutation was bred. Entries are added in `_night_breed` and listed

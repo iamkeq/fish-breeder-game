@@ -893,3 +893,96 @@ func test_buying_does_not_fill_in_the_book() -> void:
 	gs.buy_strain("red_delta", Fish.MALE)
 	for m in gs.book_mutations("guppy"):
 		assert_false(m["discovered"])
+
+
+# --- Order tanks (build a request separately from the display tank)
+
+func _order() -> int:
+	gs.accept_request({"theme": "planted", "fish_count": 1, "base_reward": 100, "species_id": "guppy",
+		"constraints": [{"trait": "sex", "value": Fish.MALE, "min_count": 1}]})
+	return gs.orders.size() - 1
+
+
+func test_orders_get_stable_ids() -> void:
+	var a := _order()
+	var b := _order()
+	var id_b: int = gs.orders[b]["id"]
+	assert_ne(gs.orders[a]["id"], id_b)
+	gs.cancel_order(a)
+	assert_eq(gs.order_index_by_id(id_b), 0, "still findable after the first order is gone")
+	assert_eq(Fish.order_id(Fish.order_location(id_b)), id_b)
+
+
+func test_order_tank_uses_a_spare_tank() -> void:
+	var i := _order()
+	assert_eq(gs.inventory.count("tank"), 1)
+	assert_true(gs.start_order_tank(i))
+	assert_eq(gs.inventory.count("tank"), 0)
+	assert_ne(gs.order_tank(i), null)
+	assert_eq(gs.tank_at(Fish.order_location(gs.orders[i]["id"])), gs.order_tank(i))
+	assert_false(gs.start_order_tank(i), "only one tank per order")
+
+
+func test_order_tank_needs_a_tank_in_stock() -> void:
+	gs.inventory.remove("tank")
+	var i := _order()
+	assert_eq(gs.order_tank_blocker(i), "You need an empty tank. Buy one in the Market (Supplies).")
+	assert_false(gs.start_order_tank(i))
+
+
+func test_fish_go_into_order_tanks_but_fry_cannot() -> void:
+	var i := _order()
+	var loc := Fish.order_location(gs.orders[i]["id"])
+	assert_eq(gs.move_blocker(_male().id, loc), "Set up this order's tank first.")
+	gs.start_order_tank(i)
+	assert_true(gs.move_fish(_male().id, loc))
+	var fry := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	assert_eq(gs.move_blocker(fry.id, loc), "Fry stay in the back room until they grow up.")
+
+
+func test_order_tank_fish_are_not_for_sale() -> void:
+	var i := _order()
+	gs.start_order_tank(i)
+	gs.move_fish(_male().id, Fish.order_location(gs.orders[i]["id"]))
+	assert_false(_male() in gs.fish_for_sale(), "reserved for the order")
+
+
+func test_deliver_the_order_tank_and_keep_the_display() -> void:
+	var i := _order()
+	gs.start_order_tank(i)
+	var m := _male()
+	gs.move_fish(m.id, Fish.order_location(gs.orders[i]["id"]))
+	gs.place_item(gs.order_tank(i), 2, "fern")
+	var preview := gs.preview_delivery(i, true)
+	assert_eq(preview["count"], 1.0)
+	var r := gs.deliver_order(i, true)
+	assert_eq(r["payout"], preview["payout"])
+	assert_eq(gs.money, 100 + r["payout"])
+	assert_eq(gs.orders.size(), 0)
+	assert_false(gs.inventory.has_fish(m.id), "the fish went with the tank")
+	assert_ne(gs.display_tank, null, "the display tank is untouched")
+
+
+func test_deliver_display_tank_still_works_and_returns_a_started_order_tank() -> void:
+	var i := _order()
+	gs.start_order_tank(i)
+	gs.place_item(gs.order_tank(i), 0, "stone")
+	var stones := gs.inventory.count("stone")
+	var r := gs.deliver_order(i, false)
+	assert_false(r.is_empty())
+	assert_eq(gs.display_tank, null, "the display tank was handed over")
+	assert_eq(gs.inventory.count("tank"), 1, "the unused order tank went back to stock")
+	assert_eq(gs.inventory.count("stone"), stones + 1)
+
+
+func test_cancel_returns_the_order_tank_items_and_fish() -> void:
+	var i := _order()
+	gs.start_order_tank(i)
+	var m := _male()
+	gs.move_fish(m.id, Fish.order_location(gs.orders[i]["id"]))
+	gs.set_substrate(gs.order_tank(i), "sand")
+	assert_true(gs.cancel_order(i))
+	assert_eq(gs.inventory.count("tank"), 1)
+	assert_eq(gs.inventory.count("sand"), 1)
+	assert_eq(m.location, Fish.HOLDING)
+	assert_eq(gs.money, 100, "no penalty")

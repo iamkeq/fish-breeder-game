@@ -23,6 +23,8 @@ var breeding_tank: Tank:
 var clock: GameClock
 ## Accepted customer requests (Dictionaries from RequestGenerator). No deadlines.
 var orders: Array = []
+## Each accepted order gets an id (its order tank lives at Fish.order_location(id)).
+var _next_order_id: int = 1
 ## The customer at the counter ({} when nobody is there). See Customers.make_walk_in.
 var customer: Dictionary = {}
 ## In-game minutes until the next customer walks in.
@@ -105,6 +107,9 @@ func tank_at(location: String) -> Tank:
 	var index := Fish.breeding_index(location)
 	if index >= 0 and index < breeding_tanks.size():
 		return breeding_tanks[index]
+	var order_index := order_index_by_id(Fish.order_id(location))
+	if order_index >= 0:
+		return orders[order_index].get("tank")
 	return null
 
 
@@ -340,12 +345,16 @@ func move_blocker(fish_id: int, to: String) -> String:
 		return "That fish isn't yours."
 	if f.location == to:
 		return "Already there."
-	if to == Fish.DISPLAY and not is_adult(f):
+	if (to == Fish.DISPLAY or Fish.is_order(to)) and not is_adult(f):
 		return "Fry stay in the back room until they grow up."
 	var target := tank_at(to)
 	if to != Fish.HOLDING:
 		if target == null:
-			return "There's no tank on display." if to == Fish.DISPLAY else "You don't have that breeding tank yet."
+			if to == Fish.DISPLAY:
+				return "There's no tank on display."
+			if Fish.is_order(to):
+				return "Set up this order's tank first."
+			return "You don't have that breeding tank yet."
 		if not target.has_room_for_fish():
 			return "That tank is full (%d fish)." % target.capacity
 	return ""
@@ -389,34 +398,108 @@ func can_accept_request() -> bool:
 func accept_request(request: Dictionary) -> bool:
 	if not can_accept_request():
 		return false
+	request["id"] = _next_order_id
+	_next_order_id += 1
+	request["tank"] = null
 	orders.append(request)
 	return true
 
 
-## What delivering the display tank to an order would pay, without doing it.
-func preview_delivery(order_index: int) -> Dictionary:
-	if display_tank == null or order_index < 0 or order_index >= orders.size():
+func order_index_by_id(order_id: int) -> int:
+	for i in orders.size():
+		if int(orders[i].get("id", -1)) == order_id:
+			return i
+	return -1
+
+
+## The order's own tank (built separately from the display tank), or null.
+func order_tank(order_index: int) -> Tank:
+	if order_index < 0 or order_index >= orders.size():
+		return null
+	return orders[order_index].get("tank")
+
+
+## An empty tank item you have in stock, or "".
+func spare_tank_item() -> String:
+	for item_id in db.items_in_category("tank"):
+		if inventory.count(item_id) > 0:
+			return item_id
+	return ""
+
+
+## Why an order tank can't be set up, or "" if it can.
+func order_tank_blocker(order_index: int) -> String:
+	if order_index < 0 or order_index >= orders.size():
+		return "No such order."
+	if order_tank(order_index) != null:
+		return "This order already has a tank."
+	if spare_tank_item() == "":
+		return "You need an empty tank. Buy one in the Market (Supplies)."
+	return ""
+
+
+## Sets up a separate tank for this order, using an empty tank from stock.
+func start_order_tank(order_index: int) -> bool:
+	if order_tank_blocker(order_index) != "":
+		return false
+	var item_id := spare_tank_item()
+	inventory.remove(item_id)
+	orders[order_index]["tank"] = _make_tank(item_id)
+	return true
+
+
+## What delivering would pay, without doing it: the order's own tank if
+## `from_order_tank`, otherwise the display tank.
+func preview_delivery(order_index: int, from_order_tank: bool = false) -> Dictionary:
+	if order_index < 0 or order_index >= orders.size():
 		return {}
-	return RequestScoring.score(orders[order_index], display_tank, tank_fish(display_tank),
-		db.items, tank_aesthetics(display_tank), tank_price(display_tank, true), db.economy)
+	var tank := order_tank(order_index) if from_order_tank else display_tank
+	if tank == null:
+		return {}
+	return RequestScoring.score(orders[order_index], tank, tank_fish(tank),
+		db.items, tank_aesthetics(tank), tank_price(tank, true), db.economy)
 
 
-## Hands the display tank (with its fish) to the customer. Returns the score breakdown.
-func deliver_order(order_index: int) -> Dictionary:
-	var result := preview_delivery(order_index)
+## Hands a tank (with its fish) to the customer: the order's own tank, or the
+## display tank. Returns the score breakdown ({} if it couldn't).
+func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionary:
+	var result := preview_delivery(order_index, from_order_tank)
 	if result.is_empty():
 		return {}
+	var order: Dictionary = orders[order_index]
+	if from_order_tank:
+		for f in tank_fish(order["tank"]):
+			inventory.remove_fish(f.id)
+		order["tank"] = null
+	else:
+		_remove_display_tank(true)
+		_dismantle_order_tank(order)  # a half-built order tank goes back to stock
 	orders.remove_at(order_index)
-	_remove_display_tank(true)
 	_earn(result["payout"], "order")
 	return result
 
 
+## No penalty. A started order tank goes back to stock: the tank, its
+## decorations, and its fish (to holding).
 func cancel_order(order_index: int) -> bool:
 	if order_index < 0 or order_index >= orders.size():
 		return false
+	_dismantle_order_tank(orders[order_index])
 	orders.remove_at(order_index)
 	return true
+
+
+func _dismantle_order_tank(order: Dictionary) -> void:
+	var tank: Tank = order.get("tank")
+	if tank == null:
+		return
+	for item_id in tank.placed_item_ids():
+		inventory.add(item_id)
+	if tank.tank_item_id != "":
+		inventory.add(tank.tank_item_id)
+	for f in tank_fish(tank):
+		f.location = Fish.HOLDING
+	order["tank"] = null
 
 
 # --- Closed for restock ------------------------------------------------------
@@ -535,7 +618,10 @@ func serve_customer() -> int:
 
 
 func accept_customer_request() -> bool:
-	if customer.get("kind") != "request" or not accept_request(customer["request"]):
+	if customer.get("kind") != "request":
+		return false
+	customer["request"]["customer"] = customer["name"]
+	if not accept_request(customer["request"]):
 		return false
 	_customer_leaves()
 	return true

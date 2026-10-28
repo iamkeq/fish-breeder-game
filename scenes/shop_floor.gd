@@ -4,6 +4,8 @@ extends Control
 
 ## The player wants to open the aquascaping editor for the display tank.
 signal edit_tank_requested
+## The player wants to build an order in the Orders room.
+signal orders_room_requested
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
 const TEXT_WIDTH := 262.0
@@ -323,8 +325,11 @@ func _add_orders() -> void:
 		var buttons := HBoxContainer.new()
 		buttons.add_theme_constant_override("separation", 4)
 		var preview := state.preview_delivery(i)
-		var deliver := UI.small_button("Deliver tank → $%d" % preview["payout"] if not preview.is_empty() else "Deliver tank",
-			"Build the tank on display, then deliver it. Better match, fish and looks = bigger bonus.")
+		var build := UI.small_button("Build in Orders room", "Build this order in its own tank, separate from your display tank.")
+		build.pressed.connect(func(): orders_room_requested.emit())
+		buttons.add_child(build)
+		var deliver := UI.small_button("Give display tank → $%d" % preview["payout"] if not preview.is_empty() else "Give display tank",
+			"Hand over your current display tank instead. Better match, fish and looks = bigger bonus.")
 		deliver.disabled = preview.is_empty()
 		deliver.pressed.connect(_on_deliver.bind(i))
 		buttons.add_child(deliver)
