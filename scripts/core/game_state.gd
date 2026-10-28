@@ -189,6 +189,7 @@ func buy_strain(strain_id: String, sex: String) -> Fish:
 	for trait_name in strain["traits"]:
 		f.traits[trait_name] = strain["traits"][trait_name]
 	f.strain_id = strain_id
+	f.paid = cost
 	f.location = Fish.HOLDING
 	_spend(cost)
 	return inventory.add_fish(f)
@@ -559,15 +560,36 @@ func backorder_customer() -> bool:
 	return true
 
 
-## The fish you'd hand over for a strain back-order: a matching adult in holding,
-## then on display. Never taken from the breeding tank.
+## The fish you'd hand over for a fish back-order: a matching adult in holding,
+## then on display. Strain wishes never take fish from breeding tanks. Breed
+## orders ("traits") can also take a grown fry from a breeding tank, but never
+## one of that tank's current breeding pair, nor the fish you chose to keep.
 func backorder_fish(order: Dictionary) -> Fish:
-	var strain: Dictionary = db.strains[order["strain_id"]]
-	for location in [Fish.HOLDING, Fish.DISPLAY]:
-		for f in inventory.fish_list(location):
-			if Customers.matches_strain(f, strain, order["sex"], species_of(f)):
+	var candidates: Array = inventory.fish_list(Fish.HOLDING) + inventory.fish_list(Fish.DISPLAY)
+	if order.has("traits"):
+		for i in breeding_tanks.size():
+			var pair := breeding_pair(i)
+			for f in tank_fish(breeding_tanks[i]):
+				if not f in pair:
+					candidates.append(f)
+	for f in candidates:
+		if f.id == int(order.get("keep_id", -1)):
+			continue
+		if order.has("traits"):
+			if _matches_breed_order(f, order):
 				return f
+		elif Customers.matches_strain(f, db.strains[order["strain_id"]], order["sex"], species_of(f)):
+			return f
 	return null
+
+
+func _matches_breed_order(f: Fish, order: Dictionary) -> bool:
+	if f.species_id != order["species_id"] or f.sex != order["sex"] or not is_adult(f):
+		return false
+	for trait_name in order["traits"]:
+		if f.get_trait(trait_name) != order["traits"][trait_name]:
+			return false
+	return true
 
 
 ## Why a back-order can't be handed over yet, or "" if it can.
@@ -577,9 +599,47 @@ func backorder_blocker(index: int) -> String:
 	var order: Dictionary = backorders[index]
 	if order.has("item_id"):
 		return "" if inventory.count(order["item_id"]) > 0 else "Not in stock yet. Buy it in the Market."
+	if day < int(order.get("due_day", 0)):
+		return "They'll come back for it on Day %d." % order["due_day"]
 	if backorder_fish(order) == null:
+		if order.has("traits"):
+			return "No matching adult yet. Breed one (the breeding pair itself is never handed over)."
 		return "No matching fish yet (holding or display). Buy or breed one."
 	return ""
+
+
+# --- Breed-to-order: keep your stock, breed one for the customer ----------------
+
+## What you paid for a fish, if anything (bred fish are free).
+func fish_paid(f: Fish) -> int:
+	return f.paid
+
+
+## True when the customer wants one of your fish and selling it now would be
+## below what you paid, so you can offer to breed them one instead.
+func customer_can_breed_order() -> bool:
+	if customer.get("kind") != "fish" or not can_backorder():
+		return false
+	var f := inventory.get_fish(customer["fish_id"])
+	return f != null and is_adult(f) and customer_price() < f.paid
+
+
+## Promise the customer a fish like the one they asked for (same look and sex),
+## bred by you. They pay the price they were quoted when they collect it in
+## 2–3 days. You keep the original fish.
+func breed_order_for_customer() -> bool:
+	if not customer_can_breed_order():
+		return false
+	var f := inventory.get_fish(customer["fish_id"])
+	var wait: Array = db.economy["backorders"]["breed_wait_days"]
+	backorders.append({
+		"name": customer["name"], "species_id": f.species_id, "sex": f.sex,
+		"keep_id": f.id,  # the fish you chose to keep is never handed over
+		"traits": f.traits.duplicate(), "price": customer_price(),
+		"due_day": day + rng.randi_range(int(wait[0]), int(wait[1])),
+	})
+	_customer_leaves()
+	return true
 
 
 func fulfil_backorder(index: int) -> int:

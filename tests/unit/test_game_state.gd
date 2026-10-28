@@ -688,3 +688,85 @@ func test_breeding_fish_counts_every_tank_for_appeal() -> void:
 	gs.buy_breeding_tank()
 	gs.move_fish(_male().id, "breeding2")
 	assert_eq(gs.breeding_fish().size(), 1)
+
+
+# --- Breed-to-order
+
+func _koi_customer() -> Fish:
+	# A bought 4-star red-delta (cost 51) that a customer only pays 34 for.
+	gs.money = 500
+	var f := gs.buy_strain("red_delta", Fish.FEMALE)
+	gs.move_fish(f.id, Fish.DISPLAY)
+	gs.customer = {"kind": "fish", "fish_id": f.id, "name": "Priya", "waited": 0.0, "patience": 60.0}
+	return f
+
+
+func test_bought_fish_remember_what_you_paid() -> void:
+	gs.money = 500
+	var f := gs.buy_strain("red_delta", Fish.MALE)
+	assert_eq(gs.fish_paid(f), 51)
+	assert_eq(gs.fish_paid(_male()), 0, "starting and bred fish cost nothing")
+
+
+func test_breed_option_only_when_selling_would_lose_money() -> void:
+	var f := _koi_customer()
+	assert_eq(gs.customer_price(), 34)
+	assert_true(gs.customer_can_breed_order(), "34 is less than the 51 paid")
+	gs.customer = {"kind": "fish", "fish_id": _male().id, "name": "Priya", "waited": 0.0, "patience": 60.0}
+	assert_false(gs.customer_can_breed_order(), "a free fish is never sold at a loss")
+	gs.customer = {"kind": "item", "item_id": "fern", "name": "Priya", "waited": 0.0, "patience": 60.0}
+	assert_false(gs.customer_can_breed_order())
+	assert_true(gs.inventory.has_fish(f.id))
+
+
+func test_breed_order_keeps_your_fish_and_waits_two_to_three_days() -> void:
+	var f := _koi_customer()
+	assert_true(gs.breed_order_for_customer())
+	assert_true(gs.customer.is_empty())
+	assert_true(gs.inventory.has_fish(f.id), "you keep the original to breed from")
+	var order: Dictionary = gs.backorders[0]
+	assert_eq(order["price"], 34)
+	assert_eq(order["sex"], Fish.FEMALE)
+	assert_eq(order["traits"], {"body_color": "red", "tail_shape": "delta", "pattern": "plain"})
+	assert_between(order["due_day"], gs.day + 2, gs.day + 3)
+	assert_eq(gs.backorder_blocker(0), "They'll come back for it on Day %d." % order["due_day"])
+
+
+func test_breed_order_is_collected_with_a_matching_bred_fish() -> void:
+	var original := _koi_customer()
+	gs.breed_order_for_customer()
+	gs.day = gs.backorders[0]["due_day"]
+	assert_ne(gs.backorder_blocker(0), "", "the fish you kept doesn't count")
+	# Breed: the kept fish and a male make a pair; a grown fry in the same tank matches.
+	gs.move_fish(original.id, Fish.BREEDING)
+	gs.move_fish(_male().id, Fish.BREEDING)
+	var bred := gs.inventory.add_fish(F.fish(Fish.FEMALE, "red", 2, 3, "delta"))
+	gs.move_fish(bred.id, Fish.BREEDING)
+	assert_eq(gs.backorder_fish(gs.backorders[0]), bred, "the grown fry, not the breeding mother")
+	var money := gs.money
+	assert_eq(gs.fulfil_backorder(0), 34)
+	assert_eq(gs.money, money + 34)
+	assert_false(gs.inventory.has_fish(bred.id))
+	assert_true(gs.inventory.has_fish(original.id))
+
+
+func test_breeding_pair_is_never_handed_over() -> void:
+	var original := _koi_customer()
+	gs.breed_order_for_customer()
+	gs.day = gs.backorders[0]["due_day"]
+	gs.move_fish(original.id, Fish.BREEDING)
+	gs.move_fish(_male().id, Fish.BREEDING)
+	assert_eq(gs.backorder_fish(gs.backorders[0]), null)
+	assert_eq(gs.backorder_blocker(0), "No matching adult yet. Breed one (the breeding pair itself is never handed over).")
+
+
+func test_wrong_sex_or_look_does_not_match() -> void:
+	_koi_customer()
+	gs.breed_order_for_customer()
+	gs.day = gs.backorders[0]["due_day"]
+	for f in gs.inventory.fish_list(Fish.DISPLAY):
+		gs.move_fish(f.id, Fish.HOLDING)
+		gs.sell_fish_wholesale(f.id)
+	gs.inventory.add_fish(F.fish(Fish.MALE, "red", 3, 3, "delta"))
+	gs.inventory.add_fish(F.fish(Fish.FEMALE, "red", 3, 3, "round"))
+	assert_eq(gs.backorder_fish(gs.backorders[0]), null)

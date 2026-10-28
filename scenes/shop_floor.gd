@@ -93,7 +93,9 @@ func _display_card(f: Fish) -> Control:
 	box.add_theme_constant_override("separation", 2)
 	var top := HBoxContainer.new()
 	top.add_child(UI.fish_preview(f, state.species_of(f), Vector2(64, 34), 0.45))
-	var name := _label("%s %s\n%s  $%d" % [UI.sex_symbol(f), state.fish_display_name(f), UI.stars_text(f.stars), state.fish_price(f)])
+	var paid := "  (paid $%d)" % f.paid if f.paid > 0 else ""
+	var name := _label("%s %s\n%s  $%d%s" % [UI.sex_symbol(f), state.fish_display_name(f),
+		UI.stars_text(f.stars), state.fish_price(f), paid])
 	name.add_theme_font_size_override("font_size", 12)
 	top.add_child(name)
 	box.add_child(top)
@@ -151,6 +153,10 @@ func _add_customer_card() -> void:
 				var card := HBoxContainer.new()
 				card.add_child(UI.fish_preview(f, state.species_of(f), Vector2(90, 46)))
 				_counter.add_child(card)
+				text += "\n" + _cost_line(f, who, state.customer_price())
+				if state.customer_can_breed_order():
+					var wait: Array = Game.db.economy["backorders"]["breed_wait_days"]
+					text += "\nOr keep yours and breed them one: they'll come back in %d–%d days." % [wait[0], wait[1]]
 		"item":
 			text = "%s would like to buy some %s." % [who, Game.db.items[c["item_id"]]["name"]]
 		"tank":
@@ -205,8 +211,35 @@ func _add_customer_card() -> void:
 				sell.tooltip_text = blocker
 				sell.pressed.connect(_on_serve)
 				buttons.add_child(sell)
+			if state.customer_can_breed_order():
+				buttons.add_child(_breed_order_button())
 			buttons.add_child(_decline_button("Not today"))
 	_counter.add_child(buttons)
+
+
+## "You paid $44 · Priya will pay $30 (a $14 loss)."
+func _cost_line(f: Fish, who: String, offer: int) -> String:
+	var paid := Game.state.fish_paid(f)
+	if paid <= 0:
+		return "You bred this one, so $%d is all profit." % offer if f.strain_id == "" \
+			else "It cost you nothing. %s will pay $%d." % [who, offer]
+	var diff := offer - paid
+	var outcome := "breaking even" if diff == 0 else ("a $%d profit" % diff if diff > 0 else "a $%d loss" % -diff)
+	return "You paid $%d · %s will pay $%d (%s)." % [paid, who, offer, outcome]
+
+
+func _breed_order_button() -> Button:
+	var b := Button.new()
+	b.text = "Breed one"
+	var wait: Array = Game.db.economy["backorders"]["breed_wait_days"]
+	b.tooltip_text = "Keep your fish to breed from. They'll come back in %d–%d days for one like it, at the same price." % [wait[0], wait[1]]
+	b.pressed.connect(func():
+		var who: String = Game.state.customer["name"]
+		if Game.breed_order_for_customer():
+			var order: Dictionary = Game.state.backorders[-1]
+			_counter_news = "Promised %s a bred one. They'll be back on Day %d (see Back-orders)." % [who, order["due_day"]]
+			_refresh_counter())
+	return b
 
 
 func _backorder_button(blocker: String) -> Button:
@@ -217,7 +250,8 @@ func _backorder_button(blocker: String) -> Button:
 	b.pressed.connect(func():
 		var who: String = Game.state.customer["name"]
 		if Game.backorder_customer():
-			_counter_news = "Ordered it in for %s. Hand it over from Back-orders once you have it." % who)
+			_counter_news = "Ordered it in for %s. Hand it over from Back-orders once you have it." % who
+			_refresh_counter())
 	return b
 
 
@@ -232,6 +266,12 @@ func _add_backorders() -> void:
 		var what := ""
 		if order.has("item_id"):
 			what = Game.db.items[order["item_id"]]["name"]
+		elif order.has("traits"):
+			var look := PackedStringArray()
+			for v in order["traits"].values():
+				look.append(UI.pretty(v))
+			what = "%s %s %s, bred by you (ready Day %d)" % ["♂" if order["sex"] == Fish.MALE else "♀",
+				" ".join(look), Game.db.species[order["species_id"]]["name"], order["due_day"]]
 		else:
 			var strain: Dictionary = Game.db.strains[order["strain_id"]]
 			what = "%s %s (%s+)" % ["♂" if order["sex"] == Fish.MALE else "♀", strain["name"], UI.stars_text(int(strain["stars"]))]

@@ -34,6 +34,8 @@ var id: int = 0
 var species_id: String = ""
 ## Named strain this fish was bought as ("" for home-bred fish).
 var strain_id: String = ""
+## What you paid for this fish (0 for fish you bred, or were given).
+var paid: int = 0
 var sex: String = FEMALE
 var traits: Dictionary = {}
 ## 1–5 once adult. 0 while still a fry: quality is revealed when it grows up.
@@ -70,6 +72,7 @@ func to_dict() -> Dictionary:
 		"id": id,
 		"species_id": species_id,
 		"strain_id": strain_id,
+		"paid": paid,
 		"sex": sex,
 		"traits": traits.duplicate(),
 		"stars": stars,
@@ -85,6 +88,7 @@ static func from_dict(d: Dictionary) -> Fish:
 	f.id = int(d.get("id", 0))
 	f.species_id = d.get("species_id", "")
 	f.strain_id = d.get("strain_id", "")
+	f.paid = int(d.get("paid", 0))
 	f.sex = d.get("sex", FEMALE)
 	f.traits = d.get("traits", {}).duplicate()
 	f.stars = int(d.get("stars", 0))

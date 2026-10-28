@@ -2,6 +2,23 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.4.0] - 2026-10-28
+
+### Added
+- **See your profit or loss before you sell.** When a customer wants one of
+  your fish, the counter shows what you paid and what they'll pay, e.g.
+  "You paid $39 · Priya will pay $30 (a $9 loss)". Fish you bred cost nothing.
+- **Breed one for them.** If selling would be a loss, a **Breed one** button
+  lets you keep your fish (to breed from) and promise the customer one like it
+  (same variety and sex) at the quoted price. They come back in 2–3 days; hand
+  it over from **Back-orders** once you've bred a matching adult. The fish you
+  kept and your breeding pairs are never handed over, and there's no penalty
+  if you're late.
+- Fish lists show what you paid for each fish and what customers pay for it.
+
+### Fixed
+- The confirmation message after **Order it in** now shows at the counter.
+
 ## [0.3.0] - 2026-10-28
 
 ### Added

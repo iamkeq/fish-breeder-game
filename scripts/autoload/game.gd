@@ -223,3 +223,11 @@ func _changed_if(ok: bool) -> bool:
 
 func buy_breeding_tank() -> bool:
 	return _changed_if(state.buy_breeding_tank())
+
+
+func breed_order_for_customer() -> bool:
+	var ok := state.breed_order_for_customer()
+	if ok:
+		changed.emit()
+		customer_changed.emit()
+	return ok

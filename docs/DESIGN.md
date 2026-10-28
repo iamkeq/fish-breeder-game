@@ -368,3 +368,10 @@ reputation. The design keeps room for all of these.
     there's no cross-breeding between tanks.
   - **Market tabs:** Fish / Decorations / Supplies.
   - **Clock:** 48 real seconds per in-game hour (25% faster).
+- **2026-10-28 (v0.4.0), breed-to-order:** fish remember what you paid
+  (`Fish.paid`, set by `buy_strain`). When a walk-in wants one of your fish and
+  their price is below what you paid, the counter offers **Breed one**. That
+  adds a back-order with the fish's `traits` + `sex`, the quoted price, a
+  `due_day` 2–3 days ahead (`backorders.breed_wait_days`) and `keep_id`. It can
+  be handed over from the due day with any matching adult in holding, display
+  or a breeding tank, except the kept fish and each tank's breeding pair.

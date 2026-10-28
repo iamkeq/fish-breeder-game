@@ -110,6 +110,13 @@ func _fish_entry(f: Fish) -> Control:
 	traits.modulate = Color(1, 1, 1, 0.8)
 	info.add_child(title)
 	info.add_child(traits)
+	if state.is_adult(f):
+		var value := Label.new()
+		value.text = "Customers pay $%d   ·   %s" % [state.fish_price(f),
+			"you paid $%d" % f.paid if f.paid > 0 else ("bred by you" if f.strain_id == "" else "free")]
+		value.add_theme_font_size_override("font_size", 12)
+		value.modulate = Color(1, 1, 1, 0.7)
+		info.add_child(value)
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 4)

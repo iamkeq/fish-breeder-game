@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.3.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.4.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -29,6 +29,9 @@ Current version: **0.3.0** (see the [changelog](CHANGELOG.md)).
     Accept it, build it, then deliver it for the tank's value plus a bonus.
   - If they want something you don't have, you can **order it in** for them
     at 10% off and hand it over later.
+  - The counter shows what you paid for a fish and what they'll pay. If
+    selling would be a loss, **Breed one** keeps your fish and promises them
+    one like it in 2–3 days, at the same price.
 - **The back room** holds your breeding tanks: one to start, up to four if you
   buy more. Put an adult male and female in a tank and every couple of nights
   they have a brood of fry. Feed them (fish food) and they grow up in 3 days,
@@ -81,7 +84,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.3.0
+.\tools\publish_web.ps1 0.4.0
 ```
 
 ## Project layout
