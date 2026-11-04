@@ -25,3 +25,11 @@ Fish Breeder Job Simulator is a relaxed shop game about breeding, decorating and
 - Close up to restock and speed up time 4× while your fry grow.
 
 *In active development. New varieties, decorations and features are added often. Feedback is very welcome!*
+
+---
+
+Page settings (not part of the description):
+- Short description: Breed rare guppies, decorate tanks and run a cozy aquarium shop. No fish death, no rush.
+- Genre: Simulation
+- Tags: cozy, fish, breeding, simulation, management, shop, aquarium, relaxing, casual, pixel-art
+- Kind of project: HTML. Release status: In development.
