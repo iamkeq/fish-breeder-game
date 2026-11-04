@@ -654,7 +654,8 @@ func wish_full_price(wish: Dictionary) -> int:
 
 
 ## Fish a customer could ask you to get for them, when you don't have one for sale:
-##   - Market varieties: you order one in. Market price + markup, back tomorrow.
+##   - Market varieties: you order one in. 10% under Market price (the
+##     usual back-order discount, since you didn't have it), back tomorrow.
 ##   - Bred-only varieties you've unlocked in the breeding book: you breed one.
 ##     Double price, back in a week.
 ## Never mutations (those are random), and never a variety you already have for
@@ -697,7 +698,7 @@ func _add_wish(result: Array, seen: Dictionary, species_id: String, trait_name: 
 func fish_wish_terms(wish: Dictionary) -> Dictionary:
 	var rules: Dictionary = db.economy["backorders"]
 	if wish["source"] == "market":
-		return {"price": roundi(strain_cost(wish["strain_id"]) * (1.0 + float(rules["market_markup"]))),
+		return {"price": Customers.backorder_price(strain_cost(wish["strain_id"]), rules),
 			"wait_days": int(rules["market_wait_days"])}
 	var spec := Fish.new()
 	spec.species_id = wish["species_id"]

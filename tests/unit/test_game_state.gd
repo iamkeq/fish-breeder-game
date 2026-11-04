@@ -974,7 +974,7 @@ func test_cancel_returns_the_order_tank_items_and_fish() -> void:
 	assert_eq(gs.money, 100, "no penalty")
 
 
-# --- Fish wishes: Market varieties (+20%, tomorrow) and bred ones (x2, a week)
+# --- Fish wishes: Market varieties (10% off, tomorrow) and bred ones (x2, a week)
 
 func _wish_values() -> Array:
 	return gs.wishable_fish().map(func(w): return w["value"])
@@ -1012,12 +1012,12 @@ func test_bred_varieties_need_the_breeding_book() -> void:
 	assert_eq(terms["wait_days"], 7)
 
 
-func test_market_wish_costs_20_percent_over_market_and_comes_back_tomorrow() -> void:
+func test_market_wish_is_10_percent_under_market_and_comes_back_tomorrow() -> void:
 	_no_orange_for_sale()
 	var wish: Dictionary = gs.wishable_fish().filter(func(w): return w["value"] == "orange")[0]
 	var terms := gs.fish_wish_terms(wish)
 	assert_eq(gs.strain_cost("orange"), 15)
-	assert_eq(terms["price"], 18, "15 + 20%")
+	assert_eq(terms["price"], 14, "15 - 10%, rounded")
 	assert_eq(terms["wait_days"], 1)
 
 
@@ -1025,7 +1025,7 @@ func test_fish_wish_backorder_flow() -> void:
 	_no_orange_for_sale()
 	var wish: Dictionary = gs.wishable_fish().filter(func(w): return w["value"] == "orange")[0]
 	gs.customer = {"kind": "wish_fish", "wish": wish, "sex": Fish.FEMALE, "name": "Jun", "waited": 0.0, "patience": 60.0}
-	assert_eq(gs.customer_price(), 18)
+	assert_eq(gs.customer_price(), 14)
 	assert_true(gs.backorder_customer())
 	var order: Dictionary = gs.backorders[0]
 	assert_eq(order["due_day"], gs.day + 1)
@@ -1036,8 +1036,8 @@ func test_fish_wish_backorder_flow() -> void:
 	gs.day = order["due_day"]
 	assert_eq(gs.backorder_blocker(0), "")
 	var money := gs.money
-	assert_eq(gs.fulfil_backorder(0), 18)
-	assert_eq(gs.money, money + 18)
+	assert_eq(gs.fulfil_backorder(0), 14)
+	assert_eq(gs.money, money + 14)
 	assert_false(gs.inventory.has_fish(bought.id))
 
 

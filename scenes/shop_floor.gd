@@ -179,8 +179,8 @@ func _add_customer_card() -> void:
 			text = "%s is looking for a %s %s %s, and you don't have one for sale." % [
 				who, "♂" if c["sex"] == Fish.MALE else "♀", UI.pretty(wish["value"]), Game.db.species[wish["species_id"]]["name"]]
 			if wish["source"] == "market":
-				text += "\nGet one from the Market for them: they'll pay $%d (Market price + %d%%) and come back tomorrow." % [
-					terms["price"], roundi(float(Game.db.economy["backorders"]["market_markup"]) * 100)]
+				text += "\nGet one from the Market for them: they'll pay $%d (%d%% under Market price, since you're out) and come back tomorrow." % [
+					terms["price"], roundi(float(Game.db.economy["backorders"]["discount"]) * 100)]
 			else:
 				text += "\nYou'll have to breed one: they'll pay $%d (double the usual price) and come back in %d days." % [
 					terms["price"], terms["wait_days"]]

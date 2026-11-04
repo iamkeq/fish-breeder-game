@@ -7,8 +7,8 @@ All notable changes to Fish Breeder Job Simulator. Newest first.
 ### Added
 - **Customers ask for specific guppy varieties** you don't have for sale:
   - **Market varieties** (Normal, Red … Koi, Tuxedo, Neon): get one from the
-    Market for them. They pay the **Market price + 20%** and come back
-    **tomorrow**.
+    Market for them. They pay **10% under the Market price** (you were out of
+    stock, so you take the hit) and come back **tomorrow**.
   - **Bred-only varieties** (e.g. Purple, Pink, Gold): only ones whose recipe
     is **unlocked in your breeding book**. You breed one; they pay **double**
     the usual price (a 3★ fish) and come back in **a week**.

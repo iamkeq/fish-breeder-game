@@ -32,7 +32,7 @@ Current version: **0.10.0** (see the [changelog](CHANGELOG.md)).
   - If they want a shelf item you don't have, you can **order it in** for
     them at 10% off and hand it over later.
   - They may ask for a guppy variety you don't have for sale: a Market
-    variety (Market price + 20%, back tomorrow) or a bred variety you've
+    variety (10% under Market price, back tomorrow) or a bred variety you've
     unlocked in your breeding book (double price, back in a week). Mutations
     are never requested unless you have one for sale.
   - The counter shows what you paid for a fish and what they'll pay. If
