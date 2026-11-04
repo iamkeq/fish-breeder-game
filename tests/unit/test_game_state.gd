@@ -512,20 +512,6 @@ func test_sold_out_item_can_be_backordered() -> void:
 	assert_true(gs.backorder_customer())
 
 
-func test_backorder_a_strain_fish() -> void:
-	gs.customer = {"kind": "wish_fish", "strain_id": "orange", "sex": Fish.FEMALE, "name": "Jun", "waited": 0.0, "patience": 60.0}
-	assert_eq(gs.customer_price(), 9, "3-star orange sells for 10, less 10%")
-	gs.backorder_customer()
-	assert_ne(gs.backorder_blocker(0), "")
-	# A home-bred fish that matches counts too, but never one in the breeding tank.
-	var bred := gs.inventory.add_fish(F.fish(Fish.FEMALE, "orange", 3))
-	gs.move_fish(bred.id, Fish.BREEDING)
-	assert_ne(gs.backorder_blocker(0), "", "breeding fish are off limits")
-	gs.move_fish(bred.id, Fish.HOLDING)
-	assert_eq(gs.fulfil_backorder(0), 9)
-	assert_false(gs.inventory.has_fish(bred.id))
-
-
 func test_backorder_list_has_a_limit() -> void:
 	for i in 2:
 		_wish_item("castle")
@@ -986,3 +972,81 @@ func test_cancel_returns_the_order_tank_items_and_fish() -> void:
 	assert_eq(gs.inventory.count("sand"), 1)
 	assert_eq(m.location, Fish.HOLDING)
 	assert_eq(gs.money, 100, "no penalty")
+
+
+# --- Fish wishes: Market varieties (+20%, tomorrow) and bred ones (x2, a week)
+
+func _wish_values() -> Array:
+	return gs.wishable_fish().map(func(w): return w["value"])
+
+
+## The starting male is an orange guppy in holding (for sale), which would stop
+## customers wishing for orange. Put him in the breeding tank (not for sale).
+func _no_orange_for_sale() -> void:
+	gs.move_fish(_male().id, Fish.BREEDING)
+
+
+func test_market_varieties_are_wishable_mutations_are_not() -> void:
+	_no_orange_for_sale()
+	var values := _wish_values()
+	assert_has(values, "orange", "the single-trait Market strain")
+	assert_false("red" in values, "red is a mutation in the test species")
+
+
+func test_varieties_you_have_for_sale_are_not_wished_for() -> void:
+	gs.money = 500
+	gs.buy_strain("orange", Fish.MALE)  # goes to holding, so it's for sale
+	assert_false("orange" in _wish_values())
+
+
+func test_bred_varieties_need_the_breeding_book() -> void:
+	var species: Dictionary = gs.db.species["guppy"]
+	species["traits"]["body_color"]["common"].append("teal")
+	species["recipes"] = {"body_color": [{"parents": ["grey", "orange"], "child": "teal"}]}
+	assert_false("teal" in _wish_values(), "not discovered yet")
+	gs.discovered_recipes[GameState.book_key("body_color", "grey", "orange")] = 1
+	var wish: Dictionary = gs.wishable_fish().filter(func(w): return w["value"] == "teal")[0]
+	assert_eq(wish["source"], "bred")
+	var terms := gs.fish_wish_terms(wish)
+	assert_eq(terms["price"], 20, "a 3-star teal sells for 10; bred to order costs double")
+	assert_eq(terms["wait_days"], 7)
+
+
+func test_market_wish_costs_20_percent_over_market_and_comes_back_tomorrow() -> void:
+	_no_orange_for_sale()
+	var wish: Dictionary = gs.wishable_fish().filter(func(w): return w["value"] == "orange")[0]
+	var terms := gs.fish_wish_terms(wish)
+	assert_eq(gs.strain_cost("orange"), 15)
+	assert_eq(terms["price"], 18, "15 + 20%")
+	assert_eq(terms["wait_days"], 1)
+
+
+func test_fish_wish_backorder_flow() -> void:
+	_no_orange_for_sale()
+	var wish: Dictionary = gs.wishable_fish().filter(func(w): return w["value"] == "orange")[0]
+	gs.customer = {"kind": "wish_fish", "wish": wish, "sex": Fish.FEMALE, "name": "Jun", "waited": 0.0, "patience": 60.0}
+	assert_eq(gs.customer_price(), 18)
+	assert_true(gs.backorder_customer())
+	var order: Dictionary = gs.backorders[0]
+	assert_eq(order["due_day"], gs.day + 1)
+	assert_eq(order["traits"], {"body_color": "orange"})
+	gs.money = 500
+	var bought := gs.buy_strain("orange", Fish.FEMALE)
+	assert_eq(gs.backorder_blocker(0), "They'll come back for it on Day %d." % order["due_day"])
+	gs.day = order["due_day"]
+	assert_eq(gs.backorder_blocker(0), "")
+	var money := gs.money
+	assert_eq(gs.fulfil_backorder(0), 18)
+	assert_eq(gs.money, money + 18)
+	assert_false(gs.inventory.has_fish(bought.id))
+
+
+func test_wrong_sex_does_not_fill_a_fish_wish() -> void:
+	_no_orange_for_sale()
+	var wish: Dictionary = gs.wishable_fish().filter(func(w): return w["value"] == "orange")[0]
+	gs.customer = {"kind": "wish_fish", "wish": wish, "sex": Fish.FEMALE, "name": "Jun", "waited": 0.0, "patience": 60.0}
+	gs.backorder_customer()
+	gs.day += 1
+	gs.money = 500
+	gs.buy_strain("orange", Fish.MALE)
+	assert_eq(gs.backorder_blocker(0), "No matching adult yet. Buy one in the Market.")

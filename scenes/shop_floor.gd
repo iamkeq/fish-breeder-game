@@ -174,10 +174,17 @@ func _add_customer_card() -> void:
 		"wish_item":
 			text = "%s is looking for %s, but you're out." % [who, Game.db.items[c["item_id"]]["name"]]
 		"wish_fish":
-			var strain: Dictionary = Game.db.strains[c["strain_id"]]
-			text = "%s is looking for a %s %s (%s or better). You don't have one right now." % [
-				who, "♂" if c["sex"] == Fish.MALE else "♀", strain["name"], UI.stars_text(int(strain["stars"]))]
-	if state.customer_can_backorder():
+			var wish: Dictionary = c["wish"]
+			var terms := state.fish_wish_terms(wish)
+			text = "%s is looking for a %s %s %s, and you don't have one for sale." % [
+				who, "♂" if c["sex"] == Fish.MALE else "♀", UI.pretty(wish["value"]), Game.db.species[wish["species_id"]]["name"]]
+			if wish["source"] == "market":
+				text += "\nGet one from the Market for them: they'll pay $%d (Market price + %d%%) and come back tomorrow." % [
+					terms["price"], roundi(float(Game.db.economy["backorders"]["market_markup"]) * 100)]
+			else:
+				text += "\nYou'll have to breed one: they'll pay $%d (double the usual price) and come back in %d days." % [
+					terms["price"], terms["wait_days"]]
+	if state.customer_can_backorder() and c["kind"] != "wish_fish":
 		text += "\nOrder it in for them? They'll wait and pay $%d (10%% off)." % \
 			Customers.backorder_price(state.wish_full_price(c), Game.db.economy["backorders"])
 	_counter.add_child(_wrapped(text))
@@ -202,8 +209,12 @@ func _add_customer_card() -> void:
 			buttons.add_child(_decline_button("No thanks"))
 		"browse":
 			buttons.add_child(_decline_button("Wave goodbye"))
-		"wish_item", "wish_fish":
+		"wish_item":
 			buttons.add_child(_backorder_button(blocker))
+			buttons.add_child(_decline_button("Not today"))
+		"wish_fish":
+			var label := "Order it in" if c["wish"]["source"] == "market" else "Breed it for them"
+			buttons.add_child(_backorder_button(blocker, label))
 			buttons.add_child(_decline_button("Not today"))
 		_:
 			if state.customer_can_backorder():  # sold out while they waited
@@ -246,9 +257,9 @@ func _breed_order_button() -> Button:
 	return b
 
 
-func _backorder_button(blocker: String) -> Button:
+func _backorder_button(blocker: String, label: String = "Order it in") -> Button:
 	var b := Button.new()
-	b.text = "Order it in"
+	b.text = label
 	b.disabled = blocker != ""
 	b.tooltip_text = blocker if blocker != "" else "Goes on your back-order list. Hand it over once you have it."
 	b.pressed.connect(func():
@@ -274,11 +285,9 @@ func _add_backorders() -> void:
 			var look := PackedStringArray()
 			for v in order["traits"].values():
 				look.append(UI.pretty(v))
-			what = "%s %s %s, bred by you (ready Day %d)" % ["♂" if order["sex"] == Fish.MALE else "♀",
-				" ".join(look), Game.db.species[order["species_id"]]["name"], order["due_day"]]
-		else:
-			var strain: Dictionary = Game.db.strains[order["strain_id"]]
-			what = "%s %s (%s+)" % ["♂" if order["sex"] == Fish.MALE else "♀", strain["name"], UI.stars_text(int(strain["stars"]))]
+			var how: String = {"market": "from the Market", "bred": "bred by you"}.get(order.get("source", ""), "bred by you")
+			what = "%s %s %s, %s (ready Day %d)" % ["♂" if order["sex"] == Fish.MALE else "♀",
+				" ".join(look), Game.db.species[order["species_id"]]["name"], how, order["due_day"]]
 		var line := _wrapped("• %s for %s" % [what, order["name"]])
 		line.add_theme_font_size_override("font_size", 13)
 		_counter.add_child(line)

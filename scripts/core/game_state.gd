@@ -571,8 +571,10 @@ func customer_price() -> int:
 			return Pricing.item_price(db.items[customer["item_id"]])
 		"tank":
 			return tank_price(display_tank, true) if display_tank != null else 0
-		"wish_item", "wish_fish":
+		"wish_item":
 			return Customers.backorder_price(wish_full_price(customer), db.economy["backorders"])
+		"wish_fish":
+			return fish_wish_terms(customer["wish"])["price"]
 	return 0
 
 
@@ -646,55 +648,104 @@ func customer_can_backorder() -> bool:
 	return false
 
 
-## Full (undiscounted) price of what a customer or back-order asks for.
+## Full (undiscounted) price of an item a customer wishes for.
 func wish_full_price(wish: Dictionary) -> int:
-	if wish.has("item_id"):
-		return Pricing.item_price(db.items[wish["item_id"]])
-	var strain: Dictionary = db.strains[wish["strain_id"]]
+	return Pricing.item_price(db.items[wish["item_id"]])
+
+
+## Fish a customer could ask you to get for them, when you don't have one for sale:
+##   - Market varieties: you order one in. Market price + markup, back tomorrow.
+##   - Bred-only varieties you've unlocked in the breeding book: you breed one.
+##     Double price, back in a week.
+## Never mutations (those are random), and never a variety you already have for
+## sale (they'd just buy that one).
+## [{species_id, trait, value, source: "market" | "bred", strain_id}]
+func wishable_fish() -> Array:
+	var result := []
+	var seen := {}
+	for f in fish_for_sale():
+		for trait_name in f.traits:
+			seen["%s:%s:%s" % [f.species_id, trait_name, f.traits[trait_name]]] = true
+	var strain_ids := db.strains.keys()
+	strain_ids.sort()
+	for id in strain_ids:
+		var strain: Dictionary = db.strains[id]
+		if strain["traits"].size() != 1:
+			continue
+		var trait_name: String = strain["traits"].keys()[0]
+		_add_wish(result, seen, strain["species"], trait_name, strain["traits"][trait_name], "market", id)
+	var species_ids := db.species.keys()
+	species_ids.sort()
+	for species_id in species_ids:
+		for r in book_recipes(species_id):
+			if r["discovered"]:
+				_add_wish(result, seen, species_id, r["trait"], r["child"], "bred", "")
+	return result
+
+
+func _add_wish(result: Array, seen: Dictionary, species_id: String, trait_name: String, value: String,
+		source: String, strain_id: String) -> void:
+	var key := "%s:%s:%s" % [species_id, trait_name, value]
+	if seen.has(key) or Genetics.is_mutation(db.species[species_id], trait_name, value):
+		return
+	seen[key] = true
+	result.append({"species_id": species_id, "trait": trait_name, "value": value,
+		"source": source, "strain_id": strain_id})
+
+
+## Price and wait for a fish wish: {price, wait_days}.
+func fish_wish_terms(wish: Dictionary) -> Dictionary:
+	var rules: Dictionary = db.economy["backorders"]
+	if wish["source"] == "market":
+		return {"price": roundi(strain_cost(wish["strain_id"]) * (1.0 + float(rules["market_markup"]))),
+			"wait_days": int(rules["market_wait_days"])}
 	var spec := Fish.new()
-	spec.species_id = strain["species"]
-	spec.stars = int(strain["stars"])
-	spec.traits = strain["traits"].duplicate()
-	spec.age_days = int(db.species[strain["species"]]["days_to_adult"])
-	return fish_price(spec)
+	spec.species_id = wish["species_id"]
+	spec.stars = int(rules["bred_reference_stars"])
+	spec.traits = {wish["trait"]: wish["value"]}
+	spec.age_days = int(db.species[wish["species_id"]]["days_to_adult"])
+	return {"price": roundi(fish_price(spec) * float(rules["bred_price_multiplier"])),
+		"wait_days": int(rules["bred_wait_days"])}
 
 
-## Takes the customer's order for something you don't have. They'll pay the
-## discounted price when you hand it over later.
+## Takes the customer's order for something you don't have. Items: they pay the
+## discounted price when you hand it over. Fish: the wish's price, and they come
+## back after its wait (tomorrow for Market fish, a week for bred ones).
 func backorder_customer() -> bool:
 	if not customer_can_backorder():
 		return false
 	var order := {"name": customer["name"]}
 	if customer.has("item_id"):
 		order["item_id"] = customer["item_id"]
+		order["price"] = Customers.backorder_price(wish_full_price(order), db.economy["backorders"])
 	else:
-		order["strain_id"] = customer["strain_id"]
+		var wish: Dictionary = customer["wish"]
+		var terms := fish_wish_terms(wish)
+		order["species_id"] = wish["species_id"]
 		order["sex"] = customer["sex"]
-	order["price"] = Customers.backorder_price(wish_full_price(order), db.economy["backorders"])
+		order["traits"] = {wish["trait"]: wish["value"]}
+		order["source"] = wish["source"]
+		order["price"] = terms["price"]
+		order["due_day"] = day + terms["wait_days"]
 	backorders.append(order)
 	_customer_leaves()
 	return true
 
 
-## The fish you'd hand over for a fish back-order: a matching adult in holding,
-## then on display. Strain wishes never take fish from breeding tanks. Breed
-## orders ("traits") can also take a grown fry from a breeding tank, but never
-## one of that tank's current breeding pair, nor the fish you chose to keep.
+## The fish you'd hand over for a fish back-order: a matching adult (same look
+## and sex) from holding, the display tank or a breeding tank, but never one of
+## a tank's current breeding pair, nor a fish you chose to keep.
 func backorder_fish(order: Dictionary) -> Fish:
 	var candidates: Array = inventory.fish_list(Fish.HOLDING) + inventory.fish_list(Fish.DISPLAY)
-	if order.has("traits"):
-		for i in breeding_tanks.size():
-			var pair := breeding_pair(i)
-			for f in tank_fish(breeding_tanks[i]):
-				if not f in pair:
-					candidates.append(f)
+	for i in breeding_tanks.size():
+		var pair := breeding_pair(i)
+		for f in tank_fish(breeding_tanks[i]):
+			if not f in pair:
+				candidates.append(f)
 	for f in candidates:
 		if f.id == int(order.get("keep_id", -1)):
 			continue
-		if order.has("traits"):
-			if _matches_breed_order(f, order):
-				return f
-		elif Customers.matches_strain(f, db.strains[order["strain_id"]], order["sex"], species_of(f)):
+		if _matches_breed_order(f, order):
 			return f
 	return null
 
@@ -718,9 +769,9 @@ func backorder_blocker(index: int) -> String:
 	if day < int(order.get("due_day", 0)):
 		return "They'll come back for it on Day %d." % order["due_day"]
 	if backorder_fish(order) == null:
-		if order.has("traits"):
-			return "No matching adult yet. Breed one (the breeding pair itself is never handed over)."
-		return "No matching fish yet (holding or display). Buy or breed one."
+		if order.get("source") == "market":
+			return "No matching adult yet. Buy one in the Market."
+		return "No matching adult yet. Breed one (the breeding pair itself is never handed over)."
 	return ""
 
 
@@ -789,7 +840,7 @@ func _new_customer() -> Dictionary:
 	var ctx := {
 		"fish_for_sale": fish_for_sale(), "species_db": db.species,
 		"items_in_stock": inventory.stock().keys(), "all_items": db.items.keys(),
-		"strains": db.strains if can_backorder() else {},
+		"wishable": wishable_fish() if can_backorder() else [],
 		"tank_for_sale": tank_for_sale, "can_take_request": can_accept_request(),
 	}
 	if not can_backorder():

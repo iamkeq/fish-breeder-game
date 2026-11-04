@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.9.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.10.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -29,8 +29,12 @@ Current version: **0.9.0** (see the [changelog](CHANGELOG.md)).
     Accept it, then build it in its own tank in the **Orders room** (or hand
     over your display tank instead) and deliver it for the tank's value plus
     a bonus.
-  - If they want something you don't have, you can **order it in** for them
-    at 10% off and hand it over later.
+  - If they want a shelf item you don't have, you can **order it in** for
+    them at 10% off and hand it over later.
+  - They may ask for a guppy variety you don't have for sale: a Market
+    variety (Market price + 20%, back tomorrow) or a bred variety you've
+    unlocked in your breeding book (double price, back in a week). Mutations
+    are never requested unless you have one for sale.
   - The counter shows what you paid for a fish and what they'll pay. If
     selling would be a loss, **Breed one** keeps your fish and promises them
     one like it in 2–3 days, at the same price.
@@ -92,7 +96,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.9.0
+.\tools\publish_web.ps1 0.10.0
 ```
 
 ## Project layout

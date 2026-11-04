@@ -83,37 +83,21 @@ func test_request_chance() -> void:
 	assert_eq(c["name"], "Mabel")
 
 
-func test_wishes_are_for_things_you_dont_have() -> void:
-	var r := rules.duplicate(true)
-	r["wants"] = {"fish": 0, "item": 0, "tank": 0, "wish": 1.0}
-	var strains := {"red_delta": F.strains()[1]}
-	var rng := F.rng()
-	var kinds := {}
-	for i in 200:
-		var c := Customers.make_walk_in({"items_in_stock": ["sand"], "all_items": ["sand", "castle"],
-			"strains": strains}, r, rng)
-		kinds[c["kind"]] = true
-		if c["kind"] == "wish_item":
-			assert_eq(c["item_id"], "castle", "only out-of-stock items are wished for")
-		else:
-			assert_eq(c["strain_id"], "red_delta")
-			assert_has([Fish.MALE, Fish.FEMALE], c["sex"])
-	assert_eq(kinds.size(), 2, "both kinds of wish happen")
-
-
-func test_matches_strain() -> void:
-	var strain: Dictionary = F.strains()[1]  # red delta, 4 stars
-	assert_true(Customers.matches_strain(F.fish(Fish.MALE, "red", 4, 3, "delta"), strain, Fish.MALE, F.species()))
-	assert_true(Customers.matches_strain(F.fish(Fish.MALE, "red", 5, 3, "delta", "mosaic"), strain, Fish.MALE, F.species()),
-		"better stars and unlisted traits are fine")
-	assert_false(Customers.matches_strain(F.fish(Fish.FEMALE, "red", 4, 3, "delta"), strain, Fish.MALE, F.species()), "sex")
-	assert_false(Customers.matches_strain(F.fish(Fish.MALE, "red", 3, 3, "delta"), strain, Fish.MALE, F.species()), "stars")
-	assert_false(Customers.matches_strain(F.fish(Fish.MALE, "grey", 4, 3, "delta"), strain, Fish.MALE, F.species()), "colour")
-	assert_false(Customers.matches_strain(F.fish(Fish.MALE, "red", 4, 1, "delta"), strain, Fish.MALE, F.species()), "fry")
-
-
 func test_backorder_price_is_discounted() -> void:
 	var r := {"discount": 0.1}
 	assert_eq(Customers.backorder_price(100, r), 90)
 	assert_eq(Customers.backorder_price(15, r), 14, "13.5 rounds up")
 	assert_eq(Customers.backorder_price(1, r), 1)
+
+
+func test_fish_wishes_come_from_the_wishable_list() -> void:
+	var r := rules.duplicate(true)
+	r["wants"] = {"fish": 0, "item": 0, "tank": 0, "wish": 1.0}
+	var wishable := [{"species_id": "guppy", "trait": "body_color", "value": "orange", "source": "market", "strain_id": "orange"}]
+	var rng := F.rng()
+	for i in 50:
+		var c := Customers.make_walk_in({"wishable": wishable}, r, rng)
+		assert_eq(c["kind"], "wish_fish")
+		assert_eq(c["wish"]["value"], "orange")
+		assert_has([Fish.MALE, Fish.FEMALE], c["sex"])
+	assert_eq(Customers.make_walk_in({"wishable": []}, r, rng)["kind"], "browse", "nothing to wish for")

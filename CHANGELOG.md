@@ -2,6 +2,26 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.10.0] - 2026-11-04
+
+### Added
+- **Customers ask for specific guppy varieties** you don't have for sale:
+  - **Market varieties** (Normal, Red … Koi, Tuxedo, Neon): get one from the
+    Market for them. They pay the **Market price + 20%** and come back
+    **tomorrow**.
+  - **Bred-only varieties** (e.g. Purple, Pink, Gold): only ones whose recipe
+    is **unlocked in your breeding book**. You breed one; they pay **double**
+    the usual price (a 3★ fish) and come back in **a week**.
+  - **Mutations** (Albino, Glass, …) are never requested, because they're
+    random. Customers only ask for one if you have it for sale.
+  - Accepted wishes go on **Back-orders**. Hand over any adult of the right
+    variety and sex from the due day (from holding, display or a breeding tank,
+    but never a breeding pair).
+
+### Changed
+- Replaces the old "wishes for a Market strain at 10% off" rule. Item
+  back-orders (10% off) are unchanged.
+
 ## [0.9.0] - 2026-10-28
 
 ### Added

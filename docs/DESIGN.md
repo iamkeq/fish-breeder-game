@@ -383,6 +383,14 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-04 (v0.10.0), fish wishes:** `GameState.wishable_fish()` lists
+  single-trait Market strains (`source: market`) and breeding-book-discovered
+  recipe children (`source: bred`), excluding mutations and anything already
+  for sale. `fish_wish_terms()` prices them: market = strain cost × (1 +
+  `backorders.market_markup`), wait `market_wait_days`; bred = price of a
+  `bred_reference_stars` fish × `bred_price_multiplier`, wait `bred_wait_days`.
+  Back-orders now always match on traits + sex. The old strain-wish path and
+  `Customers.matches_strain` are removed.
 - **2026-10-28 (v0.9.0), order tanks:** accepted orders get a stable `id`, a
   `customer` name and an optional `tank` (an order tank at location
   `Fish.order_location(id)`, set up from a spare tank item).

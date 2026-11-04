@@ -63,7 +63,9 @@ static func economy() -> Dictionary:
 			"names": ["Mabel"],
 		},
 		"requests": {"max_orders": 2, "min_bonus_fraction": 0.25},
-		"backorders": {"discount": 0.1, "max": 2, "breed_wait_days": [2, 3]},
+		"backorders": {"discount": 0.1, "max": 2, "breed_wait_days": [2, 3],
+			"market_markup": 0.2, "market_wait_days": 1, "bred_price_multiplier": 2.0,
+			"bred_wait_days": 7, "bred_reference_stars": 3},
 		"wholesale": {"fraction": 0.4, "fry_price": 1},
 		"fish_market": {"price_multiplier": 1.5, "tiers": [{"tier": 1, "name": "Starter"}, {"tier": 2, "name": "Fancy"}]},
 		"starting_state": {
