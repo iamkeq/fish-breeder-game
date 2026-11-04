@@ -2,6 +2,21 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.11.0] - 2026-11-04
+
+### Added
+- **Bubbling Treasure Chest** decoration ($14 at the Market, sells for $26).
+  It's animated: the lid opens and lets out a stream of bubbles. Place it in
+  any tank or sell it from the shelf.
+- Animated decor support: items can list `frames`, `fps` and `body_height`
+  (the object itself, so rising bubbles don't shrink it).
+- `tools/cut_animation.py` cuts an animation strip on a flat dark background
+  into a transparent, bottom-aligned frame sheet.
+
+### Changed
+- Breeding tanks in the back room always have a sand floor, so they no longer
+  look bottomless.
+
 ## [0.10.0] - 2026-11-04
 
 ### Added

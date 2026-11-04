@@ -19,6 +19,8 @@ const WATER_TOP := Color("#a6d8e8")
 const WATER_BOTTOM := Color("#5fa9c4")
 const EMPTY_TEXT := Color("#7a6e64")
 const SUBSTRATE_HEIGHT := 22.0
+## Back-room (breeding) tanks without a substrate of their own get this one.
+const BACK_ROOM_SAND := "fine_sand"
 
 ## Fish.DISPLAY, or a breeding tank location ("breeding", "breeding2", ...).
 @export var location: String = "display"
@@ -35,6 +37,8 @@ const SLOT_SHORT := ["B1", "B2", "M1", "M2", "F1", "F2"]
 
 var _sprites: Dictionary = {}  # fish id -> sprite
 var _pulse := 0.0
+## Clock for animated decor (bubbling chests).
+var _anim_time := 0.0
 
 
 func _ready() -> void:
@@ -118,9 +122,12 @@ func _slot_base(t: Tank, slot: int, w: Rect2) -> Vector2:
 
 
 func _draw_substrate(t: Tank, w: Rect2) -> void:
-	if t.substrate == "":
+	var substrate := t.substrate
+	if substrate == "" and Fish.is_breeding(location):
+		substrate = BACK_ROOM_SAND  # back-room tanks always have a sand floor
+	if substrate == "":
 		return
-	var color := Color(Game.db.items[t.substrate].get("color", "#d9c9a0"))
+	var color := Color(Game.db.items[substrate].get("color", "#d9c9a0"))
 	var top := w.end.y - SUBSTRATE_HEIGHT
 	var points := PackedVector2Array([Vector2(w.position.x, w.end.y)])
 	for i in 9:
@@ -169,9 +176,22 @@ func _draw_item(item: Dictionary, base: Vector2, water_height: float, scale_: fl
 
 
 func _process(delta: float) -> void:
+	_anim_time += delta
 	if show_slot_markers:
 		_pulse += delta
 		queue_redraw()
+	elif _has_animated_decor():
+		queue_redraw()
+
+
+func _has_animated_decor() -> bool:
+	var t := tank()
+	if t == null:
+		return false
+	for id in t.slots:
+		if id != "" and Game.db.items[id].has("frames"):
+			return true
+	return false
 
 
 ## Where the editor marker for a slot sits (above the item's base).
@@ -217,18 +237,25 @@ func _gui_input(event: InputEvent) -> void:
 
 
 ## Draws an item's sprite standing on `base`, sized by its height class
-## (aspect ratio kept, never wider than 40% of the tank).
+## (aspect ratio kept, never wider than 40% of the tank). Animated items
+## ("frames") are sized by their body; their bubbles rise above it.
 func _draw_item_sprite(item: Dictionary, base: Vector2, water_height: float, scale_: float) -> void:
 	var r: Array = item["sprite"]
+	var body_px: float = r[3]
+	if item.has("frames"):
+		var frames: Array = item["frames"]
+		r = frames[int(_anim_time * float(item.get("fps", 4))) % frames.size()]
+		body_px = float(item["body_height"])
 	var src := Rect2(r[0], r[1], r[2], r[3])
-	var h: float = water_height * SPRITE_HEIGHT.get(item.get("height", "short"), 0.2) * scale_
-	var w := h * src.size.x / src.size.y
+	var body_h: float = water_height * SPRITE_HEIGHT.get(item.get("height", "short"), 0.2) * scale_
+	var w := body_h * src.size.x / body_px
 	var max_w := size.x * 0.4
 	if w > max_w:
-		h *= max_w / w
+		body_h *= max_w / w
 		w = max_w
+	var h := body_h * src.size.y / body_px
 	# Sink the bottom slightly into the substrate so it looks planted.
-	var dest := Rect2(base.x - w * 0.5, base.y - h * 0.94, w, h)
+	var dest := Rect2(base.x - w * 0.5, base.y + body_h * 0.06 - h, w, h)
 	# Keep it inside the glass, even for wide plants in the edge slots.
 	var water := water_rect()
 	dest.position.x = clampf(dest.position.x, water.position.x, maxf(water.position.x, water.end.x - w))

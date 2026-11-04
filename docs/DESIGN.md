@@ -383,6 +383,11 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-04 (v0.11.0), animated decor:** items may carry `frames` (rects
+  on their sheet), `fps` and `body_height` (pixels of the object at the bottom
+  of each frame). TankView sizes the body by the height class and lets the
+  rest (bubbles) extend above; `sprite` stays a still crop for icons. Breeding
+  tanks without a substrate draw `fine_sand`.
 - **2026-11-04 (v0.10.0), fish wishes:** `GameState.wishable_fish()` lists
   single-trait Market strains (`source: market`) and breeding-book-discovered
   recipe children (`source: bred`), excluding mutations and anything already

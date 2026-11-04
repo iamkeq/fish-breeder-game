@@ -154,6 +154,11 @@ func _validate_item(item: Dictionary) -> void:
 		var rect = item["sprite"]
 		if not rect is Array or rect.size() != 4:
 			errors.append("%s: 'sprite' must be [x, y, w, h]" % ctx)
+		if item.has("frames"):
+			if not item["frames"] is Array or item["frames"].is_empty() or item["frames"].any(func(f): return not f is Array or f.size() != 4):
+				errors.append("%s: 'frames' must be a list of [x, y, w, h]" % ctx)
+			if float(item.get("body_height", 0)) <= 0:
+				errors.append("%s: animated items need 'body_height'" % ctx)
 		if not ResourceLoader.exists(item.get("sheet", "")):
 			errors.append("%s: sprite sheet '%s' not found" % [ctx, item.get("sheet", "")])
 
