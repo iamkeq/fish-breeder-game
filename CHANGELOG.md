@@ -13,9 +13,14 @@ All notable changes to Fish Breeder Job Simulator. Newest first.
 - `tools/cut_animation.py` cuts an animation strip on a flat dark background
   into a transparent, bottom-aligned frame sheet.
 
+- Every back-room breeding tank has a bubbling **air stone** in the back
+  corner (a fixture, so it doesn't take a decor slot).
+
 ### Changed
 - Breeding tanks in the back room always have a sand floor, so they no longer
   look bottomless.
+- `tools/cut_animation.py` ignores JPEG noise and reads the background from
+  the image corners.
 
 ## [0.10.0] - 2026-11-04
 

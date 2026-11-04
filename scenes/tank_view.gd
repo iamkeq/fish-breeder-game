@@ -19,8 +19,6 @@ const WATER_TOP := Color("#a6d8e8")
 const WATER_BOTTOM := Color("#5fa9c4")
 const EMPTY_TEXT := Color("#7a6e64")
 const SUBSTRATE_HEIGHT := 22.0
-## Back-room (breeding) tanks without a substrate of their own get this one.
-const BACK_ROOM_SAND := "fine_sand"
 
 ## Fish.DISPLAY, or a breeding tank location ("breeding", "breeding2", ...).
 @export var location: String = "display"
@@ -103,6 +101,7 @@ func _draw() -> void:
 	draw_rect(Rect2(w.position, Vector2(w.size.x, 4)), Color(1, 1, 1, 0.5))
 
 	_draw_substrate(t, w)
+	_draw_air_stone(w)
 	for slot in t.slot_count():
 		if not t.is_slot_empty(slot):
 			_draw_item(Game.db.items[t.slots[slot]], _slot_base(t, slot, w), w.size.y, ROW_SCALE[t.row_of(slot)])
@@ -124,7 +123,8 @@ func _slot_base(t: Tank, slot: int, w: Rect2) -> Vector2:
 func _draw_substrate(t: Tank, w: Rect2) -> void:
 	var substrate := t.substrate
 	if substrate == "" and Fish.is_breeding(location):
-		substrate = BACK_ROOM_SAND  # back-room tanks always have a sand floor
+		# Back-room tanks always have a sand floor.
+		substrate = Game.db.economy["breeding_tanks"].get("substrate", "")
 	if substrate == "":
 		return
 	var color := Color(Game.db.items[substrate].get("color", "#d9c9a0"))
@@ -184,10 +184,22 @@ func _process(delta: float) -> void:
 		queue_redraw()
 
 
+## Breeding tanks have a bubbling air stone in the back corner (a fixture,
+## not a decor item). Drawn before the slots so decor sits in front of it.
+func _draw_air_stone(w: Rect2) -> void:
+	var stone: Dictionary = Game.db.economy["breeding_tanks"].get("air_stone", {})
+	if stone.is_empty() or not Fish.is_breeding(location):
+		return
+	var base := Vector2(w.position.x + w.size.x * float(stone.get("x", 0.93)), w.end.y - SUBSTRATE_HEIGHT * 0.5 - ROW_LIFT["back"])
+	_draw_item_sprite(stone, base, w.size.y, ROW_SCALE["back"])
+
+
 func _has_animated_decor() -> bool:
 	var t := tank()
 	if t == null:
 		return false
+	if Fish.is_breeding(location) and Game.db.economy["breeding_tanks"].has("air_stone"):
+		return true
 	for id in t.slots:
 		if id != "" and Game.db.items[id].has("frames"):
 			return true

@@ -387,7 +387,9 @@ reputation. The design keeps room for all of these.
   on their sheet), `fps` and `body_height` (pixels of the object at the bottom
   of each frame). TankView sizes the body by the height class and lets the
   rest (bubbles) extend above; `sprite` stays a still crop for icons. Breeding
-  tanks without a substrate draw `fine_sand`.
+  tanks without a substrate draw `breeding_tanks.substrate` (fine sand) and
+  the `breeding_tanks.air_stone` animation (same fields as an animated item,
+  plus `x`, its spot across the water) behind their decor.
 - **2026-11-04 (v0.10.0), fish wishes:** `GameState.wishable_fish()` lists
   single-trait Market strains (`source: market`) and breeding-book-discovered
   recipe children (`source: bred`), excluding mutations and anything already

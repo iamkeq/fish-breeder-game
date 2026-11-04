@@ -9,7 +9,7 @@ Prints the JSON to paste into an item: "frames" (rects in the new sheet),
 used for sizing; the bubbles are drawn above it) and "sprite" (the last
 frame's body only, for shop icons).
 
-The background colour is read from the top-left pixel. Above each object the
+The background colour is the median of the image corners. Above each object the
 background is "unmixed" from every pixel, so bubbles stay semi-transparent.
 Around the object only background connected to the image edge is removed, so
 dark parts of the object (an open chest's inside) stay solid.
@@ -21,6 +21,7 @@ from collections import deque
 from PIL import Image
 
 TOLERANCE = 14  # how far from the background colour still counts as background
+NOISE = 10  # colour wobble ignored when unmixing bubbles (JPEG noise)
 
 
 def main() -> None:
@@ -29,7 +30,9 @@ def main() -> None:
     im = Image.open(src).convert("RGB")
     W, H = im.size
     px = im.load()
-    bg = px[0, 0]
+    corner = [px[x, y] for x0, y0 in ((0, 0), (W - 8, 0), (0, H - 8), (W - 8, H - 8))
+              for x in range(x0, x0 + 8) for y in range(y0, y0 + 8)]
+    bg = tuple(sorted(c[i] for c in corner)[len(corner) // 2] for i in range(3))
 
     def dist(c):
         return max(abs(c[i] - bg[i]) for i in range(3))
@@ -88,10 +91,11 @@ def main() -> None:
         """Colour-to-alpha against the background."""
         a = 0.0
         for i in range(3):
-            if c[i] > bg[i]:
-                a = max(a, (c[i] - bg[i]) / (255 - bg[i]))
-            elif c[i] < bg[i]:
-                a = max(a, (bg[i] - c[i]) / bg[i])
+            # Differences within NOISE are compression noise, not bubble.
+            if c[i] > bg[i] + NOISE:
+                a = max(a, (c[i] - bg[i] - NOISE) / (255 - bg[i] - NOISE))
+            elif c[i] < bg[i] - NOISE:
+                a = max(a, (bg[i] - NOISE - c[i]) / (bg[i] - NOISE))
         if a <= 0.02:
             return (0, 0, 0, 0)
         rgb = tuple(max(0, min(255, round(bg[i] + (c[i] - bg[i]) / a))) for i in range(3))

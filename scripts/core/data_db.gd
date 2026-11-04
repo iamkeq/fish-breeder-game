@@ -183,6 +183,10 @@ func _validate_economy() -> void:
 	if _require(tanks, ["max", "extra_costs"], "economy/breeding_tanks") \
 			and tanks["extra_costs"].size() < int(tanks["max"]) - 1:
 		errors.append("economy/breeding_tanks: needs a cost for each extra tank (%d)" % (int(tanks["max"]) - 1))
+	if tanks.has("substrate") and not items.has(tanks["substrate"]):
+		errors.append("economy/breeding_tanks: unknown substrate '%s'" % tanks["substrate"])
+	if tanks.has("air_stone") and not ResourceLoader.exists(tanks["air_stone"].get("sheet", "")):
+		errors.append("economy/breeding_tanks: air stone sheet '%s' not found" % tanks["air_stone"].get("sheet", ""))
 	var start: Dictionary = economy["starting_state"]
 	if not _require(start, ["money", "display_tank", "items", "fish"], "economy/starting_state"):
 		return
