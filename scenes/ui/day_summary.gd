@@ -57,6 +57,7 @@ func show_summary(s: Dictionary) -> void:
 	_add_money(s)
 	_add_show(s)
 	_add_staff(s)
+	_add_standing_orders(s)
 	_add_back_room(s)
 	_add_tomorrow(s)
 	_open_button.text = ("Start Day %d (still closed for restock)" if Game.state.restocking else "Open shop for Day %d") % Game.state.day
@@ -135,6 +136,21 @@ func _add_staff(s: Dictionary) -> void:
 	if int(report["wages_skipped"]) > 0:
 		wages += "   ·   %d skipped (no worries, you can pay next time)" % int(report["wages_skipped"])
 	_line(wages).modulate = Color(1, 1, 1, 0.75)
+
+
+## "Standing orders": what the shop ordered by itself today, and what it cost.
+func _add_standing_orders(s: Dictionary) -> void:
+	var report: Dictionary = s.get("standing_orders", {})
+	var placed: Array = report.get("placed", [])
+	if placed.is_empty():
+		return
+	_heading("Standing orders")
+	var total := 0
+	for o in placed:
+		total += int(o["cost"])
+		_line("Ordered %d× %s  ($%d). It arrives tomorrow morning." % [int(o["quantity"]), o["name"], int(o["cost"])])
+	if placed.size() > 1:
+		_line("Total: $%d" % total).modulate = Color(1, 1, 1, 0.75)
 
 
 func _add_back_room(s: Dictionary) -> void:

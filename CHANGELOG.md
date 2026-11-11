@@ -2,6 +2,21 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.21.0] - 2026-11-11
+
+### Added
+- **Standing orders (auto-reorder):** a new tab in the Market. For any item
+  (fish food, decorations, plants and so on) switch on **Auto**, then set
+  "when stock is at or below N" and "order M". The shop pays at the normal
+  Market price (no discount) when stock runs low, and the goods arrive the
+  next morning. It never reorders while a delivery is already on the way,
+  and if you can't afford it, it quietly waits (no debt). A "Keep at least $"
+  setting protects your cash. Fish food shows how much your tanks use a
+  night. Fish are never auto-ordered.
+- A "Delivery" toast each morning, a "Standing orders" block in the day
+  summary, and an "Auto-order on" tag on the Supplies and Decorations rows.
+- Two new goals ("Never run out", "Well supplied") and Stats lines.
+
 ## [0.20.0] - 2026-11-11
 
 ### Added

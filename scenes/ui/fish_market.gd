@@ -1,7 +1,8 @@
 extends ColorRect
-## Market, in four tabs: Fish (named strains grouped by price tier, all always
+## Market, in five tabs: Fish (named strains grouped by price tier, all always
 ## visible), Decorations (plants, rocks, driftwood, decor), Supplies (tanks,
-## fish food, substrate) and Upgrades (one-off improvements to the shop).
+## fish food, substrate), Upgrades (one-off improvements to the shop) and
+## Standing orders (the shop reorders supplies by itself).
 ## Pauses the shop clock while open. Bought fish go to the holding tanks.
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
@@ -10,16 +11,18 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 @onready var _money: Label = %MarketMoney
 @onready var _status: Label = %MarketStatus
 
-const TABS := ["Fish", "Decorations", "Supplies", "Upgrades"]
+const TABS := ["Fish", "Decorations", "Supplies", "Upgrades", "Standing orders"]
 var _tab := 0
 var _tab_buttons: Array[Button] = []
+## True while a Standing orders field is being edited: the rows are not rebuilt then.
+var _editing := false
 
 
 func _ready() -> void:
 	visible = false
 	%CloseMarket.pressed.connect(close)
 	_build_tabs()
-	Game.changed.connect(func(): if visible: _refresh())
+	Game.changed.connect(func(): if visible and not _editing: _refresh())
 
 
 func open() -> void:
@@ -84,8 +87,134 @@ func _refresh() -> void:
 			_add_item_sections(SUPPLY_SECTIONS)
 		3:
 			_add_upgrades()
+		4:
+			_add_standing_orders()
 		_:
 			_add_fish_tiers()
+
+
+## The Standing orders tab: one row per Market item (not fish).
+func _add_standing_orders() -> void:
+	var state := Game.state
+	var note := Label.new()
+	note.text = "Set it and forget it: the shop reorders when stock runs low and it arrives next morning."
+	note.add_theme_font_size_override("font_size", 14)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.modulate = Color(1, 1, 1, 0.75)
+	_tiers.add_child(note)
+	var floor_row := HBoxContainer.new()
+	floor_row.add_theme_constant_override("separation", 8)
+	var floor_label := Label.new()
+	floor_label.text = "Keep at least $"
+	floor_row.add_child(floor_label)
+	var floor_spin := SpinBox.new()
+	floor_spin.min_value = 0
+	floor_spin.max_value = 9999
+	floor_spin.value = state.order_money_floor
+	floor_spin.tooltip_text = "The shop won't place an order if it would leave you with less than this."
+	floor_spin.value_changed.connect(func(v: float):
+		_editing = true
+		Game.set_order_money_floor(int(v))
+		_editing = false)
+	floor_row.add_child(floor_spin)
+	var floor_hint := Label.new()
+	floor_hint.text = "in the till after an order, so a reorder never empties your purse."
+	floor_hint.add_theme_font_size_override("font_size", 13)
+	floor_hint.modulate = Color(1, 1, 1, 0.7)
+	floor_row.add_child(floor_hint)
+	_tiers.add_child(floor_row)
+	_tiers.add_child(HSeparator.new())
+	var sections: Array = [SUPPLY_SECTIONS[1], SUPPLY_SECTIONS[2], SUPPLY_SECTIONS[0]] + DECOR_SECTIONS  # food first
+	for section in sections:
+		var ids := []
+		for category in section[1]:
+			ids.append_array(Game.db.items_in_category(category))
+		if ids.is_empty():
+			continue
+		ids.sort_custom(func(a, b): return Game.db.items[a]["name"] < Game.db.items[b]["name"])
+		var header := Label.new()
+		header.text = section[0]
+		header.add_theme_font_size_override("font_size", 19)
+		_tiers.add_child(header)
+		for id in ids:
+			_tiers.add_child(_standing_order_row(id))
+		_tiers.add_child(HSeparator.new())
+
+
+func _standing_order_row(item_id: String) -> Control:
+	var state := Game.state
+	var item: Dictionary = Game.db.items[item_id]
+	var rule := state.standing_order(item_id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.add_child(UI.item_icon(item, Vector2(48, 40)))
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 1)
+	var name := Label.new()
+	name.text = item["name"]
+	info.add_child(name)
+	var stock := Label.new()
+	stock.text = "In stock: %d · On the way: %d" % [state.inventory.count(item_id), state.pending_quantity(item_id)]
+	stock.add_theme_font_size_override("font_size", 13)
+	stock.modulate = Color(1, 1, 1, 0.7)
+	info.add_child(stock)
+	if item["category"] == "food":
+		var hint := Label.new()
+		hint.text = "Your tanks use about %d a night." % state.food_use_per_night()
+		hint.add_theme_font_size_override("font_size", 13)
+		hint.modulate = Color(0.45, 0.65, 0.5)
+		info.add_child(hint)
+	row.add_child(info)
+
+	var auto := CheckButton.new()
+	auto.text = "Auto"
+	auto.button_pressed = rule["enabled"]
+	auto.focus_mode = Control.FOCUS_NONE
+	auto.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(auto)
+	var controls := HBoxContainer.new()
+	controls.add_theme_constant_override("separation", 4)
+	controls.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var level_label := Label.new()
+	level_label.text = "At or below"
+	controls.add_child(level_label)
+	var level := SpinBox.new()
+	level.min_value = 0
+	level.max_value = int(Game.db.economy["standing_orders"]["max_level"])
+	level.value = rule["reorder_at"]
+	level.custom_minimum_size = Vector2(76, 0)
+	controls.add_child(level)
+	var qty_label := Label.new()
+	qty_label.text = "order"
+	controls.add_child(qty_label)
+	var qty := SpinBox.new()
+	qty.min_value = 1
+	qty.max_value = int(Game.db.economy["standing_orders"]["max_quantity"])
+	qty.value = rule["quantity"]
+	qty.custom_minimum_size = Vector2(76, 0)
+	controls.add_child(qty)
+	var cost := Label.new()
+	cost.text = "≈ $%d" % state.standing_order_cost(item_id)
+	cost.custom_minimum_size = Vector2(52, 0)
+	cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	controls.add_child(cost)
+	row.add_child(controls)
+	controls.modulate = Color.WHITE if rule["enabled"] else Color(1, 1, 1, 0.45)
+
+	# Changes apply at once. Editing a number never rebuilds the rows (that would
+	# steal focus), it just updates the price shown.
+	var save := func(_v = 0.0):
+		_editing = true
+		Game.set_standing_order(item_id, auto.button_pressed, int(level.value), int(qty.value))
+		_editing = false
+		_money.text = "You have $%d" % state.money
+		cost.text = "≈ $%d" % state.standing_order_cost(item_id)
+		controls.modulate = Color.WHITE if auto.button_pressed else Color(1, 1, 1, 0.45)
+	auto.toggled.connect(save)
+	level.value_changed.connect(save)
+	qty.value_changed.connect(save)
+	return row
 
 
 func _add_upgrades() -> void:
@@ -293,6 +422,15 @@ func _supply_row(item_id: String) -> Control:
 	name.text = "%s   (%s, have %d)" % [item["name"], item["category"], state.inventory.count(item_id)]
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(name)
+	if state.standing_order(item_id)["enabled"]:
+		var auto := Label.new()
+		auto.text = "Auto-order on"
+		auto.add_theme_font_size_override("font_size", 13)
+		auto.modulate = Color(0.45, 0.65, 0.5)
+		auto.tooltip_text = "Standing order: reorders %d when stock is %d or less." % [
+			state.standing_order(item_id)["quantity"], state.standing_order(item_id)["reorder_at"]]
+		auto.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.add_child(auto)
 	var price := Label.new()
 	price.text = "$%d" % cost
 	price.custom_minimum_size = Vector2(56, 0)

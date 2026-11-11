@@ -48,6 +48,8 @@
 		{"id": "full_wall", "name": "Full wall", "description": "Fill the wall with 6 portraits.", "metric": "pinned", "target": 6, "reward": 150},
 		{"id": "first_hire", "name": "First hire", "description": "Hire your first helper.", "metric": "staff_hired", "target": 1, "reward": 40},
 		{"id": "full_team", "name": "Full team", "description": "Have 3 helpers working in the shop.", "metric": "staff_count", "target": 3, "reward": 120},
-		{"id": "many_hands", "name": "Many hands", "description": "Your helpers do 100 odd jobs.", "metric": "staff_actions", "target": 100, "reward": 100}
+		{"id": "many_hands", "name": "Many hands", "description": "Your helpers do 100 odd jobs.", "metric": "staff_actions", "target": 100, "reward": 100},
+		{"id": "first_standing_order", "name": "Never run out", "description": "Switch on a standing order at the Market.", "metric": "standing_orders_active", "target": 1, "reward": 20},
+		{"id": "items_delivered_50", "name": "Well supplied", "description": "Get 50 items delivered by standing orders.", "metric": "items_delivered", "target": 50, "reward": 60}
 	]
 }

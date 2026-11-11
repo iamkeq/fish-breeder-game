@@ -77,6 +77,7 @@ static func economy() -> Dictionary:
 			"bred_wait_days": 7, "bred_reference_stars": 3},
 		"wholesale": {"fraction": 0.4, "fry_price": 1},
 		"favorites": {"max": 3},
+		"standing_orders": {"max_quantity": 50, "max_level": 50, "default_floor": 5, "delivery_days": 1},
 		"gallery": {"pin_slots": 2},
 		"fish_market": {"price_multiplier": 1.5, "tiers": [{"tier": 1, "name": "Starter"}, {"tier": 2, "name": "Fancy"}]},
 		"starting_state": {

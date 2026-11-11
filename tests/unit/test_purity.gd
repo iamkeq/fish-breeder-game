@@ -285,7 +285,7 @@ func test_goals_exist_and_pay() -> void:
 	var ids := db.goals.map(func(g): return g["id"])
 	for id in ["first_scan", "pure_line", "champion_line", "scans_10"]:
 		assert_true(id in ids, id)
-	assert_eq(db.goals.size(), 49)
+	assert_eq(db.goals.size(), 51)
 	_unlock_lab()
 	gs.db.goals.append({"id": "scan1", "name": "Scan", "description": "", "metric": "fish_scanned", "target": 1, "reward": 7})
 	gs.scan_fish(_adult("grey", 80).id)

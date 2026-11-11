@@ -74,6 +74,17 @@ var staff: Array = []
 var _next_staff_id: int = 1
 ## What staff did so far tonight (reset in end_day, read for the summary).
 var _staff_night: Dictionary = {}
+## Standing orders (auto-reorder of Market items): item id -> {enabled, reorder_at,
+## quantity}. Saved. See process_standing_orders().
+var standing_orders: Dictionary = {}
+## The shop never auto-orders if paying would leave less than this. Saved.
+var order_money_floor: int = 0
+## Standing orders paid for and on the way: [{item_id, quantity, arrive_day}]. Saved.
+var deliveries: Array = []
+## What arrived when today's shop opened: [{item_id, name, quantity}]. For the morning toast.
+var last_deliveries: Array = []
+## Orders placed so far today: [{item_id, name, quantity, cost}]. For the day summary.
+var _orders_placed_today: Array = []
 
 ## Which starting pair and challenge mode this game began with ("" = the
 ## standard ones). See data/new_game.json.
@@ -99,6 +110,7 @@ static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator, options: Dictio
 	s.challenge_id = p_db.challenge_by_id(str(options.get("challenge_id", ""))).get("id", "")
 	var start: Dictionary = p_db.economy["starting_state"]
 	s.money = int(s.challenge_rule("starting_money", start["money"]))
+	s.order_money_floor = s.default_order_money_floor()
 	for item_id in start["items"]:
 		s.inventory.add(item_id, int(start["items"][item_id]))
 	s.display_tank = s._make_tank(start["display_tank"])
@@ -261,12 +273,17 @@ func can_afford(amount: int) -> bool:
 func buy_item(item_id: String, qty: int = 1) -> bool:
 	if not db.items.has(item_id) or qty <= 0:
 		return false
-	var cost := int(db.items[item_id]["cost"]) * qty
+	var cost := item_cost(item_id, qty)
 	if not can_afford(cost):
 		return false
 	_spend(cost)
 	inventory.add(item_id, qty)
 	return true
+
+
+## What `qty` of an item costs at the Market (the same price buy_item charges).
+func item_cost(item_id: String, qty: int = 1) -> int:
+	return int(db.items[item_id]["cost"]) * qty
 
 
 ## Fish Market tiers from data: [{"tier": 1, "name": "Starter"}, ...]
@@ -733,6 +750,7 @@ func sell_item(item_id: String) -> int:
 	var price := Pricing.item_price(db.items[item_id])
 	_earn(price, "item")
 	_count("items_sold")
+	process_standing_orders()
 	return price
 
 
@@ -789,6 +807,7 @@ func install_display_tank(tank_item_id: String) -> bool:
 	if not inventory.remove(tank_item_id):
 		return false
 	display_tank = _make_tank(tank_item_id)
+	process_standing_orders()
 	return true
 
 
@@ -802,6 +821,7 @@ func place_item(tank: Tank, slot: int, item_id: String) -> bool:
 	take_item(tank, slot)
 	inventory.remove(item_id)
 	tank.place(slot, item)
+	process_standing_orders()
 	return true
 
 
@@ -820,6 +840,7 @@ func set_substrate(tank: Tank, item_id: String) -> bool:
 	take_substrate(tank)
 	inventory.remove(item_id)
 	tank.set_substrate(item)
+	process_standing_orders()
 	return true
 
 
@@ -1470,9 +1491,12 @@ func open_day() -> void:
 	_level_announced = reputation_level()
 	earned_today = 0
 	_reset_day_log()
+	_orders_placed_today = []
 	clock.open_shop()
 	customer = {}
 	minutes_to_customer = float(db.economy["customers"]["first_arrival_minutes"])
+	_receive_deliveries()
+	process_standing_orders()
 
 
 ## Runs the night: feeding, growth, breeding. Returns a summary for the UI.
@@ -1496,6 +1520,11 @@ func end_day() -> Dictionary:
 	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING))
 	_count("fish_bred", summary["fry_born"])
 	_staff_finish_night(summary)
+	# Last of all, so food used tonight is noticed. Placed orders arrive tomorrow morning.
+	process_standing_orders()
+	summary["log"] = day_log.duplicate(true)  # now includes the standing orders' purchases
+	if not _orders_placed_today.is_empty():
+		summary["standing_orders"] = {"placed": _orders_placed_today.duplicate(true)}
 	_record_best("best_day", earned_today)
 	_hold_show(summary)
 	check_goals()
@@ -1780,11 +1809,140 @@ func food_count() -> int:
 	return total
 
 
+## A guess at how many portions of fish food tonight's feeding will use: one for
+## every group of fish (each breeding tank, and holding) that has fry. The
+## auto-feeder upgrade uses none. Matches _night_feed_and_grow().
+func food_use_per_night() -> int:
+	if upgrade_effect("auto_feed") > 0.0:
+		return 0
+	var groups: Array = []
+	for tank in breeding_tanks:
+		groups.append(tank_fish(tank))
+	groups.append(inventory.fish_list(Fish.HOLDING))
+	var used := 0
+	for group in groups:
+		if group.any(func(f): return not is_adult(f)):
+			used += 1
+	return used
+
+
 func _use_food() -> bool:
 	for item_id in db.items_in_category("food"):
 		if inventory.remove(item_id):
 			return true
 	return false
+
+
+# --- Standing orders -----------------------------------------------------------
+
+## The shop's settings for one Market item: {enabled, reorder_at, quantity}.
+## Unset items give the defaults (off, order 5 when stock is 2 or less).
+func standing_order(item_id: String) -> Dictionary:
+	var rule: Dictionary = standing_orders.get(item_id, {})
+	var rules := _standing_rules()
+	return {
+		"enabled": bool(rule.get("enabled", false)),
+		"reorder_at": clampi(int(rule.get("reorder_at", 2)), 0, int(rules.get("max_level", 50))),
+		"quantity": clampi(int(rule.get("quantity", 5)), 1, int(rules.get("max_quantity", 50))),
+	}
+
+
+func _standing_rules() -> Dictionary:
+	return db.economy.get("standing_orders", {})
+
+
+## Sets "when stock is at or below `reorder_at`, order `quantity` more" for a
+## Market item (not fish). Numbers are clamped into range. False for unknown items.
+## Does not order anything itself: orders go out at the next check.
+func set_standing_order(item_id: String, enabled: bool, reorder_at: int, quantity: int) -> bool:
+	if not db.items.has(item_id):
+		return false
+	var rules := _standing_rules()
+	standing_orders[item_id] = {
+		"enabled": enabled,
+		"reorder_at": clampi(reorder_at, 0, int(rules.get("max_level", 50))),
+		"quantity": clampi(quantity, 1, int(rules.get("max_quantity", 50))),
+	}
+	return true
+
+
+func standing_orders_active() -> int:
+	var n := 0
+	for id in standing_orders:
+		if db.items.has(id) and bool(standing_orders[id].get("enabled", false)):
+			n += 1
+	return n
+
+
+func default_order_money_floor() -> int:
+	return int(_standing_rules().get("default_floor", 0))
+
+
+func set_order_money_floor(amount: int) -> void:
+	order_money_floor = maxi(amount, 0)
+
+
+## Units of an item ordered and not yet delivered.
+func pending_quantity(item_id: String) -> int:
+	var total := 0
+	for d in deliveries:
+		if d["item_id"] == item_id:
+			total += int(d["quantity"])
+	return total
+
+
+## What one order of this item costs: quantity times the normal Market price.
+func standing_order_cost(item_id: String) -> int:
+	if not db.items.has(item_id):
+		return 0
+	return item_cost(item_id, int(standing_order(item_id)["quantity"]))
+
+
+## Looks at every switched-on standing order. If spare stock plus what is on the
+## way is at or below its level, and paying would leave at least the money floor,
+## the order is paid for now (like any Market purchase) and arrives tomorrow
+## morning. Otherwise it quietly waits for the next check. Returns the orders placed.
+func process_standing_orders() -> Array:
+	var placed := []
+	if standing_orders.is_empty():
+		return placed
+	var ids := standing_orders.keys()
+	ids.sort()
+	var delay := int(_standing_rules().get("delivery_days", 1))
+	for id in ids:
+		if not db.items.has(id):
+			continue
+		var rule := standing_order(id)
+		if not rule["enabled"]:
+			continue
+		if inventory.count(id) + pending_quantity(id) > int(rule["reorder_at"]):
+			continue
+		var cost := item_cost(id, int(rule["quantity"]))
+		if cost > money or money - cost < order_money_floor:
+			continue
+		_spend(cost)
+		deliveries.append({"item_id": id, "quantity": int(rule["quantity"]), "arrive_day": day + delay})
+		var entry := {"item_id": id, "name": str(db.items[id]["name"]), "quantity": int(rule["quantity"]), "cost": cost}
+		placed.append(entry)
+		_orders_placed_today.append(entry.duplicate())
+	return placed
+
+
+## Moves everything that has arrived (arrive_day today or earlier) into stock.
+func _receive_deliveries() -> void:
+	last_deliveries = []
+	var waiting := []
+	var arrived := {}
+	for d in deliveries:
+		if int(d["arrive_day"]) <= day:
+			arrived[d["item_id"]] = int(arrived.get(d["item_id"], 0)) + int(d["quantity"])
+		else:
+			waiting.append(d)
+	deliveries = waiting
+	for id in arrived:
+		inventory.add(id, arrived[id])
+		_count("items_delivered", arrived[id])
+		last_deliveries.append({"item_id": id, "name": str(db.items[id]["name"]), "quantity": arrived[id]})
 
 
 # --- Staff -----------------------------------------------------------------------
@@ -2105,6 +2263,8 @@ func goal_value(metric: String) -> int:
 			return pinned_entries().size()
 		"staff_count":
 			return staff.size()
+		"standing_orders_active":
+			return standing_orders_active()
 	return stat(metric)
 
 
@@ -2335,6 +2495,9 @@ func to_dict() -> Dictionary:
 		"gallery_pins": gallery_pins.duplicate(),
 		"staff": staff.duplicate(true),
 		"next_staff_id": _next_staff_id,
+		"standing_orders": standing_orders.duplicate(true),
+		"order_money_floor": order_money_floor,
+		"deliveries": deliveries.duplicate(true),
 	}
 
 
@@ -2379,6 +2542,16 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 		if m is Dictionary and m.has("id") and m.has("task") and m.has("name"):
 			s.staff.append(m.duplicate(true))
 	s._next_staff_id = int(d.get("next_staff_id", s.staff.size() + 1))
+	var saved_orders: Dictionary = d.get("standing_orders", {})
+	for id in saved_orders:
+		if p_db.items.has(id) and saved_orders[id] is Dictionary:
+			var r: Dictionary = saved_orders[id]
+			s.set_standing_order(id, bool(r.get("enabled", false)), int(r.get("reorder_at", 2)), int(r.get("quantity", 5)))
+	s.order_money_floor = maxi(int(d.get("order_money_floor", s.default_order_money_floor())), 0)
+	for delivery in d.get("deliveries", []):
+		if delivery is Dictionary and p_db.items.has(delivery.get("item_id", "")) and int(delivery.get("quantity", 0)) > 0:
+			s.deliveries.append({"item_id": delivery["item_id"], "quantity": int(delivery["quantity"]),
+				"arrive_day": int(delivery.get("arrive_day", s.day))})
 	for id in d.get("upgrades", {}):
 		if p_db.upgrades.has(id):
 			s.upgrades[id] = int(d["upgrades"][id])

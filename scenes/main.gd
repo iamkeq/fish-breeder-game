@@ -78,6 +78,7 @@ func _ready() -> void:
 	add_child(_staff)
 	Game.staff_requested.connect(func(): _staff.open())
 	Game.day_started.connect(_remind_about_show)
+	Game.day_started.connect(_announce_deliveries)
 	_goals_button = Button.new()
 	_goals_button.pressed.connect(func(): _goals.open())
 	_market_button.add_sibling(_goals_button)
@@ -126,6 +127,7 @@ func _ready() -> void:
 		_show_toast("★ Your shop is now %s!" % level_name))
 	if Game.loaded_from_save:
 		_show_toast("Welcome back! Your shop is just as you left it.")
+		_announce_deliveries()
 
 	_hint.visible = OS.is_debug_build()
 	_update_top_bar()
@@ -205,6 +207,20 @@ func _process(delta: float) -> void:
 	_toast_time -= delta
 	_toast.modulate.a = clampf(_toast_time, 0.0, 1.0)
 	_toast.visible = _toast_time > 0.0
+
+
+## "Delivery: 10 fish food, 2 treasure chests" when standing orders arrive.
+func _announce_deliveries() -> void:
+	var parts := PackedStringArray()
+	for d in Game.state.last_deliveries:
+		parts.append("%d %s" % [int(d["quantity"]), str(d["name"]).to_lower()])
+	if parts.is_empty():
+		return
+	var text := "Delivery: " + ", ".join(parts)
+	if _toast_time > 0.0:
+		text = _toast_label.text + "
+" + text
+	_show_toast(text)
 
 
 ## On show day morning: a nudge, once per show, if you could still enter.

@@ -383,6 +383,16 @@ func dismiss_staff(staff_id: int) -> bool:
 	return _changed_if(state.dismiss_staff(staff_id))
 
 
+## Sets a standing order (auto-reorder) for a Market item. See GameState.set_standing_order().
+func set_standing_order(item_id: String, enabled: bool, reorder_at: int, quantity: int) -> bool:
+	return _changed_if(state.set_standing_order(item_id, enabled, reorder_at, quantity))
+
+
+func set_order_money_floor(amount: int) -> void:
+	state.set_order_money_floor(amount)
+	changed.emit()
+
+
 func buy_breeding_tank() -> bool:
 	return _changed_if(state.buy_breeding_tank())
 

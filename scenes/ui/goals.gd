@@ -360,6 +360,8 @@ func _add_stats(state: GameState) -> void:
 		["Back-orders handed over", str(state.stat("backorders_filled"))],
 		["Shelf items sold", str(state.stat("items_sold"))],
 		["Tanks sold", str(state.stat("tanks_sold"))],
+		["Standing orders active", str(state.standing_orders_active())],
+		["Items delivered", str(state.stat("items_delivered"))],
 	])
 
 

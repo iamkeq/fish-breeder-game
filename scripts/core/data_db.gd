@@ -52,7 +52,8 @@ const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "displa
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
 	"reputation_level", "fish_scanned", "best_purity_scanned", "shows_entered", "ribbons_first", "ribbons",
-	"grand_wins", "hall_of_fame", "pinned", "staff_hired", "staff_count", "staff_actions"]
+	"grand_wins", "hall_of_fame", "pinned", "staff_hired", "staff_count", "staff_actions",
+	"standing_orders_active", "items_delivered"]
 ## The jobs a hire can be given, in the order they run each night. See GameState.end_day().
 const STAFF_TASKS := ["feeder", "decorator", "stocker"]
 ## What a reputation level can change. See GameState.reputation_effect().
@@ -540,6 +541,7 @@ func _validate_economy() -> void:
 			and int(gallery["pin_slots"]) >= 1):
 		errors.append("economy/gallery: needs a 'pin_slots' number of 1 or more")
 	_validate_purity()
+	_validate_standing_orders()
 	var collector = economy["customers"].get("collector")
 	if collector != null and not (collector is Dictionary and collector.has("min_stars")
 			and collector.get("price_multipliers") is Dictionary):
@@ -569,6 +571,21 @@ func _validate_economy() -> void:
 	for id in slot_items:
 		if id != "" and not items.get(id, {}).get("category") in PLACEABLE_CATEGORIES:
 			errors.append("economy/starting_state: layout item '%s' can't go in a slot" % id)
+
+
+## Optional block: only type-checked when present.
+func _validate_standing_orders() -> void:
+	var rules = economy.get("standing_orders")
+	if rules == null:
+		return
+	if not rules is Dictionary:
+		errors.append("economy/standing_orders: must be an object")
+		return
+	for key in ["max_quantity", "max_level", "delivery_days"]:
+		if not _is_whole(rules.get(key)) or int(rules[key]) < 1:
+			errors.append("economy/standing_orders: '%s' must be a whole number of 1 or more" % key)
+	if not _is_whole(rules.get("default_floor")) or int(rules["default_floor"]) < 0:
+		errors.append("economy/standing_orders: 'default_floor' must be a whole number, 0 or more")
 
 
 ## Optional block: only type-checked when present.

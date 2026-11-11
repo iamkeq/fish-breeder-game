@@ -383,6 +383,17 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.21.0), standing orders:**
+  - `standing_orders` (item -> enabled, reorder_at, quantity),
+    `order_money_floor` and pending `deliveries` are saved. Orders are paid
+    through `_spend` at `item_cost()` (the same price as `buy_item`) and
+    arrive `delivery_days` (1) later, at `open_day`.
+  - `process_standing_orders()` runs after sales, placements, at end of
+    night and at open of day. It orders while `stock + pending <=
+    reorder_at`, and never below the money floor. Setting a rule does not
+    order by itself, so spin-boxes can't trigger orders while scrolling.
+  - It is separate from the Stock clerk and Feeder; they don't double-charge.
+    Prices are unchanged; retail decorations still sell at a margin by design.
 - **2026-11-11 (v0.20.0), shop staff:**
   - `data/staff.json`; hires are `{id, name, task, hired_day, color}` so stats
     and skills can be added later. One hire per task.

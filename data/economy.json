@@ -23,6 +23,7 @@
 			{ "min": 90, "name": "Champion Line" }
 		]
 	},
+	"standing_orders": {"max_quantity": 50, "max_level": 50, "default_floor": 50, "delivery_days": 1},
 	"lab": {
 		"scan_cost": 20,
 		"certified_bonus": [
