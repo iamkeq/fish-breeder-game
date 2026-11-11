@@ -383,6 +383,21 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.22.0), money-loop rebalance:**
+  - A headless bot (`tools/playbot.gd`, styles casual / optimizer / lazy;
+    optional `--tanks=sell`) and `tools/exploit_probes.gd` check the economy.
+    Run: `"$GODOT" --headless --path . -s res://tools/playbot.gd -- --days=100
+    --seed=1 --style=casual`. Re-run both after any pricing change.
+  - Tank sale = Market build cost (tank + substrate + placed items at `cost`)
+    x (1 + `tank_pricing.premium` 0.06 + up to `looks_bonus_max` 0.06) + fish.
+    Item retail `price` is about 1.25x `cost` (Fish Food is 1.5 because prices
+    are whole dollars). Special-order `stocked_tank` base_reward 45.
+  - Known and accepted: tank customers also buy fish at full price, so a shop
+    with surplus fish gets an extra outlet (selling+rebuilding a tank is at
+    most about 1.3x normal income). The optimizer bot still ends 100 days
+    near $107k (casual about $12.6k); that comes from fish, collector and
+    show income, which was left alone. Late-game money sinks are the open
+    item if this needs flattening.
 - **2026-11-11 (v0.21.0), standing orders:**
   - `standing_orders` (item -> enabled, reorder_at, quantity),
     `order_money_floor` and pending `deliveries` are saved. Orders are paid

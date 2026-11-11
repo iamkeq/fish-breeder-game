@@ -32,8 +32,8 @@
 		]
 	},
 	"tank_pricing": {
-		"item_markup": 1.2,
-		"aesthetics_bonus_per_point": 0.5
+		"premium": 0.06,
+		"looks_bonus_max": 0.06
 	},
 	"aesthetics": {
 		"substrate": 15,

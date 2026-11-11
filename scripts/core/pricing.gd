@@ -38,17 +38,27 @@ static func item_price(item: Dictionary) -> int:
 	return int(item["price"])
 
 
-## Tank + marked-up contents + a looks bonus + (optionally) the fish inside.
-## Pass `fish_total` = 0 to sell the tank without fish.
+## What it cost to build the tank at Market prices: the tank, its substrate
+## and everything placed in it.
+static func tank_build_cost(tank: Tank, items: Dictionary) -> int:
+	var total := 0
+	if tank.tank_item_id != "":
+		total += int(items[tank.tank_item_id]["cost"])
+	for id in tank.placed_item_ids():
+		total += int(items[id]["cost"])
+	return total
+
+
+## Build cost + a small premium + a looks bonus (at most `looks_bonus_max` of
+## the build cost, at 100 looks) + (optionally) the fish inside at their own
+## prices. Pass `fish_total` = 0 to sell the tank without fish. Selling a tank
+## and rebuilding it can never earn more than the premium and looks bonus.
 static func tank_price(tank: Tank, items: Dictionary, aesthetics_score: int, fish_total: int,
 		economy: Dictionary) -> int:
 	var rules: Dictionary = economy["tank_pricing"]
-	var total := 0.0
-	if tank.tank_item_id != "":
-		total += float(items[tank.tank_item_id]["price"])
-	for id in tank.placed_item_ids():
-		total += float(items[id]["price"]) * float(rules["item_markup"])
-	total += aesthetics_score * float(rules["aesthetics_bonus_per_point"])
+	var build := float(tank_build_cost(tank, items))
+	var total := build * (1.0 + float(rules["premium"]))
+	total += build * float(rules["looks_bonus_max"]) * clampf(aesthetics_score / 100.0, 0.0, 1.0)
 	total += fish_total
 	return roundi(total)
 

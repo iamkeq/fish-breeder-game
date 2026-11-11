@@ -2,6 +2,28 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.22.0] - 2026-11-11
+
+### Changed (balance, from a 100-day bot test)
+- **Selling the display tank** now pays the tank's Market build cost plus 6%,
+  plus up to 6% more for great looks, with any fish at their own prices.
+  Before, a decorated tank could sell for nearly three times what it cost, so
+  selling and rebuilding it was a money loop.
+- **Shop items** now sell to customers for about 1.25 times their Market cost
+  (they were 1.6 to 2 times). Decorations are still worth stocking, but
+  buying and reselling them, including with standing orders, is no longer a
+  hands-off earner.
+- **Special orders** pay a smaller bonus (base reward 60 to 45), and since
+  tank values are lower they pay roughly $45 above the fish and materials
+  instead of $157. They are still better than selling the same things
+  separately.
+- Fish prices, collectors, shows and reputation are unchanged.
+
+### Added
+- Developer tools `tools/playbot.gd` and `tools/exploit_probes.gd`: a
+  headless player that plays 100 days in three styles, and probes for money
+  loops. See DESIGN.md.
+
 ## [0.21.0] - 2026-11-11
 
 ### Added

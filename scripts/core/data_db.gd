@@ -520,6 +520,11 @@ func _validate_purity() -> void:
 func _validate_economy() -> void:
 	if not _require(economy, ECONOMY_FIELDS, "economy"):
 		return
+	if _require(economy["tank_pricing"], ["premium", "looks_bonus_max"], "economy/tank_pricing"):
+		for key in ["premium", "looks_bonus_max"]:
+			var value = economy["tank_pricing"][key]
+			if not (value is int or value is float) or float(value) < 0.0:
+				errors.append("economy/tank_pricing: '%s' must be a number of 0 or more" % key)
 	var tanks: Dictionary = economy["breeding_tanks"]
 	if _require(tanks, ["max", "extra_costs"], "economy/breeding_tanks") \
 			and tanks["extra_costs"].size() < int(tanks["max"]) - 1:

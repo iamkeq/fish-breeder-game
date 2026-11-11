@@ -33,19 +33,20 @@ func test_tank_price_without_fish() -> void:
 	var t := Tank.new("tank")
 	t.set_substrate(items["sand"])
 	t.place(4, items["stone"])
-	# 40 tank + (10 + 5) * 1.2 = 18 + 20 looks * 0.5 = 10  -> 68
-	assert_eq(Pricing.tank_price(t, items, 20, 0, economy), 68)
+	# Build cost at Market prices: 25 tank + 4 sand + 2 stone = 31.
+	# 31 * 1.10 premium = 34.1 + 31 * 0.10 * 0.20 looks = 0.62  -> 35
+	assert_eq(Pricing.tank_price(t, items, 20, 0, economy), 35)
 
 
 func test_tank_price_with_fish() -> void:
 	var t := Tank.new("tank")
 	t.set_substrate(items["sand"])
 	t.place(4, items["stone"])
-	assert_eq(Pricing.tank_price(t, items, 20, 25, economy), 93)
+	assert_eq(Pricing.tank_price(t, items, 20, 25, economy), 60, "35 + 25 for the fish")
 
 
-func test_empty_tank_is_worth_its_retail_price() -> void:
-	assert_eq(Pricing.tank_price(Tank.new("tank"), items, 0, 0, economy), 40)
+func test_empty_tank_is_worth_its_cost_plus_the_premium() -> void:
+	assert_eq(Pricing.tank_price(Tank.new("tank"), items, 0, 0, economy), 28, "25 * 1.10 = 27.5 rounds up")
 
 
 func test_strain_cost_counts_only_fixed_traits() -> void:

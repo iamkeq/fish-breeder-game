@@ -54,7 +54,7 @@ static func economy() -> Dictionary:
 				{"min": 70, "name": "Pure Line"}, {"min": 90, "name": "Champion Line"}],
 		},
 		"lab": {"scan_cost": 20, "certified_bonus": [{"min": 70, "bonus": 0.10}, {"min": 90, "bonus": 0.25}]},
-		"tank_pricing": {"item_markup": 1.2, "aesthetics_bonus_per_point": 0.5},
+		"tank_pricing": {"premium": 0.10, "looks_bonus_max": 0.10},
 		"aesthetics": {
 			"substrate": 15, "coverage": 25, "hardscape_and_plants": 15,
 			"variety": 15, "variety_cap": 4, "layering": 15, "theme": 15,
