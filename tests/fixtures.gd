@@ -46,7 +46,7 @@ static func template() -> Dictionary:
 static func economy() -> Dictionary:
 	return {
 		"quality_multipliers": {"1": 0.6, "2": 0.8, "3": 1.0, "4": 1.5, "5": 2.25},
-		"offspring_quality_nudge": {"normal": [0.2, 0.6, 0.2], "fed": [0.1, 0.6, 0.3]},
+		"offspring_quality_nudge": {"normal": [0.2, 0.6, 0.2], "fed": [0.1, 0.6, 0.3], "premium": [0.0, 0.0, 1.0]},
 		"tank_pricing": {"item_markup": 1.2, "aesthetics_bonus_per_point": 0.5},
 		"aesthetics": {
 			"substrate": 15, "coverage": 25, "hardscape_and_plants": 15,
@@ -91,8 +91,30 @@ static func strains() -> Array:
 	]
 
 
+static func goals() -> Array:
+	return [
+		{"id": "first_sale", "name": "First sale", "description": "Sell a fish.", "metric": "fish_sold", "target": 1, "reward": 10},
+		{"id": "two_tanks", "name": "Two tanks", "description": "Own 2 breeding tanks.", "metric": "breeding_tanks", "target": 2, "reward": 30},
+		{"id": "good_day", "name": "Good day", "description": "Earn $50 in a day.", "metric": "best_day", "target": 50, "reward": 5},
+	]
+
+
+static func upgrades() -> Array:
+	return [
+		{"id": "sign", "name": "Sign", "description": "", "cost": 40, "effects": {"customer_speed": 1.0}},
+		{"id": "big_sign", "name": "Big Sign", "description": "", "cost": 10, "requires": "sign", "effects": {"customer_speed": 1.0}},
+		{"id": "bench", "name": "Bench", "description": "", "cost": 5, "effects": {"patience": 0.5}},
+		{"id": "desk", "name": "Desk", "description": "", "cost": 5, "effects": {"max_orders": 2, "max_backorders": 3}},
+		{"id": "feeder", "name": "Feeder", "description": "", "cost": 5, "effects": {"auto_feed": 1}},
+		{"id": "racks", "name": "Racks", "description": "", "cost": 5, "effects": {"breeding_capacity": 4}},
+		{"id": "premium", "name": "Premium", "description": "", "cost": 5, "effects": {"premium_food": 1}},
+		{"id": "contract", "name": "Contract", "description": "", "cost": 5, "effects": {"wholesale_fraction": 0.1}},
+		{"id": "heaters", "name": "Heaters", "description": "", "cost": 5, "effects": {"brood_nights": 1}},
+	]
+
+
 static func db() -> DataDB:
-	return DataDB.from_dicts([species()], items(), [template()], economy(), strains())
+	return DataDB.from_dicts([species()], items(), [template()], economy(), strains(), goals(), upgrades())
 
 
 static func rng(seed_value: int = 1234) -> RandomNumberGenerator:

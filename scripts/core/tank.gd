@@ -107,3 +107,19 @@ func remove_fish(fish_id: int) -> bool:
 		return false
 	fish_ids.erase(fish_id)
 	return true
+
+
+func to_dict() -> Dictionary:
+	return {"tank_item_id": tank_item_id, "capacity": capacity, "substrate": substrate,
+		"slots": slots.duplicate(), "fish_ids": fish_ids.duplicate()}
+
+
+static func from_dict(d: Dictionary) -> Tank:
+	var t := Tank.new(d.get("tank_item_id", ""), int(d.get("capacity", 6)))
+	t.substrate = d.get("substrate", "")
+	var saved: Array = d.get("slots", [])
+	for i in mini(saved.size(), t.slots.size()):
+		t.slots[i] = str(saved[i])
+	for fish_id in d.get("fish_ids", []):
+		t.fish_ids.append(int(fish_id))
+	return t

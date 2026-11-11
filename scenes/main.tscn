@@ -44,7 +44,7 @@ layout_mode = 2
 
 [node name="TopBar" type="HBoxContainer" parent="Margin/Layout/TopBarPanel"]
 layout_mode = 2
-theme_override_constants/separation = 16
+theme_override_constants/separation = 9
 
 [node name="ShopName" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
 layout_mode = 2

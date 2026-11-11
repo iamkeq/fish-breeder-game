@@ -275,7 +275,7 @@ func _add_backorders() -> void:
 	if state.backorders.is_empty():
 		return
 	_counter.add_child(HSeparator.new())
-	_counter.add_child(_label("Back-orders  %d/%d" % [state.backorders.size(), int(Game.db.economy["backorders"]["max"])]))
+	_counter.add_child(_label("Back-orders  %d/%d" % [state.backorders.size(), state.max_backorders()]))
 	for i in state.backorders.size():
 		var order: Dictionary = state.backorders[i]
 		var what := ""
@@ -319,7 +319,7 @@ func _decline_button(text: String) -> Button:
 
 func _add_orders() -> void:
 	var state := Game.state
-	var max_orders := int(Game.db.economy["requests"]["max_orders"])
+	var max_orders := state.max_orders()
 	_counter.add_child(_label("Orders  %d/%d" % [state.orders.size(), max_orders]))
 	if state.orders.is_empty():
 		var none := _wrapped("No orders. Request customers drop by now and then.")

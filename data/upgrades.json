@@ -1,0 +1,14 @@
+{
+	"upgrades": [
+		{"id": "waiting_bench", "name": "Waiting Bench", "description": "Customers wait 50% longer at the counter before wandering off.", "cost": 60, "effects": {"patience": 0.5}},
+		{"id": "shop_sign", "name": "Painted Shop Sign", "description": "Customers come in 20% more often.", "cost": 90, "effects": {"customer_speed": 0.2}},
+		{"id": "window_display", "name": "Lit Window Display", "description": "Customers come in another 30% more often.", "cost": 240, "requires": "shop_sign", "effects": {"customer_speed": 0.3}},
+		{"id": "order_desk", "name": "Order Desk", "description": "Take 2 more special orders and 3 more back-orders at once.", "cost": 150, "effects": {"max_orders": 2, "max_backorders": 3}},
+		{"id": "wholesale_contract", "name": "Wholesale Contract", "description": "The wholesaler pays 50% of the customer price for adult fish instead of 40%.", "cost": 160, "effects": {"wholesale_fraction": 0.1}},
+		{"id": "auto_feeder", "name": "Auto-Feeders", "description": "Fry are fed every night without using up fish food.", "cost": 180, "effects": {"auto_feed": 1}},
+		{"id": "bigger_breeding_tanks", "name": "Bigger Breeding Tanks", "description": "Every breeding tank holds 4 more fish.", "cost": 200, "effects": {"breeding_capacity": 4}},
+		{"id": "breeding_room_extension", "name": "Breeding Room Extension", "description": "Every breeding tank holds another 4 fish.", "cost": 400, "requires": "bigger_breeding_tanks", "effects": {"breeding_capacity": 4}},
+		{"id": "conditioning_food", "name": "Conditioning Food", "description": "Well-fed fry are more likely to grow up a star better than their parents.", "cost": 300, "effects": {"premium_food": 1}},
+		{"id": "tank_heaters", "name": "Tank Heaters", "description": "Breeding pairs have a brood one night sooner.", "cost": 350, "effects": {"brood_nights": 1}}
+	]
+}

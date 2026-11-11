@@ -56,7 +56,7 @@ func refresh() -> void:
 			if view.get_parent() != null and view.get_parent().get_parent() == child:
 				view.get_parent().remove_child(view)
 		child.queue_free()
-	var max_orders := int(Game.db.economy["requests"]["max_orders"])
+	var max_orders := state.max_orders()
 	for i in max_orders:
 		_columns.add_child(_order_column(i) if i < state.orders.size() else _empty_column())
 

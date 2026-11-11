@@ -41,6 +41,14 @@ var restocking: bool = false
 ## you've bred at least once, with the day they were first bred.
 var discovered_recipes: Dictionary = {}
 var discovered_mutations: Dictionary = {}
+## Lifetime counters ("fish_sold", "best_day", ...), used by goals.
+var stats: Dictionary = {}
+## Goals reached: goal id -> the day it was reached.
+var completed_goals: Dictionary = {}
+## Shop upgrades bought: upgrade id -> the day it was bought.
+var upgrades: Dictionary = {}
+
+const SAVE_VERSION := 1
 
 
 static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator) -> GameState:
@@ -146,7 +154,7 @@ func buy_breeding_tank() -> bool:
 
 
 func _add_breeding_tank() -> void:
-	breeding_tanks.append(Tank.new("", int(db.economy["breeding_tank_capacity"])))
+	breeding_tanks.append(Tank.new("", breeding_capacity()))
 	brood_nights.append(0)
 
 
@@ -224,6 +232,7 @@ func fish_display_name(f: Fish) -> String:
 func _earn(amount: int, category: String) -> void:
 	money += amount
 	earned_today += amount
+	_count("total_earned", amount)
 	if day_log.is_empty():
 		_reset_day_log()
 	var sale: Array = day_log["sales"].get(category, [0, 0])
@@ -238,7 +247,7 @@ func _spend(amount: int) -> void:
 
 
 func _reset_day_log() -> void:
-	day_log = {"money_start": money, "sales": {}, "spent": 0, "served": 0, "walked_out": 0}
+	day_log = {"money_start": money, "sales": {}, "spent": 0, "served": 0, "walked_out": 0, "goals": []}
 
 
 ## Sells one item from stock. Returns the money earned (0 if it couldn't).
@@ -258,10 +267,14 @@ func sell_fish(fish_id: int) -> int:
 	var price := fish_price(f)
 	_release_fish(f)
 	_earn(price, "fish")
+	_count_fish_sold(f)
 	return price
 
 
 func wholesale_price(f: Fish) -> int:
+	var bonus := upgrade_effect("wholesale_fraction")
+	if bonus > 0.0 and is_adult(f):
+		return maxi(1, roundi(fish_price(f) * (float(db.economy["wholesale"]["fraction"]) + bonus)))
 	return Pricing.wholesale_price(f, species_of(f), db.economy)
 
 
@@ -391,8 +404,13 @@ func make_request(template_id: String = "") -> Dictionary:
 		inventory.fish_list(), rng)
 
 
+## How many special orders you can hold at once.
+func max_orders() -> int:
+	return int(db.economy["requests"]["max_orders"]) + int(upgrade_effect("max_orders"))
+
+
 func can_accept_request() -> bool:
-	return orders.size() < int(db.economy["requests"]["max_orders"])
+	return orders.size() < max_orders()
 
 
 func accept_request(request: Dictionary) -> bool:
@@ -476,6 +494,7 @@ func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionar
 		_dismantle_order_tank(order)  # a half-built order tank goes back to stock
 	orders.remove_at(order_index)
 	_earn(result["payout"], "order")
+	_count("orders_delivered")
 	return result
 
 
@@ -615,6 +634,7 @@ func serve_customer() -> int:
 		"tank":
 			earned = sell_display_tank(customer.get("with_fish", true))
 	day_log["served"] = day_log.get("served", 0) + 1
+	_count("customers_served")
 	_customer_leaves()
 	return earned
 
@@ -631,8 +651,13 @@ func accept_customer_request() -> bool:
 
 # --- Back-orders ---------------------------------------------------------------
 
+## How many back-orders you can hold at once.
+func max_backorders() -> int:
+	return int(db.economy["backorders"]["max"]) + int(upgrade_effect("max_backorders"))
+
+
 func can_backorder() -> bool:
-	return backorders.size() < int(db.economy["backorders"]["max"])
+	return backorders.size() < max_backorders()
 
 
 ## True if the customer at the counter wants something you could order in for
@@ -817,9 +842,12 @@ func fulfil_backorder(index: int) -> int:
 	if order.has("item_id"):
 		inventory.remove(order["item_id"])
 	else:
-		_release_fish(backorder_fish(order))
+		var f := backorder_fish(order)
+		_release_fish(f)
+		_count_fish_sold(f)
 	backorders.remove_at(index)
 	_earn(order["price"], "backorder")
+	_count("backorders_filled")
 	return order["price"]
 
 
@@ -847,6 +875,7 @@ func _new_customer() -> Dictionary:
 	if not can_backorder():
 		ctx["all_items"] = []
 	var c := Customers.make_walk_in(ctx, db.economy["customers"], rng)
+	c["patience"] *= 1.0 + upgrade_effect("patience")
 	if c["kind"] == "request":
 		c["request"] = make_request()
 	return c
@@ -854,7 +883,8 @@ func _new_customer() -> Dictionary:
 
 func _customer_leaves() -> void:
 	customer = {}
-	minutes_to_customer = Customers.next_arrival_minutes(shop_appeal(), db.economy["customers"], rng)
+	minutes_to_customer = Customers.next_arrival_minutes(shop_appeal(), db.economy["customers"], rng) \
+		/ (1.0 + upgrade_effect("customer_speed"))
 
 
 # --- Day cycle ---------------------------------------------------------------
@@ -885,6 +915,11 @@ func end_day() -> Dictionary:
 		_night_breed(summary, i)
 	# Fry moved out to holding (to make room) keep growing there too.
 	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING))
+	_count("fish_bred", summary["fry_born"])
+	_record_best("best_day", earned_today)
+	check_goals()
+	summary["goals"] = day_log["goals"].duplicate(true)
+	summary["money_end"] = money
 	day += 1
 	# Looking ahead to tomorrow.
 	summary["nights_until_brood"] = nights_until_brood()
@@ -909,8 +944,9 @@ func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
 			fry.append(f)
 	if fry.is_empty():
 		return
-	var fed := _use_food()
-	if fed:
+	var auto := upgrade_effect("auto_feed") > 0.0  # auto-feeders use no food
+	var fed := auto or _use_food()
+	if fed and not auto:
 		summary["food_used"] += 1
 	for f in fry:
 		if not fed:
@@ -919,8 +955,7 @@ func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
 			continue
 		f.age_days += 1
 		if is_adult(f):
-			f.stars = Quality.roll_offspring_stars(f.parent_stars, f.fed_every_night,
-				db.economy["offspring_quality_nudge"], rng)
+			f.stars = Quality.roll_offspring_stars(f.parent_stars, f.fed_every_night, _star_nudges(), rng)
 			summary["fry_grown_up"] += 1
 			summary["grown_ids"].append(f.id)
 
@@ -933,7 +968,7 @@ func _night_breed(summary: Dictionary, tank_index: int) -> void:
 		return
 	var species := species_of(pair[0])
 	brood_nights[tank_index] += 1
-	if brood_nights[tank_index] < int(species["days_between_broods"]):
+	if brood_nights[tank_index] < brood_interval(species):
 		return
 	brood_nights[tank_index] = 0
 	for fry in Genetics.breed(pair[0], pair[1], species, rng):
@@ -1021,7 +1056,21 @@ func nights_until_brood(tank_index: int = 0) -> int:
 	var pair := breeding_pair(tank_index)
 	if pair.is_empty():
 		return -1
-	return int(species_of(pair[0])["days_between_broods"]) - brood_nights[tank_index]
+	return brood_interval(species_of(pair[0])) - brood_nights[tank_index]
+
+
+## Nights between a pair's broods (tank heaters shorten it; never below 1).
+func brood_interval(species: Dictionary) -> int:
+	return maxi(1, int(species["days_between_broods"]) - int(upgrade_effect("brood_nights")))
+
+
+## The star-nudge odds for fry growing up. Conditioning food swaps the
+## "fed every night" odds for the better "premium" ones.
+func _star_nudges() -> Dictionary:
+	var nudges: Dictionary = db.economy["offspring_quality_nudge"]
+	if upgrade_effect("premium_food") > 0.0 and nudges.has("premium"):
+		return {"normal": nudges["normal"], "fed": nudges["premium"]}
+	return nudges
 
 
 func food_count() -> int:
@@ -1036,6 +1085,220 @@ func _use_food() -> bool:
 		if inventory.remove(item_id):
 			return true
 	return false
+
+
+# --- Stats and goals -----------------------------------------------------------
+
+func stat(stat_name: String) -> int:
+	return int(stats.get(stat_name, 0))
+
+
+func _count(stat_name: String, amount: int = 1) -> void:
+	stats[stat_name] = stat(stat_name) + amount
+
+
+func _record_best(stat_name: String, value: int) -> void:
+	if value > stat(stat_name):
+		stats[stat_name] = value
+
+
+func _count_fish_sold(f: Fish) -> void:
+	_count("fish_sold")
+	_record_best("best_stars_sold", f.stars)
+
+
+## The current number behind a goal metric (see DataDB.GOAL_METRICS).
+func goal_value(metric: String) -> int:
+	match metric:
+		"recipes":
+			return discovered_recipes.size()
+		"mutations":
+			return discovered_mutations.size()
+		"breeding_tanks":
+			return breeding_tanks.size()
+		"upgrades":
+			return upgrades.size()
+		"display_looks":
+			return tank_aesthetics(display_tank) if display_tank != null else 0
+		"best_day":
+			return maxi(stat("best_day"), earned_today)
+	return stat(metric)
+
+
+func is_goal_done(goal_id: String) -> bool:
+	return completed_goals.has(goal_id)
+
+
+## How far along a goal is, capped at its target.
+func goal_progress(goal: Dictionary) -> int:
+	if is_goal_done(goal["id"]):
+		return int(goal["target"])
+	return mini(goal_value(goal["metric"]), int(goal["target"]))
+
+
+## Marks every goal that has just been reached as done and pays its reward
+## (once). Returns the goals reached this time.
+func check_goals() -> Array:
+	var reached := []
+	for goal in db.goals:
+		if is_goal_done(goal["id"]) or goal_value(goal["metric"]) < int(goal["target"]):
+			continue
+		completed_goals[goal["id"]] = day
+		var reward := int(goal["reward"])
+		money += reward
+		_count("goal_rewards", reward)
+		if day_log.is_empty():
+			_reset_day_log()
+		day_log["goals"].append({"name": goal["name"], "reward": reward})
+		reached.append(goal)
+	return reached
+
+
+# --- Shop upgrades -------------------------------------------------------------
+
+func has_upgrade(upgrade_id: String) -> bool:
+	return upgrades.has(upgrade_id)
+
+
+## The total of one effect across every upgrade you own (0 if none).
+func upgrade_effect(effect: String) -> float:
+	var total := 0.0
+	for id in upgrades:
+		if db.upgrades.has(id):
+			total += float(db.upgrades[id]["effects"].get(effect, 0.0))
+	return total
+
+
+## Why you can't buy an upgrade, or "" if you can.
+func upgrade_blocker(upgrade_id: String) -> String:
+	if not db.upgrades.has(upgrade_id):
+		return "No such upgrade."
+	if has_upgrade(upgrade_id):
+		return "Already bought."
+	var upgrade: Dictionary = db.upgrades[upgrade_id]
+	var needs: String = upgrade.get("requires", "")
+	if needs != "" and not has_upgrade(needs):
+		return "Buy the %s first." % db.upgrades[needs]["name"]
+	if not can_afford(int(upgrade["cost"])):
+		return "You need $%d more." % (int(upgrade["cost"]) - money)
+	return ""
+
+
+func buy_upgrade(upgrade_id: String) -> bool:
+	if upgrade_blocker(upgrade_id) != "":
+		return false
+	_spend(int(db.upgrades[upgrade_id]["cost"]))
+	upgrades[upgrade_id] = day
+	for tank in breeding_tanks:
+		tank.capacity = breeding_capacity()
+	return true
+
+
+## How many fish each breeding tank holds.
+func breeding_capacity() -> int:
+	return int(db.economy["breeding_tank_capacity"]) + int(upgrade_effect("breeding_capacity"))
+
+
+# --- Saving --------------------------------------------------------------------
+
+## Everything needed to carry on later, as plain data. Meant to be taken
+## between days: the customer at the counter and today's log aren't kept.
+func to_dict() -> Dictionary:
+	var saved_orders := []
+	for order in orders:
+		var o := {}
+		for key in order:
+			o[key] = order[key]
+		var tank: Tank = order.get("tank")
+		o["tank"] = tank.to_dict() if tank != null else null
+		saved_orders.append(o)
+	return {
+		"version": SAVE_VERSION,
+		"money": money,
+		"day": day,
+		"stock": inventory.stock(),
+		"fish": inventory.fish_list().map(func(f): return f.to_dict()),
+		"next_fish_id": inventory.next_fish_id(),
+		"display_tank": display_tank.to_dict() if display_tank != null else null,
+		"breeding_tanks": breeding_tanks.map(func(t): return t.to_dict()),
+		"brood_nights": Array(brood_nights),
+		"orders": saved_orders,
+		"next_order_id": _next_order_id,
+		"backorders": backorders.duplicate(true),
+		"restocking": restocking,
+		"discovered_recipes": discovered_recipes.duplicate(),
+		"discovered_mutations": discovered_mutations.duplicate(),
+		"stats": stats.duplicate(),
+		"completed_goals": completed_goals.duplicate(),
+		"upgrades": upgrades.duplicate(),
+	}
+
+
+## Rebuilds a game from to_dict() data and opens its day. Returns null if the
+## data is from another save version or is missing its basics.
+static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary) -> GameState:
+	if int(d.get("version", 0)) != SAVE_VERSION or not d.has("money") or d.get("breeding_tanks", []).is_empty():
+		return null
+	var s := GameState.new()
+	s.db = p_db
+	s.rng = p_rng
+	s.money = int(d["money"])
+	s.day = int(d.get("day", 1))
+	s.restocking = bool(d.get("restocking", false))
+	s.discovered_recipes = d.get("discovered_recipes", {}).duplicate()
+	s.discovered_mutations = d.get("discovered_mutations", {}).duplicate()
+	s.stats = d.get("stats", {}).duplicate()
+	s.completed_goals = d.get("completed_goals", {}).duplicate()
+	for id in d.get("upgrades", {}):
+		if p_db.upgrades.has(id):
+			s.upgrades[id] = int(d["upgrades"][id])
+	var stock: Dictionary = d.get("stock", {})
+	for item_id in stock:
+		if p_db.items.has(item_id) and int(stock[item_id]) > 0:
+			s.inventory.add(item_id, int(stock[item_id]))
+	for fish_data in d.get("fish", []):
+		if p_db.species.has(fish_data.get("species_id", "")):
+			s.inventory.add_fish(Fish.from_dict(fish_data))
+	s.inventory.set_next_fish_id(int(d.get("next_fish_id", 1)))
+	if d.get("display_tank") != null:
+		s.display_tank = Tank.from_dict(d["display_tank"])
+	for tank_data in d["breeding_tanks"]:
+		s.breeding_tanks.append(Tank.from_dict(tank_data))
+		s.brood_nights.append(0)
+	var nights: Array = d.get("brood_nights", [])
+	for i in mini(nights.size(), s.brood_nights.size()):
+		s.brood_nights[i] = int(nights[i])
+	for order_data in d.get("orders", []):
+		var order: Dictionary = order_data.duplicate(true)
+		order["tank"] = Tank.from_dict(order_data["tank"]) if order_data.get("tank") != null else null
+		s.orders.append(order)
+	s._next_order_id = int(d.get("next_order_id", 1))
+	s.backorders = d.get("backorders", []).duplicate(true)
+	s._match_fish_to_tanks()
+	s.clock = GameClock.new(p_db.economy["clock"])
+	s.open_day()
+	return s
+
+
+## After loading: every tank lists exactly the fish that say they live in it
+## (saved order kept), and fish whose tank is gone wait in holding.
+func _match_fish_to_tanks() -> void:
+	var tanks: Array = [display_tank]
+	tanks.append_array(breeding_tanks)
+	for order in orders:
+		tanks.append(order.get("tank"))
+	for tank in tanks:
+		if tank != null:
+			tank.fish_ids = tank.fish_ids.filter(func(id): return inventory.has_fish(id) \
+				and tank_at(inventory.get_fish(id).location) == tank)
+	for f in inventory.fish_list():
+		if f.location == Fish.HOLDING:
+			continue
+		var home := tank_at(f.location)
+		if home == null:
+			f.location = Fish.HOLDING
+		elif not f.id in home.fish_ids:
+			home.fish_ids.append(f.id)
 
 
 # --- Helpers -----------------------------------------------------------------

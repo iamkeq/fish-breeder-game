@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.11.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.12.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -45,12 +45,18 @@ Current version: **0.11.0** (see the [changelog](CHANGELOG.md)).
   holding tanks, which is handy when a breeding tank gets crowded. Fish only breed with others in the same
   tank, so you can keep lines apart. Each tank's tab lists the fish inside.
 - **Move ▾** on any fish sends it to the display tank, a breeding tank or holding.
-- **The Market** has three tabs: **Fish** (named guppy strains in four price
+- **The Market** has four tabs: **Fish** (named guppy strains in four price
   tiers; they cost more than customers pay, so the profit is in breeding them), **Decorations** (plants, rocks, driftwood, decor) and **Supplies**
   (tanks, fish food, substrate).
 - **The tank editor** lets you place substrate and six items (back, middle,
   front). A live looks score and tips show how to make it prettier, and
   prettier tanks sell for more.
+- **Goals** (top bar) lists things to aim for. Each pays a one-off cash reward
+  when you reach it.
+- **Upgrades** (a Market tab) are permanent shop improvements: more customers,
+  bigger breeding tanks, auto-feeders, faster broods and more.
+- **Saving:** the game saves at the end of every day and loads by itself next
+  time. Start over from the bottom of the Goals window.
 - **Wholesaler:** any fish, even fry, can be sold instantly for less than a
   customer would pay, to make room or clear out a line you don't like.
 - **Restock** (top bar) closes the shop to customers and runs time 4× faster to
@@ -96,7 +102,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.11.0
+.\tools\publish_web.ps1 0.12.0
 ```
 
 ## Project layout

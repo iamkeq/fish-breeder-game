@@ -49,6 +49,15 @@ func add_fish(fish: Fish) -> Fish:
 	return fish
 
 
+## The id the next new fish will get (saved so ids are never reused).
+func next_fish_id() -> int:
+	return _next_fish_id
+
+
+func set_next_fish_id(value: int) -> void:
+	_next_fish_id = maxi(_next_fish_id, value)
+
+
 func get_fish(fish_id: int) -> Fish:
 	return _fish.get(fish_id)
 

@@ -1,0 +1,30 @@
+{
+	"goals": [
+		{"id": "first_sale", "name": "Open for business", "description": "Sell a fish to a customer.", "metric": "fish_sold", "target": 1, "reward": 10},
+		{"id": "first_fry", "name": "Pitter patter", "description": "Breed 5 fry.", "metric": "fish_bred", "target": 5, "reward": 10},
+		{"id": "sell_10", "name": "Regular trade", "description": "Sell 10 fish to customers.", "metric": "fish_sold", "target": 10, "reward": 25},
+		{"id": "first_recipe", "name": "Something new", "description": "Discover a breeding recipe.", "metric": "recipes", "target": 1, "reward": 25},
+		{"id": "looks_80", "name": "Window dressing", "description": "Get your display tank to 80 looks.", "metric": "display_looks", "target": 80, "reward": 20},
+		{"id": "first_order", "name": "Made to order", "description": "Deliver a special order tank.", "metric": "orders_delivered", "target": 1, "reward": 30},
+		{"id": "backorders_3", "name": "Worth the wait", "description": "Hand over 3 back-orders.", "metric": "backorders_filled", "target": 3, "reward": 30},
+		{"id": "second_tank", "name": "Room to grow", "description": "Own 2 breeding tanks.", "metric": "breeding_tanks", "target": 2, "reward": 30},
+		{"id": "first_upgrade", "name": "Fixer-upper", "description": "Buy a shop upgrade.", "metric": "upgrades", "target": 1, "reward": 25},
+		{"id": "day_200", "name": "A good day", "description": "Earn $200 in one day.", "metric": "best_day", "target": 200, "reward": 50},
+		{"id": "sell_4_star", "name": "Quality stock", "description": "Sell a 4★ fish to a customer.", "metric": "best_stars_sold", "target": 4, "reward": 40},
+		{"id": "recipes_5", "name": "Mixologist", "description": "Discover 5 breeding recipes.", "metric": "recipes", "target": 5, "reward": 75},
+		{"id": "first_mutation", "name": "Lucky fry", "description": "Breed a rare mutation.", "metric": "mutations", "target": 1, "reward": 60},
+		{"id": "sell_50", "name": "Busy shop", "description": "Sell 50 fish to customers.", "metric": "fish_sold", "target": 50, "reward": 100},
+		{"id": "orders_5", "name": "Tank builder", "description": "Deliver 5 special order tanks.", "metric": "orders_delivered", "target": 5, "reward": 100},
+		{"id": "sell_5_star", "name": "Show quality", "description": "Sell a 5★ fish to a customer.", "metric": "best_stars_sold", "target": 5, "reward": 100},
+		{"id": "four_tanks", "name": "Full back room", "description": "Own all 4 breeding tanks.", "metric": "breeding_tanks", "target": 4, "reward": 100},
+		{"id": "recipes_10", "name": "Master mixer", "description": "Discover 10 breeding recipes.", "metric": "recipes", "target": 10, "reward": 150},
+		{"id": "day_500", "name": "A great day", "description": "Earn $500 in one day.", "metric": "best_day", "target": 500, "reward": 150},
+		{"id": "bred_200", "name": "Fish factory", "description": "Breed 200 fry.", "metric": "fish_bred", "target": 200, "reward": 150},
+		{"id": "upgrades_5", "name": "Well equipped", "description": "Buy 5 shop upgrades.", "metric": "upgrades", "target": 5, "reward": 150},
+		{"id": "mutations_3", "name": "Oddity collector", "description": "Breed 3 different mutations.", "metric": "mutations", "target": 3, "reward": 200},
+		{"id": "earned_5000", "name": "Going concern", "description": "Earn $5,000 in total.", "metric": "total_earned", "target": 5000, "reward": 250},
+		{"id": "all_recipes", "name": "The whole book", "description": "Discover all 15 breeding recipes.", "metric": "recipes", "target": 15, "reward": 300},
+		{"id": "all_mutations", "name": "One in a million", "description": "Breed all 6 mutations.", "metric": "mutations", "target": 6, "reward": 300},
+		{"id": "all_upgrades", "name": "Dream shop", "description": "Buy every shop upgrade.", "metric": "upgrades", "target": 10, "reward": 300}
+	]
+}

@@ -15,6 +15,10 @@ signal day_started
 signal customer_changed
 ## A new customer just walked in (rings the shop bell).
 signal customer_arrived
+## One or more goals were just reached (entries from data/goals.json).
+signal goals_reached(goals: Array)
+
+var save_path := "user://save.json"
 
 ## Debug builds only: hold F to run the clock this many times faster.
 const FAST_FORWARD := 20.0
@@ -22,6 +26,11 @@ const FAST_FORWARD := 20.0
 var db: DataDB
 var state: GameState
 var _pause_requests: int = 0
+## Whether this run loads and writes the save file. Off for headless runs and
+## scripted tools (tests, screenshots), so they never touch a real save.
+var persist: bool = true
+## True if this run carried on from a save (for the "welcome back" note).
+var loaded_from_save: bool = false
 
 
 func _ready() -> void:
@@ -29,9 +38,55 @@ func _ready() -> void:
 	db = DataDB.load_from_dir("res://data")
 	for e in db.errors:
 		push_error("Game data: " + e)
+	var args := OS.get_cmdline_args()
+	persist = DisplayServer.get_name() != "headless" and not ("-s" in args or "--script" in args)
+	state = _load_saved()
+	loaded_from_save = state != null
+	if state == null:
+		state = GameState.new_game(db, _new_rng())
+	changed.connect(_check_goals)
+
+
+func _new_rng() -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
-	state = GameState.new_game(db, rng)
+	return rng
+
+
+## The saved game, or null if there isn't a usable one.
+func _load_saved() -> GameState:
+	if not persist:
+		return null
+	var data := SaveFile.read(save_path)
+	if data.is_empty():
+		return null
+	var loaded := GameState.from_dict(db, _new_rng(), data)
+	if loaded == null:
+		push_warning("Save file couldn't be used; starting a new game.")
+	return loaded
+
+
+## Writes the save. Called at the end of every day, once the night has run.
+func save_game() -> bool:
+	return persist and SaveFile.write(save_path, state.to_dict())
+
+
+## Wipes the save and starts again from Day 1.
+func new_game() -> void:
+	if persist and FileAccess.file_exists(save_path):
+		DirAccess.remove_absolute(save_path)
+	state = GameState.new_game(db, _new_rng())
+	loaded_from_save = false
+	_pause_requests = 0
+	get_tree().reload_current_scene()
+
+
+## Runs after anything changes: pays out goals that were just reached.
+func _check_goals() -> void:
+	var reached := state.check_goals()
+	if not reached.is_empty():
+		goals_reached.emit(reached)
+		changed.emit()  # money went up
 
 
 func _process(delta: float) -> void:
@@ -125,6 +180,7 @@ func sell_fish_wholesale(fish_id: int) -> int:
 
 func _finish_day() -> void:
 	var summary := state.end_day()
+	save_game()
 	changed.emit()
 	customer_changed.emit()
 	day_ended.emit(summary)
@@ -224,6 +280,10 @@ func _changed_if(ok: bool) -> bool:
 
 func buy_breeding_tank() -> bool:
 	return _changed_if(state.buy_breeding_tank())
+
+
+func buy_upgrade(upgrade_id: String) -> bool:
+	return _changed_if(state.buy_upgrade(upgrade_id))
 
 
 func breed_order_for_customer() -> bool:

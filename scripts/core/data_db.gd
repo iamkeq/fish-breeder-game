@@ -23,7 +23,21 @@ var request_templates: Dictionary = {}
 ## Named breeding-stock lines sold in the Fish Market, by id.
 var strains: Dictionary = {}
 var economy: Dictionary = {}
+## Goals in the order they're listed (data/goals.json).
+var goals: Array = []
+## Shop upgrades by id, and their listed order (data/upgrades.json).
+var upgrades: Dictionary = {}
+var upgrade_order: Array = []
 var errors: Array[String] = []
+
+const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
+## What a goal can count. See GameState.goal_value().
+const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
+	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
+	"best_stars_sold", "total_earned", "customers_served"]
+const UPGRADE_FIELDS := ["id", "name", "description", "cost", "effects"]
+const UPGRADE_EFFECTS := ["customer_speed", "patience", "max_orders", "max_backorders",
+	"breeding_capacity", "auto_feed", "premium_food", "wholesale_fraction", "brood_nights"]
 
 
 static func load_from_dir(root: String = "res://data") -> DataDB:
@@ -37,15 +51,20 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 	for file_data in _read_dir(root.path_join("strains"), read_errors):
 		strain_list.append_array(file_data.get("strains", []))
 	var economy_data = _read_file(root.path_join("economy.json"), read_errors)
+	var goal_data = _read_file(root.path_join("goals.json"), read_errors)
+	var upgrade_data = _read_file(root.path_join("upgrades.json"), read_errors)
 	var db := from_dicts(species_list, item_list, template_list,
-		economy_data if economy_data is Dictionary else {}, strain_list)
+		economy_data if economy_data is Dictionary else {}, strain_list,
+		goal_data.get("goals", []) if goal_data is Dictionary else [],
+		upgrade_data.get("upgrades", []) if upgrade_data is Dictionary else [])
 	read_errors.append_array(db.errors)
 	db.errors = read_errors
 	return db
 
 
 static func from_dicts(species_list: Array, item_list: Array, template_list: Array,
-		economy_data: Dictionary, strain_list: Array = []) -> DataDB:
+		economy_data: Dictionary, strain_list: Array = [], goal_list: Array = [],
+		upgrade_list: Array = []) -> DataDB:
 	var db := DataDB.new()
 	for s in species_list:
 		db._add_unique(db.species, s, "species")
@@ -55,6 +74,14 @@ static func from_dicts(species_list: Array, item_list: Array, template_list: Arr
 		db._add_unique(db.request_templates, t, "request")
 	for s in strain_list:
 		db._add_unique(db.strains, s, "strain")
+	var goal_ids := {}
+	for g in goal_list:
+		db._add_unique(goal_ids, g, "goal")
+	db.goals = goal_list.filter(func(g): return g is Dictionary and g.has("id"))
+	for u in upgrade_list:
+		db._add_unique(db.upgrades, u, "upgrade")
+		if u is Dictionary and u.has("id") and not u["id"] in db.upgrade_order:
+			db.upgrade_order.append(u["id"])
 	db.economy = economy_data
 	db.validate()
 	return db
@@ -82,6 +109,20 @@ func validate() -> void:
 		_validate_template(request_templates[id])
 	for id in strains:
 		_validate_strain(strains[id])
+	for g in goals:
+		var goal_ctx := "goal/%s" % g["id"]
+		if _require(g, GOAL_FIELDS, goal_ctx) and not g["metric"] in GOAL_METRICS:
+			errors.append("%s: unknown metric '%s'" % [goal_ctx, g["metric"]])
+	for id in upgrades:
+		var u: Dictionary = upgrades[id]
+		var upgrade_ctx := "upgrade/%s" % id
+		if not _require(u, UPGRADE_FIELDS, upgrade_ctx):
+			continue
+		for effect in u["effects"]:
+			if not effect in UPGRADE_EFFECTS:
+				errors.append("%s: unknown effect '%s'" % [upgrade_ctx, effect])
+		if u.has("requires") and not upgrades.has(u["requires"]):
+			errors.append("%s: requires unknown upgrade '%s'" % [upgrade_ctx, u["requires"]])
 	_validate_economy()
 
 

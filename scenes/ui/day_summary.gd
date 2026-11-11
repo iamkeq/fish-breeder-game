@@ -76,6 +76,8 @@ func _add_money(s: Dictionary) -> void:
 			_line("%s: %d  ($%d)" % [SALE_NAMES[key], sales[key][0], sales[key][1]])
 	if log["spent"] > 0:
 		_line("Spent at the Market: $%d" % log["spent"])
+	for g in s.get("goals", []):
+		_line("★ Goal reached: %s  (+$%d)" % [g["name"], int(g["reward"])]).modulate = GOOD
 	var people := "Customers served: %d" % log["served"]
 	if log["walked_out"] > 0:
 		people += "   ·   wandered off: %d" % log["walked_out"]

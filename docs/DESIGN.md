@@ -383,6 +383,19 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.12.0), saving, goals, upgrades:**
+  - *Saving:* `GameState.to_dict()` / `from_dict()` hold everything that
+    lasts between days (not the customer at the counter or today's log).
+    `SaveFile` writes JSON to `user://save.json` and turns whole-number floats
+    back into ints on load. The Game autoload saves after each night and loads
+    on start; headless and `-s` script runs never touch the save.
+  - *Goals:* `data/goals.json` entries are `{metric, target, reward}`.
+    `GameState.goal_value()` reads the metric (lifetime `stats` counters, or
+    live values like recipes found). `check_goals()` pays each reward once;
+    rewards are not sales, so they don't count towards "best day".
+  - *Upgrades:* `data/upgrades.json` entries carry `effects`; rules ask
+    `upgrade_effect(name)` for the total. One-off purchases only, so they
+    can't create a money loop.
 - **2026-11-04 (v0.11.0), animated decor:** items may carry `frames` (rects
   on their sheet), `fps` and `body_height` (pixels of the object at the bottom
   of each frame). TankView sizes the body by the height class and lets the

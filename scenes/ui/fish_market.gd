@@ -1,7 +1,7 @@
 extends ColorRect
-## Market, in three tabs: Fish (named strains grouped by price tier, all always
-## visible), Decorations (plants, rocks, driftwood, decor) and Supplies (tanks,
-## fish food, substrate).
+## Market, in four tabs: Fish (named strains grouped by price tier, all always
+## visible), Decorations (plants, rocks, driftwood, decor), Supplies (tanks,
+## fish food, substrate) and Upgrades (one-off improvements to the shop).
 ## Pauses the shop clock while open. Bought fish go to the holding tanks.
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
@@ -10,7 +10,7 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 @onready var _money: Label = %MarketMoney
 @onready var _status: Label = %MarketStatus
 
-const TABS := ["Fish", "Decorations", "Supplies"]
+const TABS := ["Fish", "Decorations", "Supplies", "Upgrades"]
 var _tab := 0
 var _tab_buttons: Array[Button] = []
 
@@ -82,8 +82,73 @@ func _refresh() -> void:
 			_add_item_sections(DECOR_SECTIONS)
 		2:
 			_add_item_sections(SUPPLY_SECTIONS)
+		3:
+			_add_upgrades()
 		_:
 			_add_fish_tiers()
+
+
+func _add_upgrades() -> void:
+	var state := Game.state
+	var header := Label.new()
+	header.text = "Shop upgrades  (%d of %d bought)" % [state.upgrades.size(), Game.db.upgrades.size()]
+	header.add_theme_font_size_override("font_size", 19)
+	_tiers.add_child(header)
+	var hint := Label.new()
+	hint.text = "Each one is bought once and lasts for good."
+	hint.add_theme_font_size_override("font_size", 13)
+	hint.modulate = Color(1, 1, 1, 0.7)
+	_tiers.add_child(hint)
+	for id in Game.db.upgrade_order:
+		_tiers.add_child(_upgrade_row(id))
+		_tiers.add_child(HSeparator.new())
+
+
+func _upgrade_row(upgrade_id: String) -> Control:
+	var state := Game.state
+	var upgrade: Dictionary = Game.db.upgrades[upgrade_id]
+	var owned := state.has_upgrade(upgrade_id)
+	var blocker := state.upgrade_blocker(upgrade_id)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 1)
+	var name := Label.new()
+	name.text = ("✔ " if owned else "") + upgrade["name"]
+	info.add_child(name)
+	var what := Label.new()
+	what.text = upgrade["description"]
+	what.add_theme_font_size_override("font_size", 13)
+	what.modulate = Color(1, 1, 1, 0.7)
+	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(what)
+	if not owned and upgrade.has("requires") and not state.has_upgrade(upgrade["requires"]):
+		var needs := Label.new()
+		needs.text = blocker
+		needs.add_theme_font_size_override("font_size", 13)
+		needs.modulate = Color(0.75, 0.4, 0.2)
+		info.add_child(needs)
+	row.add_child(info)
+	var price := Label.new()
+	price.text = "Bought" if owned else "$%d" % int(upgrade["cost"])
+	price.add_theme_font_size_override("font_size", 19)
+	price.custom_minimum_size = Vector2(72, 0)
+	price.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	price.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	price.modulate = Color.WHITE if blocker == "" else Color(1, 1, 1, 0.45)
+	row.add_child(price)
+	if not owned:
+		var b := UI.small_button("Buy", blocker)
+		b.disabled = blocker != ""
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(func():
+			if Game.buy_upgrade(upgrade_id):
+				_status.text = "Bought the %s." % upgrade["name"])
+		row.add_child(b)
+	else:
+		row.modulate = Color(1, 1, 1, 0.75)
+	return row
 
 
 func _add_fish_tiers() -> void:

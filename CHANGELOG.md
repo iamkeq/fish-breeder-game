@@ -2,6 +2,33 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.12.0] - 2026-11-11
+
+### Added
+- **Saving.** Your shop is saved at the end of every day and picks up where
+  you left off next time (in the browser too). **Start a new game** is at the
+  bottom of the Goals window and asks twice before wiping the save. Quitting
+  in the middle of a day goes back to that morning.
+- **Goals** (top bar): 26 things to aim for, from your first sale to
+  completing the breeding book. Each has a progress bar and pays a one-off
+  cash reward. A note pops up when you reach one, and the day summary lists
+  them. The window also shows a few lifetime numbers (fish sold, best day…).
+- **Shop upgrades** (Market → Upgrades): 10 permanent improvements, about
+  $2,100 in all.
+  - Waiting Bench ($60): customers wait 50% longer.
+  - Painted Shop Sign ($90), then Lit Window Display ($240): customers come
+    20% and then another 30% more often.
+  - Order Desk ($150): 2 more special orders and 3 more back-orders at once.
+  - Wholesale Contract ($160): wholesaler pays 50% instead of 40% for adults.
+  - Auto-Feeders ($180): fry are fed every night without using fish food.
+  - Bigger Breeding Tanks ($200), then Breeding Room Extension ($400): each
+    breeding tank holds 4 and then another 4 more fish.
+  - Conditioning Food ($300): well-fed fry more often grow up a star better.
+  - Tank Heaters ($350): broods come one night sooner.
+
+### Changed
+- Top bar spacing tightened to fit the Goals button.
+
 ## [0.11.0] - 2026-11-04
 
 ### Added
