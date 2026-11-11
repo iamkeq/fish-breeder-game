@@ -88,7 +88,7 @@ func test_real_guppies_have_art_for_every_variety() -> void:
 	var db := DataDB.load_from_dir("res://data")
 	var guppy: Dictionary = db.species["guppy"]
 	var t: Dictionary = guppy["traits"]["variety"]
-	assert_eq(t["common"].size() + t["rare"].size(), 28, "24 from the sheet + 4 new mutations")
+	assert_eq(t["common"].size() + t["rare"].size(), 33, "24 from the sheet + 4 new mutations + 5 third-generation recipes")
 	for v in t["common"] + t["rare"]:
 		assert_true(guppy["sprites"]["varieties"].has(v) or guppy["sprites"].get("placeholders", {}).has(v), v)
 

@@ -6,6 +6,12 @@ extends ColorRect
 const UI := preload("res://scenes/ui/ui_kit.gd")
 const SPECIES_ID := "guppy"
 const CARD_FISH := Vector2(74, 40)
+const GENERATION_NAMES := ["First", "Second", "Third"]
+const GENERATION_HINTS := [
+	"Pair two Market varieties.",
+	"One parent is a variety you bred.",
+	"Both parents are varieties you bred.",
+]
 
 var _progress: Label
 var _body: VBoxContainer
@@ -85,14 +91,29 @@ func _refresh() -> void:
 	var found_mutations := mutations.filter(func(m): return m["discovered"]).size()
 	_progress.text = "Recipes %d/%d   ·   Mutations %d/%d" % [found_recipes, recipes.size(), found_mutations, mutations.size()]
 
-	_body.add_child(_heading("Recipes", "Pair two varieties to discover what they make. Only breeding counts."))
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
+	# Recipes in one section per generation: how many steps from the Market varieties.
+	var generations := []
 	for r in recipes:
-		grid.add_child(_recipe_card(r))
-	_body.add_child(grid)
+		if not r["generation"] in generations:
+			generations.append(r["generation"])
+	generations.sort()
+	for g in generations:
+		var in_generation := recipes.filter(func(r): return r["generation"] == g)
+		var found := in_generation.filter(func(r): return r["discovered"]).size()
+		var title := "%s generation   ·   %d/%d" % [_generation_name(g), found, in_generation.size()]
+		var hint := "%s Only breeding counts." % _generation_hint(g)
+		var bonus := Game.state.generation_bonus(g)
+		if bonus > 0:
+			var paid_day := int(Game.state.book_bonuses.get(str(g), -1))
+			hint += "   Find them all: +$%d%s" % [bonus, " (earned)" if paid_day > 0 else (" (already complete)" if paid_day == 0 else "")]
+		_body.add_child(_heading(title, hint))
+		var grid := GridContainer.new()
+		grid.columns = 3
+		grid.add_theme_constant_override("h_separation", 10)
+		grid.add_theme_constant_override("v_separation", 10)
+		for r in in_generation:
+			grid.add_child(_recipe_card(r))
+		_body.add_child(grid)
 
 	_body.add_child(_heading("Mutations", "Any pair, any tank. Rarer ones turn up less often."))
 	var mgrid := GridContainer.new()
@@ -107,13 +128,26 @@ func _refresh() -> void:
 	_body.add_child(mgrid)
 
 
+func _generation_name(g: int) -> String:
+	return GENERATION_NAMES[g - 1] if g >= 1 and g <= GENERATION_NAMES.size() else "Generation %d" % g
+
+
+func _generation_hint(g: int) -> String:
+	return GENERATION_HINTS[g - 1] if g >= 1 and g <= GENERATION_HINTS.size() else "Built on earlier recipes."
+
+
+## "Reward $15" for something still to find, or "" if it pays nothing.
+func _reward_text(amount: int) -> String:
+	return "   ·   Reward $%d" % amount if amount > 0 else ""
+
+
 func _recipe_card(r: Dictionary) -> Control:
 	var card := _card()
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	if not r["discovered"]:
 		box.add_child(_big_text("?   ×   ?   →   ?"))
-		box.add_child(_small("Not discovered yet"))
+		box.add_child(_small("Not discovered yet" + _reward_text(Game.state.recipe_reward(r["generation"]))))
 		card.add_child(box)
 		card.modulate = Color(1, 1, 1, 0.6)
 		return card
@@ -138,7 +172,7 @@ func _mutation_card(m: Dictionary, max_weight: float) -> Control:
 	var rarity := "Very rare" if m["weight"] < max_weight * 0.5 else ("Rare" if m["weight"] < max_weight else "Uncommon")
 	if not m["discovered"]:
 		box.add_child(_big_text("?"))
-		box.add_child(_small("%s mutation, not found yet" % rarity))
+		box.add_child(_small("%s mutation, not found yet%s" % [rarity, _reward_text(Game.state.mutation_reward())]))
 		card.add_child(box)
 		card.modulate = Color(1, 1, 1, 0.6)
 		return card

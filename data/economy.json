@@ -38,7 +38,8 @@
 		"first_arrival_minutes": 10,
 		"request_chance": 0.25,
 		"patience_minutes": 90,
-		"wants": { "fish": 3, "item": 2, "tank": 1, "wish": 1.5 },
+		"wants": { "fish": 3, "item": 2, "tank": 1, "wish": 1.5, "collector": 1.5 },
+		"collector": { "min_stars": 4, "price_multipliers": { "4": 1.5, "5": 2.0 } },
 		"appeal": {
 			"display_weight": 1.0,
 			"holding_weight": 0.4,
@@ -49,6 +50,11 @@
 			"max_speedup": 4.0
 		},
 		"names": ["Mabel", "Theo", "Priya", "Jun", "Rosa", "Felix", "Ada", "Omar", "Wren", "Hugo", "Lena", "Sam"]
+	},
+	"breeding_book": {
+		"recipe_rewards": [15, 30, 60],
+		"mutation_reward": 50,
+		"generation_bonus": [50, 100, 200]
 	},
 	"requests": {
 		"max_orders": 3,

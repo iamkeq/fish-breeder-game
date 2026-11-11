@@ -45,8 +45,10 @@ static func next_arrival_minutes(appeal: float, rules: Dictionary, rng: RandomNu
 ##   wishable: Array                fish they could ask you to get (GameState.wishable_fish)
 ##   tank_for_sale: bool            display tank is decorated
 ##   can_take_request: bool         room for another order
+##   collector_fish: Array[Fish]    bred-by-you, high-star fish a collector would buy
 ## Kinds: fish / item / tank (in stock), wish_item / wish_fish (out of stock:
-## the player can back-order it), request, browse.
+## the player can back-order it), collector (wants one of your own show-quality
+## fish, for a premium), request, browse.
 static func make_walk_in(ctx: Dictionary, rules: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 	var names: Array = rules.get("names", ["A customer"])
 	var customer := {
@@ -75,6 +77,9 @@ static func make_walk_in(ctx: Dictionary, rules: Dictionary, rng: RandomNumberGe
 		options["wish_item"] = float(wants.get("wish", 0.0)) * 0.5
 	if not wishable.is_empty():
 		options["wish_fish"] = float(wants.get("wish", 0.0)) * 0.5
+	var collector_fish: Array = ctx.get("collector_fish", [])
+	if not collector_fish.is_empty():
+		options["collector"] = float(wants.get("collector", 0.0))
 	options = _positive(options)
 	if options.is_empty():
 		customer["kind"] = "request" if can_request else "browse"
@@ -89,6 +94,12 @@ static func make_walk_in(ctx: Dictionary, rules: Dictionary, rng: RandomNumberGe
 			for f in fish_for_sale:
 				weights[f.id] = 1.0 + fish_appeal(f, species_db[f.species_id], rules)
 			customer["fish_id"] = _weighted_key(weights, rng)
+		"collector":
+			# Higher stars are more likely to catch their eye.
+			var star_weights := {}
+			for f in collector_fish:
+				star_weights[f.id] = float(f.stars)
+			customer["fish_id"] = _weighted_key(star_weights, rng)
 		"item":
 			customer["item_id"] = in_stock[rng.randi_range(0, in_stock.size() - 1)]
 		"tank":

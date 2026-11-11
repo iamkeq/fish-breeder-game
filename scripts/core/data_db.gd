@@ -34,7 +34,7 @@ const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
 ## What a goal can count. See GameState.goal_value().
 const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
-	"best_stars_sold", "total_earned", "customers_served"]
+	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales"]
 const UPGRADE_FIELDS := ["id", "name", "description", "cost", "effects"]
 const UPGRADE_EFFECTS := ["customer_speed", "patience", "max_orders", "max_backorders",
 	"breeding_capacity", "auto_feed", "premium_food", "wholesale_fraction", "brood_nights"]
@@ -228,6 +228,11 @@ func _validate_economy() -> void:
 		errors.append("economy/breeding_tanks: unknown substrate '%s'" % tanks["substrate"])
 	if tanks.has("air_stone") and not ResourceLoader.exists(tanks["air_stone"].get("sheet", "")):
 		errors.append("economy/breeding_tanks: air stone sheet '%s' not found" % tanks["air_stone"].get("sheet", ""))
+	_validate_breeding_book()
+	var collector = economy["customers"].get("collector")
+	if collector != null and not (collector is Dictionary and collector.has("min_stars")
+			and collector.get("price_multipliers") is Dictionary):
+		errors.append("economy/customers/collector: needs 'min_stars' and a 'price_multipliers' object")
 	var start: Dictionary = economy["starting_state"]
 	if not _require(start, ["money", "display_tank", "items", "fish"], "economy/starting_state"):
 		return
@@ -253,6 +258,21 @@ func _validate_economy() -> void:
 	for id in slot_items:
 		if id != "" and not items.get(id, {}).get("category") in PLACEABLE_CATEGORIES:
 			errors.append("economy/starting_state: layout item '%s' can't go in a slot" % id)
+
+
+## Optional block: only type-checked when present.
+func _validate_breeding_book() -> void:
+	var book = economy.get("breeding_book")
+	if book == null:
+		return
+	if not book is Dictionary:
+		errors.append("economy/breeding_book: must be an object")
+		return
+	for key in ["recipe_rewards", "generation_bonus"]:
+		if book.has(key) and not book[key] is Array:
+			errors.append("economy/breeding_book: '%s' must be a list" % key)
+	if book.has("mutation_reward") and not (book["mutation_reward"] is int or book["mutation_reward"] is float):
+		errors.append("economy/breeding_book: 'mutation_reward' must be a number")
 
 
 static func _read_dir(path: String, errs: Array[String]) -> Array:

@@ -2,6 +2,25 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.13.0] - 2026-11-11
+
+### Added
+- **Third-generation recipes:** five new varieties, each made from two
+  varieties you bred yourself: Gold × Sunset → **Phoenix**, Koi × Dalmatian →
+  **Calico**, Tuxedo × Neon → **Midnight**, Pastel × Turquoise → **Opal**,
+  Leopard × Sunset → **Tiger**. Worth ×2.8 to ×3.4. They use tinted
+  placeholder art for now. 20 recipes in all.
+- **Breeding book rewards:** every first-time discovery pays cash: $15 / $30 /
+  $60 for a first / second / third-generation recipe, $50 for a mutation.
+  Finding every recipe of a generation pays a bonus ($50 / $100 / $200).
+  Undiscovered cards show their reward; the day summary shows what you earned.
+- The breeding book groups recipes by generation, each with its own count.
+- **Collectors:** a new customer who only wants show-quality fish **bred in
+  your shop**. They pay 1.5× the usual price for a 4★ fish and double for a
+  5★. Market-bought fish never qualify (no buy-and-resell loop).
+- Three new goals: discover a third-generation recipe, sell to a collector,
+  sell 10 fish to collectors. "The whole book" now needs all 20 recipes.
+
 ## [0.12.0] - 2026-11-11
 
 ### Added

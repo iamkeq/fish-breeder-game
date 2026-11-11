@@ -383,6 +383,20 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.13.0), recipe generations, book rewards, collectors:**
+  - `Genetics.pair_generation()` is 1 + the deeper parent's
+    `recipe_generation()` (0 for non-recipe values). Five generation-3 guppy
+    recipes added (placeholder art).
+  - `economy.breeding_book` sets one-off rewards per discovery and per
+    completed generation; `GameState._discover()` pays them straight into
+    money (not a sale). `book_bonuses` is saved; old saves get no back pay.
+  - Collector customers (`customers.collector`, `wants.collector`) pay a star
+    multiplier for adults with `paid == 0` and no `strain_id`, i.e. bred by
+    the player. Market fish are excluded so there is no resale loop.
+  - First change made with the plan / delegate / review workflow: the lead
+    wrote the plan, the `fish-dev` Sonnet agent implemented it, the lead
+    reviewed. The agent corrected the plan's Tiger recipe (Leopard ×
+    Snakeskin would have been generation 2).
 - **2026-11-11 (v0.12.0), saving, goals, upgrades:**
   - *Saving:* `GameState.to_dict()` / `from_dict()` hold everything that
     lasts between days (not the customer at the counter or today's log).

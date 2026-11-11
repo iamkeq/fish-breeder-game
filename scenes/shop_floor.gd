@@ -161,6 +161,19 @@ func _add_customer_card() -> void:
 				if state.customer_can_breed_order():
 					var wait: Array = Game.db.economy["backorders"]["breed_wait_days"]
 					text += "\nOr keep yours and breed them one: they'll come back in %d–%d days." % [wait[0], wait[1]]
+		"collector":
+			var f := state.inventory.get_fish(c["fish_id"])
+			if f != null:
+				var price := state.customer_price()
+				var usual := state.fish_price(f)
+				var ratio := float(price) / float(maxi(1, usual))
+				var how := "double the usual $%d" % usual if is_equal_approx(ratio, 2.0) \
+					else "%s× the usual $%d" % [("%.1f" % ratio).trim_suffix(".0"), usual]
+				text = "%s is a collector, looking for show-quality fish bred in your shop. They'll pay $%d for your %s %s %s (%s)." % [
+					who, price, UI.stars_text(f.stars), UI.sex_symbol(f), state.fish_display_name(f), how]
+				var card := HBoxContainer.new()
+				card.add_child(UI.fish_preview(f, state.species_of(f), Vector2(90, 46)))
+				_counter.add_child(card)
 		"item":
 			text = "%s would like to buy some %s." % [who, Game.db.items[c["item_id"]]["name"]]
 		"tank":
@@ -211,6 +224,15 @@ func _add_customer_card() -> void:
 			buttons.add_child(_decline_button("Wave goodbye"))
 		"wish_item":
 			buttons.add_child(_backorder_button(blocker))
+			buttons.add_child(_decline_button("Not today"))
+		"collector":
+			# Sell or not today: a collector can't be back-ordered or breed-ordered.
+			var sell := Button.new()
+			sell.text = "Sell $%d" % state.customer_price()
+			sell.disabled = blocker != ""
+			sell.tooltip_text = blocker
+			sell.pressed.connect(_on_serve)
+			buttons.add_child(sell)
 			buttons.add_child(_decline_button("Not today"))
 		"wish_fish":
 			var label := "Order it in" if c["wish"]["source"] == "market" else "Breed it for them"

@@ -41,6 +41,9 @@ var restocking: bool = false
 ## you've bred at least once, with the day they were first bred.
 var discovered_recipes: Dictionary = {}
 var discovered_mutations: Dictionary = {}
+## Breeding-book generation bonuses paid: generation (as a string) -> the day it
+## was completed (0 = already complete in a save from before bonuses existed).
+var book_bonuses: Dictionary = {}
 ## Lifetime counters ("fish_sold", "best_day", ...), used by goals.
 var stats: Dictionary = {}
 ## Goals reached: goal id -> the day it was reached.
@@ -594,6 +597,9 @@ func customer_price() -> int:
 			return Customers.backorder_price(wish_full_price(customer), db.economy["backorders"])
 		"wish_fish":
 			return fish_wish_terms(customer["wish"])["price"]
+		"collector":
+			var cf := inventory.get_fish(customer["fish_id"])
+			return collector_price(cf) if cf != null else 0
 	return 0
 
 
@@ -603,6 +609,10 @@ func customer_blocker() -> String:
 		"fish":
 			var f := inventory.get_fish(customer["fish_id"])
 			if f == null or not is_adult(f):
+				return "That fish isn't available any more."
+		"collector":
+			var cf := inventory.get_fish(customer["fish_id"])
+			if cf == null or not is_collector_fish(cf):
 				return "That fish isn't available any more."
 		"item":
 			if inventory.count(customer["item_id"]) <= 0:
@@ -633,10 +643,53 @@ func serve_customer() -> int:
 			earned = sell_item(customer["item_id"])
 		"tank":
 			earned = sell_display_tank(customer.get("with_fish", true))
+		"collector":
+			earned = _sell_to_collector(customer["fish_id"])
 	day_log["served"] = day_log.get("served", 0) + 1
 	_count("customers_served")
 	_customer_leaves()
 	return earned
+
+
+# --- Collectors ----------------------------------------------------------------
+
+## Collector rules from data (min_stars, price_multipliers); {} if switched off.
+func collector_rules() -> Dictionary:
+	return db.economy["customers"].get("collector", {})
+
+
+## True when a collector would buy this fish: an adult for sale (same pool as
+## fish_for_sale), at least min_stars, and bred by you. Fish bought at the Market
+## (they have a price paid or a strain) never qualify: collectors pay more than
+## the Market charges, so that would be a buy-and-resell money loop.
+func is_collector_fish(f: Fish) -> bool:
+	var rules := collector_rules()
+	if rules.is_empty() or f.paid != 0 or f.strain_id != "" or f.stars < int(rules["min_stars"]):
+		return false
+	return is_adult(f) and f.location in [Fish.DISPLAY, Fish.HOLDING]
+
+
+## Fish a collector could ask for right now.
+func collector_fish() -> Array:
+	return fish_for_sale().filter(func(f): return is_collector_fish(f))
+
+
+## What a collector pays: the usual price times a multiplier for the stars.
+func collector_price(f: Fish) -> int:
+	var multipliers: Dictionary = collector_rules().get("price_multipliers", {})
+	return roundi(fish_price(f) * float(multipliers.get(str(f.stars), 1.0)))
+
+
+func _sell_to_collector(fish_id: int) -> int:
+	var f := inventory.get_fish(fish_id)
+	if f == null or not is_collector_fish(f):
+		return 0
+	var price := collector_price(f)
+	_release_fish(f)
+	_earn(price, "collector")
+	_count_fish_sold(f)
+	_count("collector_sales")
+	return price
 
 
 func accept_customer_request() -> bool:
@@ -670,6 +723,8 @@ func customer_can_backorder() -> bool:
 			return true
 		"item":
 			return inventory.count(customer["item_id"]) <= 0
+		"collector":
+			return false  # they want one of your own bred fish or nothing
 	return false
 
 
@@ -811,6 +866,7 @@ func fish_paid(f: Fish) -> int:
 ## True when the customer wants one of your fish and selling it now would be
 ## below what you paid, so you can offer to breed them one instead.
 func customer_can_breed_order() -> bool:
+	# Only "fish" customers: a collector can't be breed-ordered (see customer_can_backorder).
 	if customer.get("kind") != "fish" or not can_backorder():
 		return false
 	var f := inventory.get_fish(customer["fish_id"])
@@ -871,6 +927,7 @@ func _new_customer() -> Dictionary:
 		"items_in_stock": inventory.stock().keys(), "all_items": db.items.keys(),
 		"wishable": wishable_fish() if can_backorder() else [],
 		"tank_for_sale": tank_for_sale, "can_take_request": can_accept_request(),
+		"collector_fish": collector_fish(),
 	}
 	if not can_backorder():
 		ctx["all_items"] = []
@@ -907,7 +964,7 @@ func end_day() -> Dictionary:
 		"day": day, "earned": earned_today, "food_used": 0,
 		"fry_unfed": 0, "fry_grown_up": 0, "fry_born": 0,
 		"log": day_log.duplicate(true), "money_end": money,
-		"born_ids": [], "grown_ids": [], "mutations": [], "discoveries": [],
+		"born_ids": [], "grown_ids": [], "mutations": [], "discoveries": [], "book_bonuses": [],
 	}
 	# Each breeding tank is separate: its own food, growth and pair.
 	for i in breeding_tanks.size():
@@ -988,17 +1045,37 @@ func _night_breed(summary: Dictionary, tank_index: int) -> void:
 				var source := "recipe" if Genetics.recipe_child(species, trait_name, mum, dad) == value else "mutation"
 				summary["mutations"].append({"fish_id": fry.id, "trait": trait_name, "value": value,
 					"source": source, "parents": [mum, dad]})
-				_discover(summary, source, trait_name, value, [mum, dad])
+				_discover(summary, source, species, trait_name, value, [mum, dad])
 
 
 ## Records a first-time recipe or mutation in the breeding book.
-func _discover(summary: Dictionary, source: String, trait_name: String, value: String, parents: Array) -> void:
+## Pays the book reward (straight into money, not a sale, like goal rewards) and,
+## when this completes a generation of recipes, that generation's bonus.
+func _discover(summary: Dictionary, source: String, species: Dictionary, trait_name: String, value: String,
+		parents: Array) -> void:
 	var book := discovered_recipes if source == "recipe" else discovered_mutations
 	var key := book_key(trait_name, parents[0], parents[1]) if source == "recipe" else "%s:%s" % [trait_name, value]
 	if book.has(key):
 		return
 	book[key] = day
-	summary["discoveries"].append({"source": source, "trait": trait_name, "value": value, "parents": parents})
+	var generation := 0
+	var reward := mutation_reward()
+	if source == "recipe":
+		generation = Genetics.pair_generation(species, trait_name, parents[0], parents[1])
+		reward = recipe_reward(generation)
+	_pay_book(reward)
+	summary["discoveries"].append({"source": source, "trait": trait_name, "value": value, "parents": parents,
+		"generation": generation, "reward": reward})
+	if source == "recipe" and not book_bonuses.has(str(generation)) and is_generation_complete(generation):
+		var bonus := generation_bonus(generation)
+		book_bonuses[str(generation)] = day
+		_pay_book(bonus)
+		summary["book_bonuses"].append({"generation": generation, "reward": bonus})
+
+
+func _pay_book(amount: int) -> void:
+	money += amount
+	_count("book_rewards", amount)
 
 
 # --- Breeding book -------------------------------------------------------------
@@ -1010,8 +1087,52 @@ static func book_key(trait_name: String, a: String, b: String) -> String:
 	return "%s:%s+%s" % [trait_name, pair[0], pair[1]]
 
 
+## What the book pays the first time a recipe of this generation is bred
+## (deeper generations than the list use its last entry). 0 if not set in data.
+func recipe_reward(generation: int) -> int:
+	var list: Array = db.economy.get("breeding_book", {}).get("recipe_rewards", [])
+	if list.is_empty() or generation < 1:
+		return 0
+	return int(list[mini(generation - 1, list.size() - 1)])
+
+
+## What the book pays for each newly bred mutation.
+func mutation_reward() -> int:
+	return int(db.economy.get("breeding_book", {}).get("mutation_reward", 0))
+
+
+## What the book pays once every recipe of this generation has been found.
+func generation_bonus(generation: int) -> int:
+	var list: Array = db.economy.get("breeding_book", {}).get("generation_bonus", [])
+	if list.is_empty() or generation < 1:
+		return 0
+	return int(list[mini(generation - 1, list.size() - 1)])
+
+
+## True when the generation has recipes and you've found them all (any species).
+func is_generation_complete(generation: int) -> bool:
+	var total := 0
+	for species_id in db.species:
+		for r in book_recipes(species_id):
+			if r["generation"] == generation:
+				total += 1
+				if not r["discovered"]:
+					return false
+	return total > 0
+
+
+## How many discovered recipes are of this generation (any species).
+func discovered_recipe_count(generation: int) -> int:
+	var count := 0
+	for species_id in db.species:
+		for r in book_recipes(species_id):
+			if r["generation"] == generation and r["discovered"]:
+				count += 1
+	return count
+
+
 ## Every recipe of a species, discovered or not:
-## [{trait, parents, child, discovered (bool), day (first bred, or 0)}]
+## [{trait, parents, child, generation, discovered (bool), day (first bred, or 0)}]
 func book_recipes(species_id: String) -> Array:
 	var result := []
 	var recipes: Dictionary = db.species[species_id].get("recipes", {})
@@ -1019,6 +1140,8 @@ func book_recipes(species_id: String) -> Array:
 		for recipe in recipes[trait_name]:
 			var key := book_key(trait_name, recipe["parents"][0], recipe["parents"][1])
 			result.append({"trait": trait_name, "parents": recipe["parents"], "child": recipe["child"],
+				"generation": Genetics.pair_generation(db.species[species_id], trait_name,
+					recipe["parents"][0], recipe["parents"][1]),
 				"discovered": discovered_recipes.has(key), "day": discovered_recipes.get(key, 0)})
 	return result
 
@@ -1114,6 +1237,8 @@ func goal_value(metric: String) -> int:
 			return discovered_recipes.size()
 		"mutations":
 			return discovered_mutations.size()
+		"third_gen_recipes":
+			return discovered_recipe_count(3)
 		"breeding_tanks":
 			return breeding_tanks.size()
 		"upgrades":
@@ -1228,6 +1353,7 @@ func to_dict() -> Dictionary:
 		"restocking": restocking,
 		"discovered_recipes": discovered_recipes.duplicate(),
 		"discovered_mutations": discovered_mutations.duplicate(),
+		"book_bonuses": book_bonuses.duplicate(),
 		"stats": stats.duplicate(),
 		"completed_goals": completed_goals.duplicate(),
 		"upgrades": upgrades.duplicate(),
@@ -1247,6 +1373,13 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	s.restocking = bool(d.get("restocking", false))
 	s.discovered_recipes = d.get("discovered_recipes", {}).duplicate()
 	s.discovered_mutations = d.get("discovered_mutations", {}).duplicate()
+	if d.has("book_bonuses"):
+		s.book_bonuses = d["book_bonuses"].duplicate()
+	else:
+		# Older save: generations already complete get no retroactive bonus.
+		for g in range(1, 10):
+			if s.is_generation_complete(g):
+				s.book_bonuses[str(g)] = 0
 	s.stats = d.get("stats", {}).duplicate()
 	s.completed_goals = d.get("completed_goals", {}).duplicate()
 	for id in d.get("upgrades", {}):

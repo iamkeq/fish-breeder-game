@@ -23,8 +23,11 @@
 		{"id": "upgrades_5", "name": "Well equipped", "description": "Buy 5 shop upgrades.", "metric": "upgrades", "target": 5, "reward": 150},
 		{"id": "mutations_3", "name": "Oddity collector", "description": "Breed 3 different mutations.", "metric": "mutations", "target": 3, "reward": 200},
 		{"id": "earned_5000", "name": "Going concern", "description": "Earn $5,000 in total.", "metric": "total_earned", "target": 5000, "reward": 250},
-		{"id": "all_recipes", "name": "The whole book", "description": "Discover all 15 breeding recipes.", "metric": "recipes", "target": 15, "reward": 300},
+		{"id": "all_recipes", "name": "The whole book", "description": "Discover all 20 breeding recipes.", "metric": "recipes", "target": 20, "reward": 300},
 		{"id": "all_mutations", "name": "One in a million", "description": "Breed all 6 mutations.", "metric": "mutations", "target": 6, "reward": 300},
-		{"id": "all_upgrades", "name": "Dream shop", "description": "Buy every shop upgrade.", "metric": "upgrades", "target": 10, "reward": 300}
+		{"id": "all_upgrades", "name": "Dream shop", "description": "Buy every shop upgrade.", "metric": "upgrades", "target": 10, "reward": 300},
+		{"id": "first_third_gen", "name": "Deep roots", "description": "Discover a third-generation recipe.", "metric": "third_gen_recipes", "target": 1, "reward": 100},
+		{"id": "first_collector", "name": "Connoisseur", "description": "Sell a fish to a collector.", "metric": "collector_sales", "target": 1, "reward": 50},
+		{"id": "collectors_10", "name": "Reputation for quality", "description": "Sell 10 fish to collectors.", "metric": "collector_sales", "target": 10, "reward": 200}
 	]
 }

@@ -7,7 +7,9 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 const SALE_NAMES := {
 	"fish": "Fish sold", "item": "Shelf items sold", "tank": "Tanks sold",
 	"order": "Orders delivered", "backorder": "Back-orders handed over", "wholesale": "Sold to wholesaler",
+	"collector": "Sold to collectors",
 }
+const GENERATION_NAMES := ["first", "second", "third"]
 const GOOD := Color(0.25, 0.5, 0.35)
 const WARN := Color(0.75, 0.4, 0.2)
 const MAX_PREVIEWS := 8
@@ -112,7 +114,12 @@ func _add_back_room(s: Dictionary) -> void:
 		var what := UI.pretty(d["value"])
 		if d["source"] == "recipe":
 			what = "%s × %s → %s" % [UI.pretty(d["parents"][0]), UI.pretty(d["parents"][1]), what]
-		_line("✎ New in your breeding book: %s" % what).modulate = GOOD
+		var paid := "  (+$%d)" % int(d["reward"]) if int(d.get("reward", 0)) > 0 else ""
+		_line("✎ New in your breeding book: %s%s" % [what, paid]).modulate = GOOD
+	for b in s.get("book_bonuses", []):
+		var g := int(b["generation"])
+		var name: String = "%s-generation" % GENERATION_NAMES[g - 1] if g >= 1 and g <= GENERATION_NAMES.size() else "generation %d" % g
+		_line("✎ Breeding book: every %s recipe found!  (+$%d)" % [name, int(b["reward"])]).modulate = GOOD
 	var grown := _existing_fish(s["grown_ids"])
 	if not grown.is_empty():
 		_line("Grown up: %d (now ready to sell or breed)" % grown.size())

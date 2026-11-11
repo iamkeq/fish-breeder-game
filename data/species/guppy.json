@@ -13,7 +13,8 @@
 			"common": ["normal", "red", "blue", "yellow", "black", "white", "grass"],
 			"rare": ["orange", "purple", "pink", "turquoise", "gold", "sunset", "pastel", "half_black",
 				"tuxedo", "dalmatian", "koi", "leopard", "snakeskin", "mosaic", "neon", "albino", "glass",
-				"lavender", "platinum", "galaxy", "dragon"],
+				"lavender", "platinum", "galaxy", "dragon",
+				"phoenix", "calico", "midnight", "opal", "tiger"],
 			"mutations": ["albino", "glass", "lavender", "platinum", "galaxy", "dragon"],
 			"mutation_weights": { "albino": 3, "glass": 3, "lavender": 2, "platinum": 2, "galaxy": 1, "dragon": 1 }
 		}
@@ -35,7 +36,12 @@
 			{ "parents": ["orange", "white"], "child": "koi" },
 			{ "parents": ["pink", "white"], "child": "pastel" },
 			{ "parents": ["half_black", "black"], "child": "tuxedo" },
-			{ "parents": ["turquoise", "blue"], "child": "neon" }
+			{ "parents": ["turquoise", "blue"], "child": "neon" },
+			{ "parents": ["gold", "sunset"], "child": "phoenix" },
+			{ "parents": ["koi", "dalmatian"], "child": "calico" },
+			{ "parents": ["tuxedo", "neon"], "child": "midnight" },
+			{ "parents": ["pastel", "turquoise"], "child": "opal" },
+			{ "parents": ["leopard", "sunset"], "child": "tiger" }
 		]
 	},
 	"value_multipliers": {
@@ -44,6 +50,7 @@
 			"leopard": 1.7, "snakeskin": 1.7, "dalmatian": 1.7, "half_black": 1.7, "mosaic": 1.7,
 			"gold": 2.0, "sunset": 2.0, "koi": 2.0, "pastel": 2.0,
 			"tuxedo": 2.4, "neon": 2.4,
+			"opal": 2.8, "tiger": 3.0, "phoenix": 3.2, "calico": 3.2, "midnight": 3.4,
 			"albino": 3.0, "glass": 3.0,
 			"lavender": 3.2, "platinum": 3.5, "galaxy": 4.0, "dragon": 4.0
 		}
@@ -67,7 +74,12 @@
 			"lavender": { "base": "white", "tint": "#C9B4F2" },
 			"platinum": { "base": "white", "tint": "#E4ECF5" },
 			"galaxy": { "base": "neon", "tint": "#7068F0" },
-			"dragon": { "base": "half_black", "tint": "#FF8A3D" }
+			"dragon": { "base": "half_black", "tint": "#FF8A3D" },
+			"phoenix": { "base": "sunset", "tint": "#FFB347" },
+			"calico": { "base": "koi", "tint": "#F2D9B8" },
+			"midnight": { "base": "tuxedo", "tint": "#5A6FD8" },
+			"opal": { "base": "pastel", "tint": "#9FE8E0" },
+			"tiger": { "base": "leopard", "tint": "#FF9A3C" }
 		},
 		"animations": {
 			"normal": {

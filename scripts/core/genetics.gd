@@ -8,6 +8,9 @@ extends RefCounted
 ##     -> orange, at the species' "recipe_chance".
 ## All randomness comes from the passed-in RNG so results are reproducible.
 
+## Recipe chains deeper than this are treated as a data mistake (a loop).
+const MAX_RECIPE_DEPTH := 8
+
 
 static func is_rare(species: Dictionary, trait_name: String, value: String) -> bool:
 	var t: Dictionary = species["traits"].get(trait_name, {})
@@ -48,6 +51,27 @@ static func recipe_child(species: Dictionary, trait_name: String, a: String, b: 
 		if (p[0] == a and p[1] == b) or (p[0] == b and p[1] == a):
 			return recipe["child"]
 	return ""
+
+
+## How many recipe steps it takes to make `child`: 0 if no recipe makes it,
+## otherwise 1 + the larger generation of its two parents (red x yellow ->
+## orange is 1, orange x yellow -> gold is 2). If several recipes make it, the
+## shortest counts. `_depth` stops bad data (a recipe loop) from recursing forever.
+static func recipe_generation(species: Dictionary, trait_name: String, child: String, _depth: int = 0) -> int:
+	if _depth > MAX_RECIPE_DEPTH:
+		return 0
+	var best := 0
+	for recipe in species.get("recipes", {}).get(trait_name, []):
+		if recipe["child"] != child:
+			continue
+		var g := pair_generation(species, trait_name, recipe["parents"][0], recipe["parents"][1], _depth + 1)
+		best = g if best == 0 else mini(best, g)
+	return best
+
+
+## The generation of the recipe that mixes parents `a` and `b`.
+static func pair_generation(species: Dictionary, trait_name: String, a: String, b: String, _depth: int = 0) -> int:
+	return 1 + maxi(recipe_generation(species, trait_name, a, _depth), recipe_generation(species, trait_name, b, _depth))
 
 
 static func inherit_trait(species: Dictionary, trait_name: String, mother_value: String,
