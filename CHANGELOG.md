@@ -2,6 +2,26 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.20.0] - 2026-11-11
+
+### Added
+- **Shop staff** (unlock at reputation level 5, "Breeder of Note"): hire up
+  to three helpers ($60, $120, $200) at $10 a day each. Open **Staff** from
+  the foot of the shop-floor shelf panel. Each helper has one job, and each
+  job can only be covered once:
+  - **Fish feeder:** if fry would go unfed because you're out of fish food,
+    buys a portion at the normal Market price so they keep growing.
+  - **Decorator:** hangs spare decorations in empty spots, best-looking first,
+    display tank first. It never moves what is already placed and leaves one
+    of each item on the shelf for customers.
+  - **Stock clerk:** tops fish food up to 5 each night, spending at most $40
+    and never dropping you below $50.
+- Wages are never a debt: if you can't afford one, it is skipped. Letting
+  someone go is free. Wages don't count as negative earnings.
+- A "Staff report" in the day summary says what each helper did.
+- Three new goals (first hire, full team, 100 jobs done) and a Staff section
+  on the Stats tab.
+
 ## [0.19.0] - 2026-11-11
 
 ### Added

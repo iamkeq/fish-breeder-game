@@ -69,6 +69,11 @@ var shows_held: int = 0
 var show_history: Array = []
 ## Gallery entry keys ("fav:<fish id>" or "hof:<show_history index>") pinned on the shop wall.
 var gallery_pins: Array = []
+## The shop's hires: [{id, name, task, hired_day, color}] (see Staff). Saved.
+var staff: Array = []
+var _next_staff_id: int = 1
+## What staff did so far tonight (reset in end_day, read for the summary).
+var _staff_night: Dictionary = {}
 
 ## Which starting pair and challenge mode this game began with ("" = the
 ## standard ones). See data/new_game.json.
@@ -1474,6 +1479,7 @@ func open_day() -> void:
 func end_day() -> Dictionary:
 	clock.is_open = false
 	customer = {}
+	_staff_night = {}
 	if day_log.is_empty():
 		_reset_day_log()
 	var summary := {
@@ -1489,6 +1495,7 @@ func end_day() -> Dictionary:
 	# Fry moved out to holding (to make room) keep growing there too.
 	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING))
 	_count("fish_bred", summary["fry_born"])
+	_staff_finish_night(summary)
 	_record_best("best_day", earned_today)
 	_hold_show(summary)
 	check_goals()
@@ -1525,6 +1532,9 @@ func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
 		return
 	var auto := upgrade_effect("auto_feed") > 0.0  # auto-feeders use no food
 	var fed := auto or _use_food()
+	if not fed and _staff_buys_food():
+		fed = _use_food()
+		_staff_night["feeder_fry"] = int(_staff_night.get("feeder_fry", 0)) + fry.size()
 	if fed and not auto:
 		summary["food_used"] += 1
 	for f in fry:
@@ -1777,6 +1787,245 @@ func _use_food() -> bool:
 	return false
 
 
+# --- Staff -----------------------------------------------------------------------
+
+func staff_unlocked() -> bool:
+	return not db.staff.is_empty() and has_unlock("staff")
+
+
+func staff_max() -> int:
+	return int(db.staff.get("max_staff", 0))
+
+
+## The one-off fee for the next hire (-1 if the team is full).
+func hire_cost() -> int:
+	var costs: Array = db.staff.get("hire_costs", [])
+	if staff.size() >= staff_max() or staff.size() >= costs.size():
+		return -1
+	return int(costs[staff.size()])
+
+
+func staff_wage() -> int:
+	return int(db.staff.get("daily_wage", 0))
+
+
+## The job's definition ({id, name, description}) from the data, or {}.
+func staff_task(task: String) -> Dictionary:
+	for t in db.staff.get("tasks", []):
+		if t["id"] == task:
+			return t
+	return {}
+
+
+## Jobs in the order they run each night.
+func staff_task_ids() -> Array:
+	return DataDB.STAFF_TASKS.filter(func(t): return not staff_task(t).is_empty())
+
+
+func staff_for_task(task: String) -> Dictionary:
+	return Staff.for_task(staff, task)
+
+
+func staff_by_id(staff_id: int) -> Dictionary:
+	for m in staff:
+		if int(m["id"]) == staff_id:
+			return m
+	return {}
+
+
+## Why you can't hire someone for this job right now, or "" if you can.
+func hire_blocker(task: String) -> String:
+	if staff_task(task).is_empty():
+		return "There's no such job."
+	if not staff_unlocked():
+		return "Reach '%s' to hire staff" % unlock_level_name("staff")
+	if staff.size() >= staff_max():
+		return "Your team is full"
+	if not staff_for_task(task).is_empty():
+		return "Someone already does that job"
+	var cost := hire_cost()
+	if not can_afford(cost):
+		return "You need $%d more." % (cost - money)
+	return ""
+
+
+## Hires a helper for a job. Pays the one-off fee (a spend, like any other).
+func hire_staff(task: String) -> bool:
+	if hire_blocker(task) != "":
+		return false
+	_spend(hire_cost())
+	var id := _next_staff_id
+	_next_staff_id += 1
+	staff.append(Staff.make_member(id, Staff.pick_name(db.staff["names"], staff), task, day,
+		Staff.pick_color(db.staff["colors"], id)))
+	_count("staff_hired")
+	return true
+
+
+## Gives a hire a different job. Only one hire per job, so jobs don't double up.
+func set_staff_task(staff_id: int, task: String) -> bool:
+	var m := staff_by_id(staff_id)
+	if m.is_empty() or staff_task(task).is_empty() or m["task"] == task:
+		return false
+	if not staff_for_task(task).is_empty():
+		return false
+	m["task"] = task
+	return true
+
+
+func rename_staff(staff_id: int, new_name: String) -> bool:
+	var m := staff_by_id(staff_id)
+	var clean := new_name.strip_edges().left(MAX_NAME_LENGTH)
+	if m.is_empty() or clean == "":
+		return false
+	m["name"] = clean
+	return true
+
+
+## Lets someone go. Free: no refund and no penalty either way.
+func dismiss_staff(staff_id: int) -> bool:
+	var m := staff_by_id(staff_id)
+	if m.is_empty():
+		return false
+	staff.erase(m)
+	return true
+
+
+## Total wages if everyone is paid tonight.
+func staff_wage_bill() -> int:
+	return staff.size() * staff_wage()
+
+
+## Called while feeding: if a Feeder is hired, buys one portion of food at the
+## normal Market price (if affordable). Never free, never below $0.
+func _staff_buys_food() -> bool:
+	if staff_for_task("feeder").is_empty():
+		return false
+	var foods := db.items_in_category("food")
+	if foods.is_empty() or not buy_item(foods[0]):
+		return false
+	_staff_night["feeder_bought"] = int(_staff_night.get("feeder_bought", 0)) + 1
+	_staff_night["feeder_spent"] = int(_staff_night.get("feeder_spent", 0)) + int(db.items[foods[0]]["cost"])
+	return true
+
+
+## After the night's growth: the Decorator and Stock clerk work, wages are
+## paid (skipped quietly if there's no money) and the staff report is made.
+func _staff_finish_night(summary: Dictionary) -> void:
+	if staff.is_empty():
+		return
+	var results := {}
+	results["feeder"] = {"actions": int(_staff_night.get("feeder_fry", 0)),
+		"detail": " (bought %d food, $%d)" % [int(_staff_night.get("feeder_bought", 0)),
+			int(_staff_night.get("feeder_spent", 0))]}
+	if not staff_for_task("decorator").is_empty():
+		results["decorator"] = {"actions": _staff_decorate(), "detail": ""}
+	if not staff_for_task("stocker").is_empty():
+		results["stocker"] = _staff_restock()
+	var entries := []
+	var total := 0
+	for task in DataDB.STAFF_TASKS:
+		var m := staff_for_task(task)
+		if m.is_empty():
+			continue
+		var r: Dictionary = results.get(task, {"actions": 0, "detail": ""})
+		total += int(r["actions"])
+		entries.append({"name": m["name"], "task": task,
+			"text": Staff.night_text(m["name"], task, int(r["actions"]), r["detail"])})
+	_count("staff_actions", total)
+	# Wages come last, from what's left. Anything unaffordable is just skipped.
+	var paid := 0
+	var skipped := 0
+	for m in staff:
+		if money >= staff_wage():
+			money -= staff_wage()
+			paid += staff_wage()
+		else:
+			skipped += 1
+	_count("staff_wages", paid)
+	_count("total_spent", paid)
+	summary["staff"] = {"entries": entries, "wages_paid": paid, "wages_skipped": skipped}
+	summary["log"] = day_log.duplicate(true)  # now includes the Feeder's and Stock clerk's purchases
+
+
+## The Decorator: hangs spare decorations in empty spots, best-looking first.
+## Fills the display tank, then breeding tanks once it is full. Never takes
+## anything out, never swaps, never buys. Returns how many it hung.
+func _staff_decorate() -> int:
+	var hung := 0
+	var tanks: Array = []
+	if display_tank != null:
+		tanks.append(display_tank)
+	tanks.append_array(breeding_tanks)
+	var keep := int(db.staff.get("decorator_keep", 0))
+	for tank in tanks:
+		while true:
+			var pick := _best_decoration(tank, keep)
+			if pick.is_empty():
+				break
+			if not place_item(tank, pick["slot"], pick["item"]):
+				break
+			hung += 1
+		if tank.filled_slot_count() < tank.slot_count():
+			break  # out of spare decorations; don't carry on to the next tank
+	return hung
+
+
+## The (slot, item) that would give `tank` the best looks, or {} if there is
+## no empty spot or no spare decoration. Ties go to the lowest slot, then item id.
+func _best_decoration(tank: Tank, keep: int) -> Dictionary:
+	var ids: Array = []
+	var stock := inventory.stock()
+	for id in stock:
+		if int(stock[id]) > keep and Tank.is_placeable(db.items.get(id, {})):
+			ids.append(id)
+	ids.sort()
+	var best := {}
+	var best_score := -1
+	for slot in tank.slot_count():
+		if not tank.is_slot_empty(slot):
+			continue
+		for id in ids:
+			tank.slots[slot] = id
+			var looks := tank_aesthetics(tank)
+			tank.slots[slot] = ""
+			if looks > best_score:
+				best_score = looks
+				best = {"slot": slot, "item": id}
+	return best
+
+
+## The Stock clerk: tops supplies up to their targets at the normal Market
+## price, within tonight's budget and never dropping money under the floor.
+## Returns {"actions", "detail"} (detail reads like "5 fish food ($10)").
+func _staff_restock() -> Dictionary:
+	var targets: Dictionary = db.staff.get("restock_to", {})
+	var budget := int(db.staff.get("restock_budget", 0))
+	var floor_money := int(db.staff.get("keep_money", 0))
+	var spent := 0
+	var total := 0
+	var parts := PackedStringArray()
+	var ids := targets.keys()
+	ids.sort()
+	for id in ids:
+		if not db.items.has(id):
+			continue
+		var cost := int(db.items[id]["cost"])
+		var bought := 0
+		while inventory.count(id) < int(targets[id]) and spent + cost <= budget and money - cost >= floor_money:
+			if not buy_item(id):
+				break
+			spent += cost
+			bought += 1
+		if bought > 0:
+			total += bought
+			parts.append("%d %s" % [bought, str(db.items[id]["name"]).to_lower()])
+	var detail := ""
+	if total > 0:
+		detail = "%s ($%d)" % [", ".join(parts), spent]
+	return {"actions": total, "detail": detail}
+
+
 # --- Stats and goals -----------------------------------------------------------
 
 func stat(stat_name: String) -> int:
@@ -1854,6 +2103,8 @@ func goal_value(metric: String) -> int:
 			return show_history.size()
 		"pinned":
 			return pinned_entries().size()
+		"staff_count":
+			return staff.size()
 	return stat(metric)
 
 
@@ -2082,6 +2333,8 @@ func to_dict() -> Dictionary:
 		"shows_held": shows_held,
 		"show_history": show_history.duplicate(true),
 		"gallery_pins": gallery_pins.duplicate(),
+		"staff": staff.duplicate(true),
+		"next_staff_id": _next_staff_id,
 	}
 
 
@@ -2122,6 +2375,10 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	s.shows_held = int(d.get("shows_held", 0))
 	s.show_history = d.get("show_history", []).duplicate(true)
 	s.gallery_pins = d.get("gallery_pins", []).duplicate()
+	for m in d.get("staff", []):
+		if m is Dictionary and m.has("id") and m.has("task") and m.has("name"):
+			s.staff.append(m.duplicate(true))
+	s._next_staff_id = int(d.get("next_staff_id", s.staff.size() + 1))
 	for id in d.get("upgrades", {}):
 		if p_db.upgrades.has(id):
 			s.upgrades[id] = int(d["upgrades"][id])

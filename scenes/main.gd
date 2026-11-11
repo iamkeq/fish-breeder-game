@@ -13,6 +13,7 @@ const NameFish := preload("res://scenes/ui/name_fish.gd")
 const Lab := preload("res://scenes/ui/lab.gd")
 const FishShow := preload("res://scenes/ui/fish_show.gd")
 const Gallery := preload("res://scenes/ui/gallery.gd")
+const StaffScreen := preload("res://scenes/ui/staff.gd")
 
 const SHOP_FLOOR_TEXT := "Shop floor"
 const BELL_TEXT := "● Shop floor"
@@ -39,6 +40,7 @@ var _name_box: ColorRect
 var _lab: ColorRect
 var _fish_show: ColorRect
 var _gallery: ColorRect
+var _staff: ColorRect
 ## The show number the morning reminder was last shown for.
 var _show_reminded := 0
 var _orders_room: Control
@@ -72,6 +74,9 @@ func _ready() -> void:
 	_gallery = Gallery.new()
 	add_child(_gallery)
 	Game.gallery_requested.connect(func(): _gallery.open())
+	_staff = StaffScreen.new()
+	add_child(_staff)
+	Game.staff_requested.connect(func(): _staff.open())
 	Game.day_started.connect(_remind_about_show)
 	_goals_button = Button.new()
 	_goals_button.pressed.connect(func(): _goals.open())
@@ -234,5 +239,6 @@ func _on_day_ended(summary: Dictionary) -> void:
 	_lab.close()
 	_fish_show.close()
 	_gallery.close()
+	_staff.close()
 	_day_summary.show_summary(summary)
 	_update_top_bar()

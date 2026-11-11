@@ -34,6 +34,9 @@ var reputation: Dictionary = {}
 ## Fish show rules (data/shows.json). Empty when a test builds a DataDB without
 ## it (fish shows are then closed).
 var shows: Dictionary = {}
+## Shop staff rules (data/staff.json). Empty when a test builds a DataDB without
+## it (hiring is then closed).
+var staff: Dictionary = {}
 ## Starting pairs and challenge modes for a new game, in listed order
 ## (data/new_game.json). With no starts listed there is one implicit "standard"
 ## start built from economy.starting_state.fish; challenges may be empty.
@@ -49,7 +52,9 @@ const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "displa
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
 	"reputation_level", "fish_scanned", "best_purity_scanned", "shows_entered", "ribbons_first", "ribbons",
-	"grand_wins", "hall_of_fame", "pinned"]
+	"grand_wins", "hall_of_fame", "pinned", "staff_hired", "staff_count", "staff_actions"]
+## The jobs a hire can be given, in the order they run each night. See GameState.end_day().
+const STAFF_TASKS := ["feeder", "decorator", "stocker"]
 ## What a reputation level can change. See GameState.reputation_effect().
 const REPUTATION_EFFECTS := ["extra_customers", "extra_orders"]
 ## What earns reputation points. See GameState._rep().
@@ -84,6 +89,7 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 	var upgrade_data = _read_file(root.path_join("upgrades.json"), read_errors)
 	var reputation_data = _read_file(root.path_join("reputation.json"), read_errors)
 	var shows_data = _read_file(root.path_join("shows.json"), read_errors)
+	var staff_data = _read_file(root.path_join("staff.json"), read_errors)
 	# Optional: without it there is one standard start and no challenges.
 	var new_game_data = null
 	if FileAccess.file_exists(root.path_join("new_game.json")):
@@ -95,7 +101,8 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 		new_game_data.get("starts", []) if new_game_data is Dictionary else [],
 		new_game_data.get("challenges", []) if new_game_data is Dictionary else [],
 		reputation_data if reputation_data is Dictionary else {},
-		shows_data if shows_data is Dictionary else {})
+		shows_data if shows_data is Dictionary else {},
+		staff_data if staff_data is Dictionary else {})
 	read_errors.append_array(db.errors)
 	db.errors = read_errors
 	return db
@@ -103,10 +110,12 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 
 static func from_dicts(species_list: Array, item_list: Array, template_list: Array,
 		economy_data: Dictionary, strain_list: Array = [], goal_list: Array = [],
-		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = [], reputation_data: Dictionary = {}, shows_data: Dictionary = {}) -> DataDB:
+		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = [], reputation_data: Dictionary = {}, shows_data: Dictionary = {},
+		staff_data: Dictionary = {}) -> DataDB:
 	var db := DataDB.new()
 	db.reputation = reputation_data
 	db.shows = shows_data
+	db.staff = staff_data
 	for s in species_list:
 		db._add_unique(db.species, s, "species")
 	for i in item_list:
@@ -205,6 +214,53 @@ func _validate_reputation() -> void:
 				errors.append("%s: unknown effect '%s'" % [ctx, effect])
 
 
+func _validate_staff() -> void:
+	if staff.is_empty():
+		return
+	var ctx := "staff"
+	if not _require(staff, ["max_staff", "hire_costs", "daily_wage", "restock_to", "restock_budget",
+			"keep_money", "names", "colors", "tasks"], ctx):
+		return
+	for key in ["max_staff", "daily_wage", "restock_budget"]:
+		if not _is_whole(staff[key]) or int(staff[key]) < 1:
+			errors.append("%s: '%s' must be a positive whole number" % [ctx, key])
+	for key in ["keep_money", "decorator_keep"]:
+		if staff.has(key) and (not _is_whole(staff[key]) or int(staff[key]) < 0):
+			errors.append("%s: '%s' must be a whole number, 0 or more" % [ctx, key])
+	var costs = staff["hire_costs"]
+	if not costs is Array or (_is_whole(staff["max_staff"]) and costs.size() != int(staff["max_staff"])):
+		errors.append("%s: hire_costs needs one price per member of staff (max_staff)" % ctx)
+	elif costs.any(func(c): return not _is_whole(c) or int(c) < 1):
+		errors.append("%s: hire_costs must be positive whole numbers" % ctx)
+	for key in ["names", "colors"]:
+		if not staff[key] is Array or staff[key].is_empty():
+			errors.append("%s: '%s' needs at least one entry" % [ctx, key])
+	if staff["restock_to"] is Dictionary:
+		for id in staff["restock_to"]:
+			if not _is_whole(staff["restock_to"][id]) or int(staff["restock_to"][id]) < 1:
+				errors.append("%s: restock_to/%s must be a positive whole number" % [ctx, id])
+			if not items.is_empty() and not items.has(id):
+				errors.append("%s: restock_to lists unknown item '%s'" % [ctx, id])
+	else:
+		errors.append("%s: restock_to must be a list of item ids and targets" % ctx)
+	if not staff["tasks"] is Array:
+		errors.append("%s: tasks must be a list" % ctx)
+		return
+	var seen := {}
+	for t in staff["tasks"]:
+		if not t is Dictionary or not _require(t, ["id", "name", "description"], "%s/task" % ctx):
+			continue
+		if not t["id"] in STAFF_TASKS:
+			errors.append("%s: unknown task '%s'" % [ctx, t["id"]])
+		if seen.has(t["id"]):
+			errors.append("%s: task '%s' listed twice" % [ctx, t["id"]])
+		seen[t["id"]] = true
+
+
+static func _is_whole(value) -> bool:
+	return (value is int) or (value is float and value == floorf(value))
+
+
 func _validate_shows() -> void:
 	if shows.is_empty():
 		return
@@ -278,6 +334,7 @@ func validate() -> void:
 			errors.append("%s: requires unknown upgrade '%s'" % [upgrade_ctx, u["requires"]])
 	_validate_reputation()
 	_validate_shows()
+	_validate_staff()
 	_validate_economy()
 	for st in starts:
 		if not _implicit_start:

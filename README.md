@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.19.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.20.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -51,6 +51,8 @@ Current version: **0.19.0** (see the [changelog](CHANGELOG.md)).
 - **The tank editor** lets you place substrate and six items (back, middle,
   front). A live looks score and tips show how to make it prettier, and
   prettier tanks sell for more.
+- **Shop staff:** from reputation level 5, hire up to three helpers to buy
+  fish food, hang spare decorations and keep supplies stocked.
 - **The Gallery:** portraits of your favourite fish and your show winners.
   Pin up to six to the shop wall at reputation level 6.
 - **Fish shows:** from reputation level 4, enter a fish in the weekly show
@@ -125,7 +127,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.19.0
+.\tools\publish_web.ps1 0.20.0
 ```
 
 ## Project layout

@@ -383,6 +383,17 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.20.0), shop staff:**
+  - `data/staff.json`; hires are `{id, name, task, hired_day, color}` so stats
+    and skills can be added later. One hire per task.
+  - The game has no manual feeding (fry eat fish food automatically), so the
+    Feeder is a safety net that buys food when fry would go unfed, and the
+    Stock clerk keeps food topped up. They overlap; consider merging or
+    adding new supplies. Both pay the normal Market price.
+  - Spare inventory decorations double as retail shelf stock, so the
+    Decorator leaves `decorator_keep` (1) of each item.
+  - Wages are paid after the night's work, are not routed through `_earn`,
+    and are skipped (never debt) if unaffordable. Staff use no rng.
 - **2026-11-11 (v0.19.0), gallery:**
   - Gallery entries are plain dictionaries: `gallery_favorites()` (live
     favourites, keys `fav:<id>`) and `gallery_hall()` (one per `show_history`

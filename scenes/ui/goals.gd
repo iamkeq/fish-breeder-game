@@ -350,6 +350,11 @@ func _add_stats(state: GameState) -> void:
 		["Portraits on the wall", str(state.pinned_entries().size())],
 	])
 
+	_section(right, "Staff", [
+		["Team size", "%d/%d" % [state.staff.size(), state.staff_max()]],
+		["Jobs done", str(state.stat("staff_actions"))],
+		["Wages paid", _money(state.stat("staff_wages"))],
+	])
 	_section(right, "Orders and stock", [
 		["Special orders delivered", str(state.stat("orders_delivered"))],
 		["Back-orders handed over", str(state.stat("backorders_filled"))],

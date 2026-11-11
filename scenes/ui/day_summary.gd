@@ -56,6 +56,7 @@ func show_summary(s: Dictionary) -> void:
 	_title.text = "Day %d is done" % s["day"]
 	_add_money(s)
 	_add_show(s)
+	_add_staff(s)
 	_add_back_room(s)
 	_add_tomorrow(s)
 	_open_button.text = ("Start Day %d (still closed for restock)" if Game.state.restocking else "Open shop for Day %d") % Game.state.day
@@ -120,6 +121,20 @@ func _add_show(s: Dictionary) -> void:
 	for r in show["top_rivals"]:
 		rivals.append("%s (%d)" % [r["name"], int(r["score"])])
 	_line("Top rivals: %s.   Your score: %d" % ["; ".join(rivals), int(show["your_score"])]).modulate = Color(1, 1, 1, 0.75)
+
+
+## "Staff report": what each helper did overnight, and the wages.
+func _add_staff(s: Dictionary) -> void:
+	var report: Dictionary = s.get("staff", {})
+	if report.is_empty():
+		return
+	_heading("Staff report")
+	for entry in report["entries"]:
+		_line(entry["text"])
+	var wages := "Wages paid: $%d" % int(report["wages_paid"])
+	if int(report["wages_skipped"]) > 0:
+		wages += "   ·   %d skipped (no worries, you can pay next time)" % int(report["wages_skipped"])
+	_line(wages).modulate = Color(1, 1, 1, 0.75)
 
 
 func _add_back_room(s: Dictionary) -> void:

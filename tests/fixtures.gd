@@ -134,7 +134,7 @@ static func reputation() -> Dictionary:
 			{"name": "Start", "points": 0, "effects": {}, "unlocks": [], "description": "Start."},
 			{"name": "Known", "points": 20, "effects": {"extra_customers": 1}, "unlocks": ["lab"], "description": "Lab."},
 			{"name": "Liked", "points": 60, "effects": {"extra_customers": 2, "extra_orders": 1}, "unlocks": ["fish_show"], "description": "Shows."},
-			{"name": "Famous", "points": 100, "effects": {}, "unlocks": ["gallery_wall"], "description": "Wall."},
+			{"name": "Famous", "points": 100, "effects": {}, "unlocks": ["gallery_wall", "staff"], "description": "Wall."},
 		],
 	}
 
@@ -157,9 +157,22 @@ static func shows() -> Dictionary:
 	}
 
 
+static func staff() -> Dictionary:
+	return {
+		"max_staff": 3, "hire_costs": [30, 60, 90], "daily_wage": 5,
+		"restock_to": {"food": 5}, "restock_budget": 20, "keep_money": 10, "decorator_keep": 0,
+		"names": ["Pip", "Marnie", "Juno"], "colors": ["#e07a5f", "#3d85c6"],
+		"tasks": [
+			{"id": "feeder", "name": "Fish feeder", "description": "Feeds."},
+			{"id": "decorator", "name": "Decorator", "description": "Decorates."},
+			{"id": "stocker", "name": "Stock clerk", "description": "Restocks."},
+		],
+	}
+
+
 static func db() -> DataDB:
 	return DataDB.from_dicts([species()], items(), [template()], economy(), strains(), goals(), upgrades(),
-		[], [], reputation(), shows())
+		[], [], reputation(), shows(), staff())
 
 
 static func rng(seed_value: int = 1234) -> RandomNumberGenerator:

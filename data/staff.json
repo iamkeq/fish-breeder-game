@@ -1,0 +1,16 @@
+{
+	"max_staff": 3,
+	"hire_costs": [60, 120, 200],
+	"daily_wage": 10,
+	"restock_to": {"fish_food": 5},
+	"restock_budget": 40,
+	"keep_money": 50,
+	"decorator_keep": 1,
+	"names": ["Pip", "Marnie", "Juno", "Basil", "Wren", "Otis", "Fern", "Dot", "Moss", "Ivy"],
+	"colors": ["#e07a5f", "#3d85c6", "#81b29a", "#f2cc8f", "#9b72aa", "#c47a9f"],
+	"tasks": [
+		{"id": "feeder", "name": "Fish feeder", "description": "Buys fish food if you run short, so fry are fed every night and keep growing."},
+		{"id": "decorator", "name": "Decorator", "description": "Hangs spare decorations in empty spots, best-looking first. Never moves what's already placed."},
+		{"id": "stocker", "name": "Stock clerk", "description": "Tops up fish food when you're running low."}
+	]
+}

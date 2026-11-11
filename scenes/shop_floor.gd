@@ -8,6 +8,7 @@ signal edit_tank_requested
 signal orders_room_requested
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
+const StaffScreen := preload("res://scenes/ui/staff.gd")
 const TEXT_WIDTH := 262.0
 
 @onready var _items: VBoxContainer = %Items
@@ -21,10 +22,13 @@ var _counter_news := ""
 ## The gallery wall at the foot of the shelf panel: pinned portraits (hidden when none).
 var _wall: VBoxContainer
 var _wall_grid: GridContainer
+## The Staff button and small avatar chips at the very foot of the shelf panel.
+var _staff_row: HBoxContainer
 
 
 func _ready() -> void:
 	_build_wall()
+	_build_staff_row()
 	Game.changed.connect(refresh)
 	Game.customer_changed.connect(_refresh_counter)
 	refresh()
@@ -35,6 +39,34 @@ func refresh() -> void:
 	_refresh_tank()
 	_refresh_counter()
 	_refresh_wall()
+	_refresh_staff_row()
+
+
+# --- Staff button ------------------------------------------------------------
+
+## Sits at the foot of the shelf panel, under the gallery wall, so it never
+## crowds the top bar or the tank.
+func _build_staff_row() -> void:
+	_staff_row = HBoxContainer.new()
+	_staff_row.add_theme_constant_override("separation", 4)
+	$Columns/ShelfPanel/Shelf.add_child(_staff_row)
+
+
+func _refresh_staff_row() -> void:
+	var state := Game.state
+	_clear(_staff_row)
+	var button := UI.small_button("Staff", "Hire helpers who feed, decorate and restock overnight.")
+	if state.staff_unlocked():
+		button.pressed.connect(func(): Game.staff_requested.emit())
+	else:
+		button.disabled = true
+		button.tooltip_text = "Reach '%s' to hire staff" % state.unlock_level_name("staff")
+	_staff_row.add_child(button)
+	for m in state.staff:
+		var chip := StaffScreen.avatar(m, 26.0)
+		chip.tooltip_text = "%s: %s" % [m["name"], state.staff_task(m["task"]).get("name", m["task"])]
+		chip.mouse_filter = Control.MOUSE_FILTER_STOP
+		_staff_row.add_child(chip)
 
 
 # --- Gallery wall ------------------------------------------------------------

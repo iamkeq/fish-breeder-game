@@ -27,6 +27,8 @@ signal lab_requested
 signal fish_show_requested
 ## The player wants the Gallery opened.
 signal gallery_requested
+## The player wants the Staff screen opened.
+signal staff_requested
 
 var save_path := "user://save.json"
 
@@ -367,6 +369,18 @@ func _changed_if(ok: bool) -> bool:
 	if ok:
 		changed.emit()
 	return ok
+
+
+func hire_staff(task: String) -> bool:
+	return _changed_if(state.hire_staff(task))
+
+
+func set_staff_task(staff_id: int, task: String) -> bool:
+	return _changed_if(state.set_staff_task(staff_id, task))
+
+
+func dismiss_staff(staff_id: int) -> bool:
+	return _changed_if(state.dismiss_staff(staff_id))
 
 
 func buy_breeding_tank() -> bool:
