@@ -53,7 +53,7 @@ static func economy() -> Dictionary:
 			"variety": 15, "variety_cap": 4, "layering": 15, "theme": 15,
 		},
 		"breeding_tank_capacity": 8,
-		"breeding_tanks": {"max": 4, "extra_costs": [20, 30, 40]},
+		"breeding_tanks": {"max": 4, "max_mothers": 3, "extra_costs": [20, 30, 40]},
 		"clock": {"open_hour": 9, "min_open_hours": 4, "hard_close_hour": 21, "real_seconds_per_hour": 60, "restock_speed": 4},
 		"customers": {
 			"spawn_interval_minutes": [30, 90], "min_interval_minutes": 12, "first_arrival_minutes": 10,

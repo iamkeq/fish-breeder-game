@@ -383,6 +383,19 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.14.0), harem breeding, stats, starting choices:**
+  - `GameState.breeding_group()` is the sire (first adult male with an adult
+    female of his species in the tank) and up to
+    `breeding_tanks.max_mothers` mothers; each mother broods on the tank's
+    shared brood night. `breeding_pair()` remains as [first mother, sire].
+  - `records` (saved) holds worded personal bests `{amount, what, day, tie}`;
+    whole numbers only, so they survive the JSON round trip.
+  - `data/new_game.json` lists starts and challenges. Challenge rules are
+    read through `challenge_rule()`: `starting_money`,
+    `market_fish_until_day`, `mutation_chance_multiplier` (capped at 0.5),
+    `customers_buy_only_mutations`. `Game.needs_setup` shows the new-game
+    screen only in real runs with no save; scripted and headless runs start
+    the standard game.
 - **2026-11-11 (v0.13.0), recipe generations, book rewards, collectors:**
   - `Genetics.pair_generation()` is 1 + the deeper parent's
     `recipe_generation()` (0 for non-recipe values). Five generation-3 guppy

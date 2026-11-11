@@ -1,0 +1,63 @@
+{
+	"starts": [
+		{
+			"id": "red_yellow",
+			"name": "Red & Yellow",
+			"description": "The classic pair. Together they can make Orange.",
+			"fish": [
+				{ "species_id": "guppy", "sex": "male", "stars": 2, "location": "breeding", "traits": { "variety": "red" } },
+				{ "species_id": "guppy", "sex": "female", "stars": 2, "location": "breeding", "traits": { "variety": "yellow" } }
+			]
+		},
+		{
+			"id": "blue_grass",
+			"name": "Blue & Grass",
+			"description": "A cool pair. Together they can make Turquoise.",
+			"fish": [
+				{ "species_id": "guppy", "sex": "male", "stars": 2, "location": "breeding", "traits": { "variety": "blue" } },
+				{ "species_id": "guppy", "sex": "female", "stars": 2, "location": "breeding", "traits": { "variety": "grass" } }
+			]
+		},
+		{
+			"id": "black_white",
+			"name": "Black & White",
+			"description": "Opposites attract. Together they can make Dalmatian.",
+			"fish": [
+				{ "species_id": "guppy", "sex": "male", "stars": 2, "location": "breeding", "traits": { "variety": "black" } },
+				{ "species_id": "guppy", "sex": "female", "stars": 2, "location": "breeding", "traits": { "variety": "white" } }
+			]
+		},
+		{
+			"id": "surprise",
+			"name": "Surprise me",
+			"description": "Two different common varieties, picked at random.",
+			"random_pair": true
+		}
+	],
+	"challenges": [
+		{
+			"id": "standard",
+			"name": "Standard",
+			"description": "The normal game.",
+			"rules": {}
+		},
+		{
+			"id": "homegrown",
+			"name": "Homegrown",
+			"description": "The Market stops selling fish after Day 3. Everything after that, you breed.",
+			"rules": { "market_fish_until_day": 3 }
+		},
+		{
+			"id": "shoestring",
+			"name": "Shoestring",
+			"description": "Start with $40 instead of $150.",
+			"rules": { "starting_money": 40 }
+		},
+		{
+			"id": "oddity_shop",
+			"name": "Oddity Shop",
+			"description": "Mutations are five times as common, but customers at the counter only buy mutations. Everything else goes to the wholesaler, orders and back-orders.",
+			"rules": { "mutation_chance_multiplier": 5, "customers_buy_only_mutations": true }
+		}
+	]
+}

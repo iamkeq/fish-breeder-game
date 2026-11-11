@@ -8,6 +8,7 @@ const ShopBell := preload("res://scenes/ui/shop_bell.gd")
 const BreedingBook := preload("res://scenes/ui/breeding_book.gd")
 const OrdersRoom := preload("res://scenes/orders_room.gd")
 const Goals := preload("res://scenes/ui/goals.gd")
+const NewGame := preload("res://scenes/ui/new_game.gd")
 
 const SHOP_FLOOR_TEXT := "Shop floor"
 const BELL_TEXT := "● Shop floor"
@@ -57,6 +58,10 @@ func _ready() -> void:
 	_bell = AudioStreamPlayer.new()
 	_bell.stream = ShopBell.make_stream()
 	add_child(_bell)
+	if Game.needs_setup:
+		var setup := NewGame.new()
+		add_child(setup)  # on top of everything: you must pick a start
+		setup.open()
 
 	var rooms := ButtonGroup.new()
 	_shop_button.button_group = rooms

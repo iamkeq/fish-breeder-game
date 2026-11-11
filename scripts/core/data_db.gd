@@ -28,6 +28,13 @@ var goals: Array = []
 ## Shop upgrades by id, and their listed order (data/upgrades.json).
 var upgrades: Dictionary = {}
 var upgrade_order: Array = []
+## Starting pairs and challenge modes for a new game, in listed order
+## (data/new_game.json). With no starts listed there is one implicit "standard"
+## start built from economy.starting_state.fish; challenges may be empty.
+var starts: Array = []
+var challenges: Array = []
+## True when `starts` is the implicit standard one (already checked as economy data).
+var _implicit_start := false
 var errors: Array[String] = []
 
 const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
@@ -35,6 +42,11 @@ const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
 const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales"]
+const START_FIELDS := ["id", "name", "description"]
+const CHALLENGE_FIELDS := ["id", "name", "description", "rules"]
+## What a challenge rule can change. See GameState.challenge_rule().
+const CHALLENGE_RULES := ["starting_money", "market_fish_until_day", "mutation_chance_multiplier",
+	"customers_buy_only_mutations"]
 const UPGRADE_FIELDS := ["id", "name", "description", "cost", "effects"]
 const UPGRADE_EFFECTS := ["customer_speed", "patience", "max_orders", "max_backorders",
 	"breeding_capacity", "auto_feed", "premium_food", "wholesale_fraction", "brood_nights"]
@@ -53,10 +65,16 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 	var economy_data = _read_file(root.path_join("economy.json"), read_errors)
 	var goal_data = _read_file(root.path_join("goals.json"), read_errors)
 	var upgrade_data = _read_file(root.path_join("upgrades.json"), read_errors)
+	# Optional: without it there is one standard start and no challenges.
+	var new_game_data = null
+	if FileAccess.file_exists(root.path_join("new_game.json")):
+		new_game_data = _read_file(root.path_join("new_game.json"), read_errors)
 	var db := from_dicts(species_list, item_list, template_list,
 		economy_data if economy_data is Dictionary else {}, strain_list,
 		goal_data.get("goals", []) if goal_data is Dictionary else [],
-		upgrade_data.get("upgrades", []) if upgrade_data is Dictionary else [])
+		upgrade_data.get("upgrades", []) if upgrade_data is Dictionary else [],
+		new_game_data.get("starts", []) if new_game_data is Dictionary else [],
+		new_game_data.get("challenges", []) if new_game_data is Dictionary else [])
 	read_errors.append_array(db.errors)
 	db.errors = read_errors
 	return db
@@ -64,7 +82,7 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 
 static func from_dicts(species_list: Array, item_list: Array, template_list: Array,
 		economy_data: Dictionary, strain_list: Array = [], goal_list: Array = [],
-		upgrade_list: Array = []) -> DataDB:
+		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = []) -> DataDB:
 	var db := DataDB.new()
 	for s in species_list:
 		db._add_unique(db.species, s, "species")
@@ -83,8 +101,37 @@ static func from_dicts(species_list: Array, item_list: Array, template_list: Arr
 		if u is Dictionary and u.has("id") and not u["id"] in db.upgrade_order:
 			db.upgrade_order.append(u["id"])
 	db.economy = economy_data
+	var start_ids := {}
+	for st in start_list:
+		db._add_unique(start_ids, st, "start")
+	db.starts = start_list.filter(func(st): return st is Dictionary and st.has("id"))
+	var challenge_ids := {}
+	for c in challenge_list:
+		db._add_unique(challenge_ids, c, "challenge")
+	db.challenges = challenge_list.filter(func(c): return c is Dictionary and c.has("id"))
+	if db.starts.is_empty() and economy_data.get("starting_state") is Dictionary \
+			and economy_data["starting_state"].get("fish") is Array:
+		db.starts = [{"id": "standard", "name": "Standard", "description": "The usual pair.",
+			"fish": economy_data["starting_state"]["fish"]}]
+		db._implicit_start = true
 	db.validate()
 	return db
+
+
+## The start with this id, or the first one listed (so unknown ids fall back).
+func start_by_id(start_id: String) -> Dictionary:
+	for st in starts:
+		if st["id"] == start_id:
+			return st
+	return starts[0] if not starts.is_empty() else {}
+
+
+## The challenge with this id, or {} (no challenge) if there isn't one.
+func challenge_by_id(challenge_id: String) -> Dictionary:
+	for c in challenges:
+		if c["id"] == challenge_id:
+			return c
+	return {}
 
 
 func is_valid() -> bool:
@@ -124,6 +171,53 @@ func validate() -> void:
 		if u.has("requires") and not upgrades.has(u["requires"]):
 			errors.append("%s: requires unknown upgrade '%s'" % [upgrade_ctx, u["requires"]])
 	_validate_economy()
+	for st in starts:
+		if not _implicit_start:
+			_validate_start(st)
+	for c in challenges:
+		_validate_challenge(c)
+
+
+func _validate_start(st: Dictionary) -> void:
+	var ctx := "start/%s" % st["id"]
+	if not _require(st, START_FIELDS, ctx):
+		return
+	if st.get("random_pair", false):
+		var species_id: String = st.get("species_id", "guppy")
+		var trait_name: String = st.get("trait", "variety")
+		if not species.has(species_id) or not species[species_id]["traits"].has(trait_name) \
+				or species[species_id]["traits"][trait_name].get("common", []).size() < 2:
+			errors.append("%s: random_pair needs a species trait with two or more common values" % ctx)
+		return
+	if not st.get("fish") is Array or st["fish"].is_empty():
+		errors.append("%s: needs a 'fish' list (or 'random_pair')" % ctx)
+		return
+	for f in st["fish"]:
+		var sp: Dictionary = species.get(f.get("species_id", ""), {})
+		if sp.is_empty():
+			errors.append("%s: fish has unknown species '%s'" % [ctx, f.get("species_id", "")])
+			continue
+		if not f.get("sex", "") in [Fish.MALE, Fish.FEMALE]:
+			errors.append("%s: fish needs a sex" % ctx)
+		var where: String = f.get("location", Fish.HOLDING)
+		if not (where in [Fish.HOLDING, Fish.DISPLAY] or Fish.is_breeding(where)):
+			errors.append("%s: fish has unknown location '%s'" % [ctx, where])
+		for trait_name in f.get("traits", {}):
+			var t: Dictionary = sp["traits"].get(trait_name, {})
+			if t.is_empty() or not f["traits"][trait_name] in t["common"] + t.get("rare", []):
+				errors.append("%s: '%s' is not a valid %s" % [ctx, f["traits"][trait_name], trait_name])
+
+
+func _validate_challenge(c: Dictionary) -> void:
+	var ctx := "challenge/%s" % c["id"]
+	if not _require(c, CHALLENGE_FIELDS, ctx):
+		return
+	if not c["rules"] is Dictionary:
+		errors.append("%s: 'rules' must be an object" % ctx)
+		return
+	for rule in c["rules"]:
+		if not rule in CHALLENGE_RULES:
+			errors.append("%s: unknown rule '%s'" % [ctx, rule])
 
 
 func _add_unique(target: Dictionary, entry, kind: String) -> void:
@@ -224,6 +318,9 @@ func _validate_economy() -> void:
 	if _require(tanks, ["max", "extra_costs"], "economy/breeding_tanks") \
 			and tanks["extra_costs"].size() < int(tanks["max"]) - 1:
 		errors.append("economy/breeding_tanks: needs a cost for each extra tank (%d)" % (int(tanks["max"]) - 1))
+	var mothers = tanks.get("max_mothers", 1)
+	if not (mothers is int or mothers is float) or int(mothers) < 1:
+		errors.append("economy/breeding_tanks: 'max_mothers' must be a number of 1 or more")
 	if tanks.has("substrate") and not items.has(tanks["substrate"]):
 		errors.append("economy/breeding_tanks: unknown substrate '%s'" % tanks["substrate"])
 	if tanks.has("air_stone") and not ResourceLoader.exists(tanks["air_stone"].get("sheet", "")):

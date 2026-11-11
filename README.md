@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.13.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.14.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -51,6 +51,13 @@ Current version: **0.13.0** (see the [changelog](CHANGELOG.md)).
 - **The tank editor** lets you place substrate and six items (back, middle,
   front). A live looks score and tips show how to make it prettier, and
   prettier tanks sell for more.
+- **Starting a game:** pick a starting pair and a mode (Standard, Homegrown,
+  Shoestring or Oddity Shop) on the new-game screen.
+- **Harem breeding:** one male (the sire) breeds with up to three adult
+  females in the same tank, each with her own brood. They all share the
+  tank's space.
+- **Stats** (a tab in the Goals window) keeps your records: biggest sale,
+  rarest fish sold, best fish bred and more.
 - **Collectors** sometimes come in for show-quality fish you bred yourself:
   1.5× the usual price for a 4★ fish, double for a 5★.
 - **The breeding book** pays cash for every first discovery, and a bonus for
@@ -106,7 +113,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.13.0
+.\tools\publish_web.ps1 0.14.0
 ```
 
 ## Project layout

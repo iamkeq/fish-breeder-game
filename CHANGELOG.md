@@ -2,6 +2,34 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.14.0] - 2026-11-11
+
+### Added
+- **Harem breeding:** in each breeding tank the first adult male is the
+  **sire**, and up to **3 adult females** each have their own brood on brood
+  night. Mothers and their fry all count against the tank's capacity, so it
+  is a trade-off for tank space. Mixed-variety mothers can give several
+  recipes from one tank. The back room tags the sire and the breeding
+  mothers, and the brood line shows how many mothers there are.
+- **Stats tab** in the Goals window: Shop, Fish, Orders and stock, and
+  Progress. New records with what and when: **biggest sale**, **rarest fish
+  sold** and **best fish bred**. New counters: wholesale sales, shelf items
+  and tanks sold, customers who wandered off, total spent, fry grown up.
+- **New-game screen**, shown when there is no save or after "Start a new
+  game":
+  - Starting pair: Red & Yellow, Blue & Grass, Black & White, or Surprise me
+    (two random common varieties).
+  - Mode: **Standard**; **Homegrown** (the Market stops selling fish after
+    Day 3); **Shoestring** (start with $40); **Oddity Shop** (mutations are
+    five times as common, but customers at the counter only buy mutations).
+  The mode and starting pair are saved and shown on the Stats tab.
+
+### Changed
+- A grown-up daughter left in a breeding tank now joins the mothers (if
+  there is room under the cap). Breeding-group fish are never handed over
+  to a back-order; move one to holding first if you want to sell it.
+- Existing tanks with two or more adult females will produce more fry.
+
 ## [0.13.0] - 2026-11-11
 
 ### Added

@@ -46,26 +46,43 @@ var discovered_mutations: Dictionary = {}
 var book_bonuses: Dictionary = {}
 ## Lifetime counters ("fish_sold", "best_day", ...), used by goals.
 var stats: Dictionary = {}
+## Personal bests that need words: key -> {"amount": int, "what": String, "day": int,
+## "tie": int}. Keys: "best_sale", "rarest_sold", "best_bred". `tie` breaks a tie
+## on `amount`. See _record().
+var records: Dictionary = {}
 ## Goals reached: goal id -> the day it was reached.
 var completed_goals: Dictionary = {}
 ## Shop upgrades bought: upgrade id -> the day it was bought.
 var upgrades: Dictionary = {}
 
+## Which starting pair and challenge mode this game began with ("" = the
+## standard ones). See data/new_game.json.
+var start_id: String = ""
+var challenge_id: String = ""
+
 const SAVE_VERSION := 1
+## A challenge can raise a species' mutation chance, but never above this.
+const MAX_MUTATION_CHANCE := 0.5
 
 
-static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator) -> GameState:
+## Starts a game. `options` may hold "start_id" (a starting pair from
+## data/new_game.json) and "challenge_id" (a mode). Unknown or missing ids fall
+## back to the first start and no challenge.
+static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator, options: Dictionary = {}) -> GameState:
 	var s := GameState.new()
 	s.db = p_db
 	s.rng = p_rng
+	var chosen_start: Dictionary = p_db.start_by_id(str(options.get("start_id", "")))
+	s.start_id = chosen_start.get("id", "")
+	s.challenge_id = p_db.challenge_by_id(str(options.get("challenge_id", ""))).get("id", "")
 	var start: Dictionary = p_db.economy["starting_state"]
-	s.money = int(start["money"])
+	s.money = int(s.challenge_rule("starting_money", start["money"]))
 	for item_id in start["items"]:
 		s.inventory.add(item_id, int(start["items"][item_id]))
 	s.display_tank = s._make_tank(start["display_tank"])
 	s._add_breeding_tank()
 	s._apply_starter_layout(s.display_tank, start.get("display_tank_layout", {}))
-	for fish_data in start["fish"]:
+	for fish_data in s._starting_fish(chosen_start):
 		var f := Fish.from_dict(fish_data)
 		f.location = Fish.HOLDING
 		if not fish_data.has("age_days"):
@@ -77,6 +94,57 @@ static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator) -> GameState:
 	s.clock = GameClock.new(p_db.economy["clock"])
 	s.open_day()
 	return s
+
+
+## The starting fish (as data) for a start: its listed fish, or for a
+## "random_pair" start a male and a female of two different common values of
+## one trait (default guppy "variety"), both 2 stars, in the breeding tank.
+func _starting_fish(chosen_start: Dictionary) -> Array:
+	if not chosen_start.get("random_pair", false):
+		return chosen_start.get("fish", db.economy["starting_state"]["fish"])
+	var species_id: String = chosen_start.get("species_id", "guppy")
+	var trait_name: String = chosen_start.get("trait", "variety")
+	var species_traits: Dictionary = db.species[species_id]["traits"]
+	var common: Array = species_traits[trait_name]["common"]
+	var a := rng.randi_range(0, common.size() - 1)
+	var b := rng.randi_range(0, common.size() - 2)
+	if b >= a:
+		b += 1
+	var result := []
+	for pick in [[Fish.MALE, common[a]], [Fish.FEMALE, common[b]]]:
+		var traits := {}
+		for other in species_traits:
+			traits[other] = pick[1] if other == trait_name else species_traits[other]["common"][0]
+		result.append({"species_id": species_id, "sex": pick[0], "stars": 2,
+			"location": Fish.BREEDING, "traits": traits})
+	return result
+
+
+# --- Challenge modes -----------------------------------------------------------
+
+## The active challenge's rules (data/new_game.json), or {} for the standard game.
+func challenge_rules() -> Dictionary:
+	for c in db.challenges:
+		if c["id"] == challenge_id:
+			return c.get("rules", {})
+	return {}
+
+
+## One rule of the active challenge, or `default` when it isn't set.
+func challenge_rule(rule_name: String, default = null):
+	return challenge_rules().get(rule_name, default)
+
+
+## The species with its mutation chance changed by the challenge (the same
+## dictionary when nothing changes, so standard games are untouched).
+func breeding_species(species: Dictionary) -> Dictionary:
+	var multiplier := float(challenge_rule("mutation_chance_multiplier", 1.0))
+	if is_equal_approx(multiplier, 1.0):
+		return species
+	var adjusted := species.duplicate()
+	var base := float(species["mutation_chance"])
+	adjusted["mutation_chance"] = maxf(base, minf(base * multiplier, MAX_MUTATION_CHANCE))
+	return adjusted
 
 
 # --- Lookups -----------------------------------------------------------------
@@ -198,10 +266,21 @@ func strain_cost(strain_id: String) -> int:
 	return Pricing.strain_cost(strain, db.species[strain["species"]], db.economy)
 
 
+## False once a challenge has closed the Market's fish (see market_last_day()).
+func market_fish_open() -> bool:
+	var last := market_last_day()
+	return last < 0 or day <= last
+
+
+## The last day the Market sells fish in this game, or -1 if it always does.
+func market_last_day() -> int:
+	return int(challenge_rule("market_fish_until_day", -1))
+
+
 ## Buys an adult of a named strain into holding. Traits the strain doesn't fix
 ## are random common values. Returns the fish, or null if it couldn't.
 func buy_strain(strain_id: String, sex: String) -> Fish:
-	if not db.strains.has(strain_id) or not sex in [Fish.MALE, Fish.FEMALE]:
+	if not db.strains.has(strain_id) or not sex in [Fish.MALE, Fish.FEMALE] or not market_fish_open():
 		return null
 	var cost := strain_cost(strain_id)
 	if not can_afford(cost):
@@ -244,6 +323,7 @@ func _earn(amount: int, category: String) -> void:
 
 func _spend(amount: int) -> void:
 	money -= amount
+	_count("total_spent", amount)
 	if day_log.is_empty():
 		_reset_day_log()
 	day_log["spent"] += amount
@@ -259,6 +339,7 @@ func sell_item(item_id: String) -> int:
 		return 0
 	var price := Pricing.item_price(db.items[item_id])
 	_earn(price, "item")
+	_count("items_sold")
 	return price
 
 
@@ -270,7 +351,7 @@ func sell_fish(fish_id: int) -> int:
 	var price := fish_price(f)
 	_release_fish(f)
 	_earn(price, "fish")
-	_count_fish_sold(f)
+	_count_fish_sold(f, price, "")
 	return price
 
 
@@ -290,6 +371,7 @@ func sell_fish_wholesale(fish_id: int) -> int:
 	var price := wholesale_price(f)
 	_release_fish(f)
 	_earn(price, "wholesale")
+	_count("wholesale_sold")
 	return price
 
 
@@ -300,6 +382,8 @@ func sell_display_tank(include_fish: bool) -> int:
 	var price := tank_price(display_tank, include_fish)
 	_remove_display_tank(include_fish)
 	_earn(price, "tank")
+	_count("tanks_sold")
+	_record("best_sale", price, "Display tank")
 	return price
 
 
@@ -488,6 +572,9 @@ func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionar
 	if result.is_empty():
 		return {}
 	var order: Dictionary = orders[order_index]
+	var customer_name: String = order.get("customer", "")
+	var what := "%s for %s" % ["Order tank" if from_order_tank else "Display tank", customer_name] \
+		if customer_name != "" else "Special order"
 	if from_order_tank:
 		for f in tank_fish(order["tank"]):
 			inventory.remove_fish(f.id)
@@ -498,6 +585,7 @@ func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionar
 	orders.remove_at(order_index)
 	_earn(result["payout"], "order")
 	_count("orders_delivered")
+	_record("best_sale", int(result["payout"]), what)
 	return result
 
 
@@ -564,6 +652,7 @@ func tick_customers(minutes: float) -> bool:
 		customer["waited"] += minutes
 		if customer["waited"] >= customer["patience"]:
 			day_log["walked_out"] = day_log.get("walked_out", 0) + 1
+			_count("walked_out")
 			_customer_leaves()  # no penalty, they just wander off
 			return true
 		return false
@@ -666,12 +755,31 @@ func is_collector_fish(f: Fish) -> bool:
 	var rules := collector_rules()
 	if rules.is_empty() or f.paid != 0 or f.strain_id != "" or f.stars < int(rules["min_stars"]):
 		return false
+	if bool(challenge_rule("customers_buy_only_mutations", false)) and not is_mutation_fish(f):
+		return false
 	return is_adult(f) and f.location in [Fish.DISPLAY, Fish.HOLDING]
 
 
 ## Fish a collector could ask for right now.
 func collector_fish() -> Array:
 	return fish_for_sale().filter(func(f): return is_collector_fish(f))
+
+
+## True when any of the fish's looks is a mutation (Genetics.is_mutation).
+func is_mutation_fish(f: Fish) -> bool:
+	var species := species_of(f)
+	for trait_name in f.traits:
+		if Genetics.is_mutation(species, trait_name, f.traits[trait_name]):
+			return true
+	return false
+
+
+## Fish a walk-in "fish" customer might ask for. Under a challenge that only
+## sells mutations, just those.
+func fish_for_customers() -> Array:
+	if not bool(challenge_rule("customers_buy_only_mutations", false)):
+		return fish_for_sale()
+	return fish_for_sale().filter(func(f): return is_mutation_fish(f))
 
 
 ## What a collector pays: the usual price times a multiplier for the stars.
@@ -687,7 +795,7 @@ func _sell_to_collector(fish_id: int) -> int:
 	var price := collector_price(f)
 	_release_fish(f)
 	_earn(price, "collector")
-	_count_fish_sold(f)
+	_count_fish_sold(f, price, " to a collector")
 	_count("collector_sales")
 	return price
 
@@ -751,7 +859,7 @@ func wishable_fish() -> Array:
 	strain_ids.sort()
 	for id in strain_ids:
 		var strain: Dictionary = db.strains[id]
-		if strain["traits"].size() != 1:
+		if strain["traits"].size() != 1 or not market_fish_open():
 			continue
 		var trait_name: String = strain["traits"].keys()[0]
 		_add_wish(result, seen, strain["species"], trait_name, strain["traits"][trait_name], "market", id)
@@ -815,13 +923,14 @@ func backorder_customer() -> bool:
 
 ## The fish you'd hand over for a fish back-order: a matching adult (same look
 ## and sex) from holding, the display tank or a breeding tank, but never one of
-## a tank's current breeding pair, nor a fish you chose to keep.
+## a tank's current breeding group (the sire and its mothers), nor a fish you
+## chose to keep.
 func backorder_fish(order: Dictionary) -> Fish:
 	var candidates: Array = inventory.fish_list(Fish.HOLDING) + inventory.fish_list(Fish.DISPLAY)
 	for i in breeding_tanks.size():
-		var pair := breeding_pair(i)
+		var group := breeding_group_fish(i)
 		for f in tank_fish(breeding_tanks[i]):
-			if not f in pair:
+			if not f in group:
 				candidates.append(f)
 	for f in candidates:
 		if f.id == int(order.get("keep_id", -1)):
@@ -851,8 +960,10 @@ func backorder_blocker(index: int) -> String:
 		return "They'll come back for it on Day %d." % order["due_day"]
 	if backorder_fish(order) == null:
 		if order.get("source") == "market":
+			if not market_fish_open():
+				return "The Market no longer sells fish. Breed one, or cancel this order (no penalty)."
 			return "No matching adult yet. Buy one in the Market."
-		return "No matching adult yet. Breed one (the breeding pair itself is never handed over)."
+		return "No matching adult yet. Breed one (the breeding group itself is never handed over)."
 	return ""
 
 
@@ -900,7 +1011,9 @@ func fulfil_backorder(index: int) -> int:
 	else:
 		var f := backorder_fish(order)
 		_release_fish(f)
-		_count_fish_sold(f)
+		_count_fish_sold(f, int(order["price"]), " for %s" % order["name"])
+	if order.has("item_id"):
+		_record("best_sale", int(order["price"]), "%s for %s" % [db.items[order["item_id"]]["name"], order["name"]])
 	backorders.remove_at(index)
 	_earn(order["price"], "backorder")
 	_count("backorders_filled")
@@ -923,9 +1036,9 @@ func decline_customer() -> void:
 func _new_customer() -> Dictionary:
 	var tank_for_sale := display_tank != null and not display_tank.placed_item_ids().is_empty()
 	var ctx := {
-		"fish_for_sale": fish_for_sale(), "species_db": db.species,
+		"fish_for_sale": fish_for_customers(), "species_db": db.species,
 		"items_in_stock": inventory.stock().keys(), "all_items": db.items.keys(),
-		"wishable": wishable_fish() if can_backorder() else [],
+		"wishable": wishable_fish() if can_backorder() and not bool(challenge_rule("customers_buy_only_mutations", false)) else [],
 		"tank_for_sale": tank_for_sale, "can_take_request": can_accept_request(),
 		"collector_fish": collector_fish(),
 	}
@@ -1013,39 +1126,46 @@ func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
 		f.age_days += 1
 		if is_adult(f):
 			f.stars = Quality.roll_offspring_stars(f.parent_stars, f.fed_every_night, _star_nudges(), rng)
+			_count("fish_grown")
+			_record_best("best_stars_bred", f.stars)
+			_record("best_bred", f.stars, _fish_label(f), _variety_value(f))
 			summary["fry_grown_up"] += 1
 			summary["grown_ids"].append(f.id)
 
 
 func _night_breed(summary: Dictionary, tank_index: int) -> void:
 	var tank := breeding_tanks[tank_index]
-	var pair := breeding_pair(tank_index)
-	if pair.is_empty():
+	var group := breeding_group(tank_index)
+	if group["mothers"].is_empty():
 		brood_nights[tank_index] = 0
 		return
-	var species := species_of(pair[0])
+	var father: Fish = group["father"]
+	var species := species_of(father)
 	brood_nights[tank_index] += 1
 	if brood_nights[tank_index] < brood_interval(species):
 		return
 	brood_nights[tank_index] = 0
-	for fry in Genetics.breed(pair[0], pair[1], species, rng):
-		if not tank.has_room_for_fish():
-			break
-		fry.location = Fish.breeding_location(tank_index)
-		inventory.add_fish(fry)
-		tank.add_fish(fry.id)
-		summary["fry_born"] += 1
-		summary["born_ids"].append(fry.id)
-		for trait_name in fry.traits:
-			var value: String = fry.traits[trait_name]
-			# A look neither parent has, from a recipe (pair mix) or a mutation. Worth celebrating.
-			var mum: String = pair[0].get_trait(trait_name)
-			var dad: String = pair[1].get_trait(trait_name)
-			if value != mum and value != dad:
-				var source := "recipe" if Genetics.recipe_child(species, trait_name, mum, dad) == value else "mutation"
-				summary["mutations"].append({"fish_id": fry.id, "trait": trait_name, "value": value,
-					"source": source, "parents": [mum, dad]})
-				_discover(summary, source, species, trait_name, value, [mum, dad])
+	var breeding_rules := breeding_species(species)
+	# Every mother has her own brood; fry fill the tank until it is full.
+	for mother in group["mothers"]:
+		for fry in Genetics.breed(mother, father, breeding_rules, rng):
+			if not tank.has_room_for_fish():
+				return
+			fry.location = Fish.breeding_location(tank_index)
+			inventory.add_fish(fry)
+			tank.add_fish(fry.id)
+			summary["fry_born"] += 1
+			summary["born_ids"].append(fry.id)
+			for trait_name in fry.traits:
+				var value: String = fry.traits[trait_name]
+				# A look neither parent has, from a recipe (pair mix) or a mutation. Worth celebrating.
+				var mum: String = mother.get_trait(trait_name)
+				var dad: String = father.get_trait(trait_name)
+				if value != mum and value != dad:
+					var source := "recipe" if Genetics.recipe_child(species, trait_name, mum, dad) == value else "mutation"
+					summary["mutations"].append({"fish_id": fry.id, "trait": trait_name, "value": value,
+						"source": source, "parents": [mum, dad]})
+					_discover(summary, source, species, trait_name, value, [mum, dad])
 
 
 ## Records a first-time recipe or mutation in the breeding book.
@@ -1161,25 +1281,55 @@ func book_mutations(species_id: String) -> Array:
 	return result
 
 
-## [mother, father] in breeding tank `tank_index`: the first adult female and an
-## adult male of the same species. [] if none. Fish never pair across tanks.
-func breeding_pair(tank_index: int = 0) -> Array:
+## The breeding group of tank `tank_index`: the sire is the first adult male who
+## has at least one adult female of his species in the tank, and every such
+## female (in tank order, up to economy.breeding_tanks.max_mothers) is a
+## mother. {"father": Fish or null, "mothers": Array[Fish]}; no group = null
+## father and no mothers. Fish never pair across tanks.
+func breeding_group(tank_index: int = 0) -> Dictionary:
 	var adults := tank_fish(breeding_tanks[tank_index]).filter(func(f): return is_adult(f))
-	for mother in adults:
-		if mother.sex != Fish.FEMALE:
+	for father in adults:
+		if father.sex != Fish.MALE:
 			continue
-		for father in adults:
-			if father.sex == Fish.MALE and father.species_id == mother.species_id:
-				return [mother, father]
-	return []
+		var mothers: Array[Fish] = []
+		for f in adults:
+			if f.sex == Fish.FEMALE and f.species_id == father.species_id and mothers.size() < max_mothers():
+				mothers.append(f)
+		if not mothers.is_empty():
+			return {"father": father, "mothers": mothers}
+	return {"father": null, "mothers": [] as Array[Fish]}
+
+
+## Every fish in tank `tank_index`'s breeding group: the sire, then the mothers.
+func breeding_group_fish(tank_index: int = 0) -> Array[Fish]:
+	var group := breeding_group(tank_index)
+	var result: Array[Fish] = []
+	if group["father"] != null:
+		result.append(group["father"])
+		result.append_array(group["mothers"])
+	return result
+
+
+## How many mothers one sire serves in a tank (data; 1 if not set).
+func max_mothers() -> int:
+	return maxi(1, int(db.economy["breeding_tanks"].get("max_mothers", 1)))
+
+
+## [first mother, father] in breeding tank `tank_index`, or [] if there is no
+## group. See breeding_group() for the rest of the mothers.
+func breeding_pair(tank_index: int = 0) -> Array:
+	var group := breeding_group(tank_index)
+	if group["mothers"].is_empty():
+		return []
+	return [group["mothers"][0], group["father"]]
 
 
 ## Nights until breeding tank `tank_index` has its next brood, or -1 if it has no pair.
 func nights_until_brood(tank_index: int = 0) -> int:
-	var pair := breeding_pair(tank_index)
-	if pair.is_empty():
+	var group := breeding_group(tank_index)
+	if group["mothers"].is_empty():
 		return -1
-	return brood_interval(species_of(pair[0])) - brood_nights[tank_index]
+	return brood_interval(species_of(group["father"])) - brood_nights[tank_index]
 
 
 ## Nights between a pair's broods (tank heaters shorten it; never below 1).
@@ -1225,9 +1375,37 @@ func _record_best(stat_name: String, value: int) -> void:
 		stats[stat_name] = value
 
 
-func _count_fish_sold(f: Fish) -> void:
+## Counts a fish sold to a customer (not the wholesaler) and updates the
+## best-sale and rarest-sold records. `suffix` says who bought it ("" for a
+## walk-in, " to a collector", " for Rosa").
+func _count_fish_sold(f: Fish, price: int, suffix: String) -> void:
 	_count("fish_sold")
 	_record_best("best_stars_sold", f.stars)
+	var what := _fish_label(f) + suffix
+	_record("best_sale", price, what)
+	_record("rarest_sold", _variety_value(f), what, f.stars)
+
+
+## "★★★★★ Koi Guppy": stars, then the fish's name. For the records.
+func _fish_label(f: Fish) -> String:
+	return ("%s %s" % ["★".repeat(f.stars), fish_display_name(f)]).strip_edges()
+
+
+## How much a fish's looks multiply its price, times 100 (a whole number so it
+## saves cleanly): Pricing.trait_multiplier(). 100 for plain looks.
+func _variety_value(f: Fish) -> int:
+	return roundi(Pricing.trait_multiplier(f, species_of(f)) * 100.0)
+
+
+## Keeps a personal best in `records` if it beats the old one: a higher
+## `amount`, or the same amount with a higher `tie`. Stamped with today.
+func _record(key: String, amount: int, what: String, tie: int = 0) -> void:
+	var old: Dictionary = records.get(key, {})
+	if not old.is_empty():
+		var old_amount := int(old["amount"])
+		if amount < old_amount or (amount == old_amount and tie <= int(old.get("tie", 0))):
+			return
+	records[key] = {"amount": amount, "what": what, "day": day, "tie": tie}
 
 
 ## The current number behind a goal metric (see DataDB.GOAL_METRICS).
@@ -1355,6 +1533,9 @@ func to_dict() -> Dictionary:
 		"discovered_mutations": discovered_mutations.duplicate(),
 		"book_bonuses": book_bonuses.duplicate(),
 		"stats": stats.duplicate(),
+		"records": records.duplicate(true),
+		"start_id": start_id,
+		"challenge_id": challenge_id,
 		"completed_goals": completed_goals.duplicate(),
 		"upgrades": upgrades.duplicate(),
 	}
@@ -1381,6 +1562,9 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 			if s.is_generation_complete(g):
 				s.book_bonuses[str(g)] = 0
 	s.stats = d.get("stats", {}).duplicate()
+	s.records = d.get("records", {}).duplicate(true)
+	s.start_id = str(d.get("start_id", ""))
+	s.challenge_id = str(d.get("challenge_id", ""))
 	s.completed_goals = d.get("completed_goals", {}).duplicate()
 	for id in d.get("upgrades", {}):
 		if p_db.upgrades.has(id):

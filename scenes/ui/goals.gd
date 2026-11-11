@@ -1,18 +1,19 @@
 extends ColorRect
-## Goals: things to aim for, each with a progress bar and a one-off cash
-## reward. Open goals come first, finished ones below. Also shows a few
-## lifetime numbers and the "start a new game" button.
-## Pauses the shop clock while open.
+## Goals and Stats, in two tabs. Goals: things to aim for, each with a progress
+## bar and a one-off cash reward (open ones first, finished ones below). Stats:
+## lifetime numbers and personal bests. Both tabs have the "start a new game"
+## button. Pauses the shop clock while open.
 
 const GOOD := Color(0.25, 0.5, 0.35)
-const STATS := [["days", "Days open"], ["fish_sold", "Fish sold"], ["fish_bred", "Fry bred"],
-	["orders_delivered", "Orders delivered"], ["best_day", "Best day"], ["total_earned", "Earned in total"]]
+const TABS := ["Goals", "Stats"]
+const DIM := Color(1, 1, 1, 0.7)
 
 var _progress: Label
 var _body: VBoxContainer
-var _stats: Label
 var _new_game_button: Button
 var _confirming := false
+var _tab := 0
+var _tab_buttons: Array[Button] = []
 
 
 func _ready() -> void:
@@ -23,7 +24,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(760, 620)
+	panel.custom_minimum_size = Vector2(820, 620)
 	center.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 10)
@@ -47,6 +48,7 @@ func _ready() -> void:
 	close_button.pressed.connect(close)
 	header.add_child(close_button)
 	box.add_child(header)
+	box.add_child(_build_tabs())
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -58,10 +60,6 @@ func _ready() -> void:
 	box.add_child(scroll)
 
 	box.add_child(HSeparator.new())
-	_stats = Label.new()
-	_stats.add_theme_font_size_override("font_size", 13)
-	_stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	box.add_child(_stats)
 	var footer := HBoxContainer.new()
 	footer.add_theme_constant_override("separation", 12)
 	var saved := Label.new()
@@ -77,6 +75,30 @@ func _ready() -> void:
 	footer.add_child(_new_game_button)
 	box.add_child(footer)
 	Game.changed.connect(func(): if visible: _refresh())
+
+
+## Same tab buttons as the Market.
+func _build_tabs() -> HBoxContainer:
+	var tabs := HBoxContainer.new()
+	tabs.add_theme_constant_override("separation", 6)
+	var group := ButtonGroup.new()
+	for i in TABS.size():
+		var b := Button.new()
+		b.text = TABS[i]
+		b.toggle_mode = true
+		b.button_group = group
+		b.focus_mode = Control.FOCUS_NONE
+		b.button_pressed = i == _tab
+		b.pressed.connect(_select_tab.bind(i))
+		tabs.add_child(b)
+		_tab_buttons.append(b)
+	return tabs
+
+
+func _select_tab(index: int) -> void:
+	_tab = index
+	_refresh()
+	_body.get_parent().scroll_vertical = 0
 
 
 func open() -> void:
@@ -108,6 +130,12 @@ func _refresh() -> void:
 	var goals: Array = Game.db.goals
 	var done := goals.filter(func(g): return state.is_goal_done(g["id"]))
 	_progress.text = "%d of %d reached" % [done.size(), goals.size()]
+	for i in _tab_buttons.size():
+		_tab_buttons[i].set_pressed_no_signal(i == _tab)
+	_new_game_button.text = "Really start over? Click again" if _confirming else "Start a new game"
+	if _tab == 1:
+		_add_stats(state)
+		return
 	for g in goals:
 		if not state.is_goal_done(g["id"]):
 			_body.add_child(_goal_row(g, false))
@@ -119,12 +147,6 @@ func _refresh() -> void:
 		for g in done:
 			_body.add_child(_goal_row(g, true))
 
-	var parts := PackedStringArray()
-	for entry in STATS:
-		var value: int = state.day - 1 if entry[0] == "days" else state.goal_value(entry[0])
-		parts.append("%s: %s%d" % [entry[1], "$" if entry[0] in ["best_day", "total_earned"] else "", value])
-	_stats.text = "   ·   ".join(parts)
-	_new_game_button.text = "Really start over? Click again" if _confirming else "Start a new game"
 
 
 func _goal_row(goal: Dictionary, done: bool) -> Control:
@@ -188,3 +210,149 @@ func _on_new_game_pressed() -> void:
 		return
 	close()
 	Game.new_game()
+
+
+# --- Stats tab -----------------------------------------------------------------
+
+## Four sections in two columns, each a plain list of "what ... number".
+func _add_stats(state: GameState) -> void:
+	var columns := HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 28)
+	columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var left := _stats_column()
+	var right := _stats_column()
+	columns.add_child(left)
+	columns.add_child(right)
+	var margin := MarginContainer.new()  # keeps numbers clear of the scrollbar
+	margin.add_theme_constant_override("margin_right", 18)
+	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	margin.add_child(columns)
+	_body.add_child(margin)
+
+	var sold_to_customers := state.stat("fish_sold") - state.stat("collector_sales")
+	_section(left, "Shop", [
+		["Days open", str(state.day - 1)],
+		["Earned in total", _money(state.stat("total_earned"))],
+		["Spent in total", _money(state.stat("total_spent"))],
+		["Best day", _money(state.goal_value("best_day"))],
+		_record_row(state, "Biggest sale", "best_sale", _money_of),
+		["Customers served", str(state.stat("customers_served"))],
+		["Customers who wandered off", str(state.stat("walked_out"))],
+	])
+	var best_stars_sold := state.stat("best_stars_sold")
+	_section(right, "Fish", [
+		["Fry bred", str(state.stat("fish_bred"))],
+		["Grown up", str(state.stat("fish_grown"))],
+		["Sold to customers", str(sold_to_customers)],
+		["Sold to collectors", str(state.stat("collector_sales"))],
+		["Sold wholesale", str(state.stat("wholesale_sold"))],
+		_record_row(state, "Best stars bred", "best_bred", _stars_of, true),
+		["Best stars sold", "★".repeat(best_stars_sold) if best_stars_sold > 0 else "–"],
+		_record_row(state, "Rarest fish sold", "rarest_sold", _variety_of),
+	])
+	var progress := [
+		["Goals reached", "%d/%d" % [state.completed_goals.size(), Game.db.goals.size()]],
+		["Recipes found", "%d/%d" % [state.discovered_recipes.size(), _count_book(state, true)]],
+		["Mutations found", "%d/%d" % [state.discovered_mutations.size(), _count_book(state, false)]],
+		["Upgrades bought", "%d/%d" % [state.upgrades.size(), Game.db.upgrades.size()]],
+		["Goal rewards earned", _money(state.stat("goal_rewards"))],
+		["Breeding book rewards", _money(state.stat("book_rewards"))],
+	]
+	if state.challenge_id != "":
+		progress.append(["Mode", _name_in(Game.db.challenges, state.challenge_id)])
+	if state.start_id != "":
+		progress.append(["Starting pair", _name_in(Game.db.starts, state.start_id)])
+	_section(left, "Progress", progress)
+
+	_section(right, "Orders and stock", [
+		["Special orders delivered", str(state.stat("orders_delivered"))],
+		["Back-orders handed over", str(state.stat("backorders_filled"))],
+		["Shelf items sold", str(state.stat("items_sold"))],
+		["Tanks sold", str(state.stat("tanks_sold"))],
+	])
+
+
+func _stats_column() -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 1)
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return column
+
+
+## A heading and its rows. A row is [label, value] or [label, value, detail]
+## (the detail is a small line under it).
+func _section(column: VBoxContainer, heading: String, rows: Array) -> void:
+	var h := Label.new()
+	h.text = heading
+	h.add_theme_font_size_override("font_size", 19)
+	column.add_child(h)
+	for row in rows:
+		var line := HBoxContainer.new()
+		var name := Label.new()
+		name.text = row[0]
+		name.add_theme_font_size_override("font_size", 14)
+		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name.modulate = DIM
+		line.add_child(name)
+		var value := Label.new()
+		value.text = row[1]
+		value.add_theme_font_size_override("font_size", 14)
+		value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		line.add_child(value)
+		column.add_child(line)
+		if row.size() > 2 and row[2] != "":
+			var detail := Label.new()
+			detail.text = row[2]
+			detail.add_theme_font_size_override("font_size", 12)
+			detail.modulate = Color(1, 1, 1, 0.55)
+			detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			detail.custom_minimum_size = Vector2(300, 0)
+			column.add_child(detail)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(0, 8)
+	column.add_child(gap)
+
+
+## [label, value, detail] for a record, or [label, "–"] if there isn't one yet.
+## `format` turns the record into the value text; `strip_stars` drops the
+## leading stars from the detail when the value already shows them.
+func _record_row(state: GameState, label: String, key: String, format: Callable, strip_stars := false) -> Array:
+	var r: Dictionary = state.records.get(key, {})
+	if r.is_empty():
+		return [label, "–"]
+	var what: String = r["what"]
+	if strip_stars:
+		what = what.lstrip("★ ")
+	return [label, format.call(r), "%s · Day %d" % [what, int(r["day"])]]
+
+
+func _money_of(r: Dictionary) -> String:
+	return _money(int(r["amount"]))
+
+
+func _stars_of(r: Dictionary) -> String:
+	return "★".repeat(int(r["amount"]))
+
+
+## A variety multiplier saved as x100: 320 -> "×3.2".
+func _variety_of(r: Dictionary) -> String:
+	return "×%s" % ("%.2f" % (float(r["amount"]) / 100.0)).trim_suffix("0").trim_suffix(".0").trim_suffix(".00")
+
+
+func _money(amount: int) -> String:
+	return "$%d" % amount
+
+
+func _count_book(state: GameState, recipes: bool) -> int:
+	var total := 0
+	for species_id in Game.db.species:
+		total += (state.book_recipes(species_id) if recipes else state.book_mutations(species_id)).size()
+	return total
+
+
+func _name_in(list: Array, id: String) -> String:
+	for entry in list:
+		if entry["id"] == id:
+			return entry["name"]
+	return id

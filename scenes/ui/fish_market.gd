@@ -153,6 +153,21 @@ func _upgrade_row(upgrade_id: String) -> Control:
 
 func _add_fish_tiers() -> void:
 	var state := Game.state
+	var mode: String = Game.db.challenge_by_id(state.challenge_id).get("name", "")
+	if state.market_last_day() >= 0:
+		var note := Label.new()
+		note.add_theme_font_size_override("font_size", 14)
+		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		if state.market_fish_open():
+			note.text = "%s: the Market sells fish until the end of Day %d." % [mode, state.market_last_day()]
+			note.modulate = Color(0.75, 0.4, 0.2)
+			_tiers.add_child(note)
+		else:
+			note.text = "%s: the Market has stopped selling fish (it closed after Day %d). From here on, you breed your own. Supplies, decorations and upgrades are still on sale." % [
+				mode, state.market_last_day()]
+			note.add_theme_font_size_override("font_size", 16)
+			_tiers.add_child(note)
+			return
 	for tier in state.market_tiers():
 		var ids := state.strains_in_tier(int(tier["tier"]))
 		if ids.is_empty():

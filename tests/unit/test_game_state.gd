@@ -724,6 +724,7 @@ func test_breed_order_is_collected_with_a_matching_bred_fish() -> void:
 	gs.day = gs.backorders[0]["due_day"]
 	assert_ne(gs.backorder_blocker(0), "", "the fish you kept doesn't count")
 	# Breed: the kept fish and a male make a pair; a grown fry in the same tank matches.
+	gs.db.economy["breeding_tanks"]["max_mothers"] = 1  # one mother, so the grown fry isn't one too
 	gs.move_fish(original.id, Fish.BREEDING)
 	gs.move_fish(_male().id, Fish.BREEDING)
 	var bred := gs.inventory.add_fish(F.fish(Fish.FEMALE, "red", 2, 3, "delta"))
@@ -743,7 +744,7 @@ func test_breeding_pair_is_never_handed_over() -> void:
 	gs.move_fish(original.id, Fish.BREEDING)
 	gs.move_fish(_male().id, Fish.BREEDING)
 	assert_eq(gs.backorder_fish(gs.backorders[0]), null)
-	assert_eq(gs.backorder_blocker(0), "No matching adult yet. Breed one (the breeding pair itself is never handed over).")
+	assert_eq(gs.backorder_blocker(0), "No matching adult yet. Breed one (the breeding group itself is never handed over).")
 
 
 func test_wrong_sex_or_look_does_not_match() -> void:

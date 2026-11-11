@@ -31,6 +31,10 @@ var _pause_requests: int = 0
 var persist: bool = true
 ## True if this run carried on from a save (for the "welcome back" note).
 var loaded_from_save: bool = false
+## True until the player has picked a starting pair and mode (a real run with
+## no save). The clock stays paused and the new-game screen shows. Never true
+## for headless or scripted runs, which start the standard game as before.
+var needs_setup: bool = false
 
 
 func _ready() -> void:
@@ -44,6 +48,8 @@ func _ready() -> void:
 	loaded_from_save = state != null
 	if state == null:
 		state = GameState.new_game(db, _new_rng())
+		if persist:
+			_wait_for_setup()
 	changed.connect(_check_goals)
 
 
@@ -67,16 +73,39 @@ func _load_saved() -> GameState:
 
 
 ## Writes the save. Called at the end of every day, once the night has run.
+## Never writes a game the player hasn't started yet.
 func save_game() -> bool:
-	return persist and SaveFile.write(save_path, state.to_dict())
+	return persist and not needs_setup and SaveFile.write(save_path, state.to_dict())
 
 
-## Wipes the save and starts again from Day 1.
+## Holds the placeholder game still until the player picks how to start.
+func _wait_for_setup() -> void:
+	needs_setup = true
+	_pause_requests = 1
+	state.clock.paused = true
+
+
+## Wipes the save and goes back to the new-game screen (the placeholder game
+## underneath is replaced when the player presses Start). Runs without a save
+## (headless, scripts) just start the standard game again.
 func new_game() -> void:
 	if persist and FileAccess.file_exists(save_path):
 		DirAccess.remove_absolute(save_path)
 	state = GameState.new_game(db, _new_rng())
 	loaded_from_save = false
+	_pause_requests = 0
+	needs_setup = false
+	if persist:
+		_wait_for_setup()
+	get_tree().reload_current_scene()
+
+
+## Starts the game the player chose on the new-game screen (ids from
+## data/new_game.json) and reloads the scene.
+func start_new_game(start_id: String, challenge_id: String) -> void:
+	state = GameState.new_game(db, _new_rng(), {"start_id": start_id, "challenge_id": challenge_id})
+	loaded_from_save = false
+	needs_setup = false
 	_pause_requests = 0
 	get_tree().reload_current_scene()
 
