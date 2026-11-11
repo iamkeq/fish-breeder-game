@@ -1,0 +1,21 @@
+{
+	"every_days": 7,
+	"grand_every": 4,
+	"rivals": 5,
+	"score": { "per_star": 18, "per_value_step": 6, "purity_weight": 0.25, "judge_swing": 5 },
+	"prizes": { "1": 75, "2": 40, "3": 20, "grand_multiplier": 2 },
+	"rival_strength": { "base": 70, "per_show": 1.5, "max": 95, "spread": 18, "grand_bonus": 12 },
+	"hints": { "typical_purity": 50, "promising": 12, "good": -4 },
+	"rival_names": [
+		"Mrs. Okafor's Gold", "Mr. Lindqvist's Pearl", "Old Tam's Sunrise", "Priya's Little Comet",
+		"The Hartley Twins' Koi", "Dr. Moreau's Ember", "Aunt Bea's Bubbles", "Juno's Moonbeam",
+		"Farmer Gil's Ripple", "Marta's Sparkler", "Mr. Chen's Lantern", "Nana Rose's Velvet"
+	],
+	"shows": [
+		{ "id": "open", "name": "Open Show", "description": "Any adult fish.", "rule": {} },
+		{ "id": "stars3", "name": "Quality Class", "description": "Fish with 3 stars or more.", "rule": { "min_stars": 3 } },
+		{ "id": "rare", "name": "Rare Colours", "description": "Fish with a rare trait.", "rule": { "rare": true } },
+		{ "id": "mutation", "name": "Oddity Class", "description": "Mutation fish only.", "rule": { "mutation": true } },
+		{ "id": "pure", "name": "Pure Line Class", "description": "Fish from a scanned Pure Line (70%+).", "rule": { "min_purity_scanned": 70 } }
+	]
+}

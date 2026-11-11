@@ -23,6 +23,8 @@ signal reputation_level_up(level: int, level_name: String)
 signal name_requested(fish_id: int)
 ## The player wants the Lab opened.
 signal lab_requested
+## The player wants the Fish Show screen opened.
+signal fish_show_requested
 
 var save_path := "user://save.json"
 
@@ -222,6 +224,19 @@ func scan_fish(fish_id: int) -> Dictionary:
 	if not result.is_empty():
 		changed.emit()
 	return result
+
+
+## Enters a fish in the next fish show.
+func enter_show(fish_id: int) -> bool:
+	var ok := state.enter_show(fish_id)
+	if ok:
+		changed.emit()
+	return ok
+
+
+func withdraw_show() -> void:
+	state.withdraw_show()
+	changed.emit()
 
 
 func set_favorite(fish_id: int, value: bool) -> bool:

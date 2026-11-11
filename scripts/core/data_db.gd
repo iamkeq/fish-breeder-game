@@ -31,6 +31,9 @@ var upgrade_order: Array = []
 ## Shop reputation: points per source, and the levels (data/reputation.json).
 ## Empty when a test builds a DataDB without it (reputation then does nothing).
 var reputation: Dictionary = {}
+## Fish show rules (data/shows.json). Empty when a test builds a DataDB without
+## it (fish shows are then closed).
+var shows: Dictionary = {}
 ## Starting pairs and challenge modes for a new game, in listed order
 ## (data/new_game.json). With no starts listed there is one implicit "standard"
 ## start built from economy.starting_state.fish; challenges may be empty.
@@ -45,12 +48,16 @@ const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
 const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
-	"reputation_level", "fish_scanned", "best_purity_scanned"]
+	"reputation_level", "fish_scanned", "best_purity_scanned", "shows_entered", "ribbons_first", "ribbons",
+	"grand_wins"]
 ## What a reputation level can change. See GameState.reputation_effect().
 const REPUTATION_EFFECTS := ["extra_customers", "extra_orders"]
 ## What earns reputation points. See GameState._rep().
 const REPUTATION_POINTS := ["sale", "star_bonus", "order_delivered", "backorder_filled",
-	"collector_sale", "goal_reached", "recipe_discovered", "mutation_discovered"]
+	"collector_sale", "goal_reached", "recipe_discovered", "mutation_discovered",
+	"show_entered", "show_first", "show_second", "show_third"]
+## What a fish show class rule can ask for. See GameState.show_blocker().
+const SHOW_RULES := ["min_stars", "rare", "mutation", "min_purity_scanned"]
 const REPUTATION_LEVEL_FIELDS := ["name", "points", "effects", "unlocks", "description"]
 const START_FIELDS := ["id", "name", "description"]
 const CHALLENGE_FIELDS := ["id", "name", "description", "rules"]
@@ -76,6 +83,7 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 	var goal_data = _read_file(root.path_join("goals.json"), read_errors)
 	var upgrade_data = _read_file(root.path_join("upgrades.json"), read_errors)
 	var reputation_data = _read_file(root.path_join("reputation.json"), read_errors)
+	var shows_data = _read_file(root.path_join("shows.json"), read_errors)
 	# Optional: without it there is one standard start and no challenges.
 	var new_game_data = null
 	if FileAccess.file_exists(root.path_join("new_game.json")):
@@ -86,7 +94,8 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 		upgrade_data.get("upgrades", []) if upgrade_data is Dictionary else [],
 		new_game_data.get("starts", []) if new_game_data is Dictionary else [],
 		new_game_data.get("challenges", []) if new_game_data is Dictionary else [],
-		reputation_data if reputation_data is Dictionary else {})
+		reputation_data if reputation_data is Dictionary else {},
+		shows_data if shows_data is Dictionary else {})
 	read_errors.append_array(db.errors)
 	db.errors = read_errors
 	return db
@@ -94,9 +103,10 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 
 static func from_dicts(species_list: Array, item_list: Array, template_list: Array,
 		economy_data: Dictionary, strain_list: Array = [], goal_list: Array = [],
-		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = [], reputation_data: Dictionary = {}) -> DataDB:
+		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = [], reputation_data: Dictionary = {}, shows_data: Dictionary = {}) -> DataDB:
 	var db := DataDB.new()
 	db.reputation = reputation_data
+	db.shows = shows_data
 	for s in species_list:
 		db._add_unique(db.species, s, "species")
 	for i in item_list:
@@ -195,6 +205,54 @@ func _validate_reputation() -> void:
 				errors.append("%s: unknown effect '%s'" % [ctx, effect])
 
 
+func _validate_shows() -> void:
+	if shows.is_empty():
+		return
+	var ctx := "shows"
+	var ok := _require(shows, ["every_days", "grand_every", "rivals", "score", "prizes", "rival_strength",
+		"hints", "rival_names", "shows"], ctx)
+	if not ok:
+		return
+	for key in ["every_days", "grand_every", "rivals"]:
+		if not (shows[key] is int or shows[key] is float) or int(shows[key]) < 1:
+			errors.append("%s: '%s' must be a positive whole number" % [ctx, key])
+	var groups := {
+		"score": ["per_star", "per_value_step", "purity_weight", "judge_swing"],
+		"prizes": ["1", "2", "3", "grand_multiplier"],
+		"rival_strength": ["base", "per_show", "max", "spread", "grand_bonus"],
+		"hints": ["typical_purity", "promising", "good"],
+	}
+	for group in groups:
+		if not shows[group] is Dictionary:
+			errors.append("%s: '%s' must be an object" % [ctx, group])
+			continue
+		for key in groups[group]:
+			if not shows[group].has(key):
+				errors.append("%s/%s: missing '%s'" % [ctx, group, key])
+			elif not (shows[group][key] is int or shows[group][key] is float):
+				errors.append("%s/%s: '%s' must be a number" % [ctx, group, key])
+	if shows["prizes"] is Dictionary:
+		for key in ["1", "2", "3", "grand_multiplier"]:
+			if shows["prizes"].has(key) and (shows["prizes"][key] is int or shows["prizes"][key] is float) \
+					and int(shows["prizes"][key]) < 1:
+				errors.append("%s/prizes: '%s' must be a positive whole number" % [ctx, key])
+	if not (shows["rival_names"] is Array and not shows["rival_names"].is_empty()):
+		errors.append("%s: 'rival_names' needs a list of names" % ctx)
+	if not (shows["shows"] is Array and not shows["shows"].is_empty()):
+		errors.append("%s: 'shows' needs a list of classes" % ctx)
+		return
+	for st in shows["shows"]:
+		var show_ctx := "shows/%s" % (st.get("id", "?") if st is Dictionary else "?")
+		if not st is Dictionary or not _require(st, ["id", "name", "description", "rule"], show_ctx):
+			continue
+		if not st["rule"] is Dictionary:
+			errors.append("%s: 'rule' must be an object" % show_ctx)
+			continue
+		for rule_key in st["rule"]:
+			if not rule_key in SHOW_RULES:
+				errors.append("%s: unknown rule '%s'" % [show_ctx, rule_key])
+
+
 func validate() -> void:
 	for id in species:
 		_validate_species(species[id])
@@ -219,6 +277,7 @@ func validate() -> void:
 		if u.has("requires") and not upgrades.has(u["requires"]):
 			errors.append("%s: requires unknown upgrade '%s'" % [upgrade_ctx, u["requires"]])
 	_validate_reputation()
+	_validate_shows()
 	_validate_economy()
 	for st in starts:
 		if not _implicit_start:

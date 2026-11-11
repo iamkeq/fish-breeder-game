@@ -55,6 +55,7 @@ func show_summary(s: Dictionary) -> void:
 		child.queue_free()
 	_title.text = "Day %d is done" % s["day"]
 	_add_money(s)
+	_add_show(s)
 	_add_back_room(s)
 	_add_tomorrow(s)
 	_open_button.text = ("Start Day %d (still closed for restock)" if Game.state.restocking else "Open shop for Day %d") % Game.state.day
@@ -91,6 +92,34 @@ func _add_money(s: Dictionary) -> void:
 	if log["walked_out"] > 0:
 		people += "   ·   wandered off: %d" % log["walked_out"]
 	_line(people)
+
+
+## "Fish show results": how your entry placed, the prize and the top rivals.
+func _add_show(s: Dictionary) -> void:
+	var show: Dictionary = s.get("show", {})
+	if show.is_empty():
+		return
+	var place: int = show["place"]
+	_heading("Fish show results")
+	var name := _line(show["show_name"])
+	name.add_theme_font_size_override("font_size", 16)
+	if show["grand"]:
+		name.modulate = Color(0.95, 0.8, 0.35)
+	var words := "placed %s!" % Shows.PLACE_WORDS[place] if place <= 3 else "placed %dth this time." % place
+	var result := _line("Your %s %s" % [show["fish_label"], words])
+	result.add_theme_font_size_override("font_size", 18)
+	result.modulate = GOOD if place <= 3 else Color.WHITE
+	if place > 3:
+		_line("No ribbon this time, and nothing lost. Better luck next show!")
+	var bits := PackedStringArray()
+	if int(show["prize"]) > 0:
+		bits.append("Prize: $%d" % int(show["prize"]))
+	bits.append("Reputation: +%d" % int(show["rep"]))
+	_line("   ·   ".join(bits))
+	var rivals := PackedStringArray()
+	for r in show["top_rivals"]:
+		rivals.append("%s (%d)" % [r["name"], int(r["score"])])
+	_line("Top rivals: %s.   Your score: %d" % ["; ".join(rivals), int(show["your_score"])]).modulate = Color(1, 1, 1, 0.75)
 
 
 func _add_back_room(s: Dictionary) -> void:

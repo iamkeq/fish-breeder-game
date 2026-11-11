@@ -37,6 +37,11 @@
 		{"id": "first_scan", "name": "Under the microscope", "description": "Scan a fish in the Lab.", "metric": "fish_scanned", "target": 1, "reward": 20},
 		{"id": "pure_line", "name": "Pure line", "description": "Scan a fish with 70% line purity.", "metric": "best_purity_scanned", "target": 70, "reward": 80},
 		{"id": "champion_line", "name": "Champion line", "description": "Scan a fish with 90% line purity.", "metric": "best_purity_scanned", "target": 90, "reward": 200},
-		{"id": "scans_10", "name": "Lab regular", "description": "Scan 10 fish in the Lab.", "metric": "fish_scanned", "target": 10, "reward": 100}
+		{"id": "scans_10", "name": "Lab regular", "description": "Scan 10 fish in the Lab.", "metric": "fish_scanned", "target": 10, "reward": 100},
+		{"id": "first_show", "name": "Ribbon day", "description": "Enter a fish in a fish show.", "metric": "shows_entered", "target": 1, "reward": 25},
+		{"id": "first_ribbon", "name": "Placed!", "description": "Win any ribbon at a fish show.", "metric": "ribbons", "target": 1, "reward": 60},
+		{"id": "blue_ribbon", "name": "Blue ribbon", "description": "Take 1st place at a fish show.", "metric": "ribbons_first", "target": 1, "reward": 100},
+		{"id": "ribbons_5", "name": "Ribbon collection", "description": "Win 5 ribbons.", "metric": "ribbons", "target": 5, "reward": 150},
+		{"id": "grand_win", "name": "Grand champion", "description": "Win a Grand Show.", "metric": "grand_wins", "target": 1, "reward": 300}
 	]
 }

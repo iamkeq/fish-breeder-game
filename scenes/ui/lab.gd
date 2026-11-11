@@ -116,6 +116,7 @@ func _row(state: GameState, f: Fish) -> Control:
 	detail.add_theme_font_size_override("font_size", 12)
 	detail.modulate = Color(1, 1, 1, 0.7)
 	info.add_child(detail)
+	UI.add_ribbons(info, f)
 	row.add_child(info)
 
 	var result := HBoxContainer.new()

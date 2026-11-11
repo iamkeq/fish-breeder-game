@@ -341,6 +341,12 @@ func _add_stats(state: GameState) -> void:
 	if state.start_id != "":
 		progress.append(["Starting pair", _name_in(Game.db.starts, state.start_id)])
 	_section(left, "Progress", progress)
+	_section(left, "Fish shows", [
+		["Shows entered", str(state.stat("shows_entered"))],
+		["1st place ribbons", str(state.stat("ribbons_first"))],
+		["2nd place ribbons", str(state.stat("ribbons_second"))],
+		["3rd place ribbons", str(state.stat("ribbons_third"))],
+	])
 
 	_section(right, "Orders and stock", [
 		["Special orders delivered", str(state.stat("orders_delivered"))],

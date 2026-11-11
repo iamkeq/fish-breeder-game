@@ -126,7 +126,8 @@ static func upgrades() -> Array:
 static func reputation() -> Dictionary:
 	return {
 		"points": {"sale": 1, "star_bonus": [0, 0, 1, 2, 4, 6], "order_delivered": 10, "backorder_filled": 4,
-			"collector_sale": 6, "goal_reached": 5, "recipe_discovered": 3, "mutation_discovered": 8},
+			"collector_sale": 6, "goal_reached": 5, "recipe_discovered": 3, "mutation_discovered": 8,
+			"show_entered": 3, "show_first": 25, "show_second": 15, "show_third": 8},
 		"customer_speed_per_extra": 0.1,
 		"levels": [
 			{"name": "Start", "points": 0, "effects": {}, "unlocks": [], "description": "Start."},
@@ -137,9 +138,27 @@ static func reputation() -> Dictionary:
 	}
 
 
+static func shows() -> Dictionary:
+	return {
+		"every_days": 7, "grand_every": 4, "rivals": 5,
+		"score": {"per_star": 18, "per_value_step": 6, "purity_weight": 0.25, "judge_swing": 5},
+		"prizes": {"1": 75, "2": 40, "3": 20, "grand_multiplier": 2},
+		"rival_strength": {"base": 70, "per_show": 1.5, "max": 95, "spread": 18, "grand_bonus": 12},
+		"hints": {"typical_purity": 50, "promising": 12, "good": -4},
+		"rival_names": ["Mrs. Okafor's Gold", "Old Tam's Sunrise", "Priya's Comet", "Aunt Bea's Bubbles", "Juno's Moonbeam", "Gil's Ripple"],
+		"shows": [
+			{"id": "open", "name": "Open Show", "description": "Any adult fish.", "rule": {}},
+			{"id": "stars3", "name": "Quality Class", "description": "Fish with 3 stars or more.", "rule": {"min_stars": 3}},
+			{"id": "rare", "name": "Rare Colours", "description": "Fish with a rare trait.", "rule": {"rare": true}},
+			{"id": "mutation", "name": "Oddity Class", "description": "Mutation fish only.", "rule": {"mutation": true}},
+			{"id": "pure", "name": "Pure Line Class", "description": "Fish from a scanned Pure Line (70%+).", "rule": {"min_purity_scanned": 70}},
+		],
+	}
+
+
 static func db() -> DataDB:
 	return DataDB.from_dicts([species()], items(), [template()], economy(), strains(), goals(), upgrades(),
-		[], [], reputation())
+		[], [], reputation(), shows())
 
 
 static func rng(seed_value: int = 1234) -> RandomNumberGenerator:

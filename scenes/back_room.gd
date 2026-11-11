@@ -84,6 +84,14 @@ func _refresh_tabs(state: GameState, roles: Dictionary) -> void:
 		lab.disabled = true
 		lab.tooltip_text = "Reach '%s' to open the Lab" % state.unlock_level_name("lab")
 	_tank_tabs.add_child(lab)
+	var show_button := UI.small_button("Fish Show", "Enter a fish in the next show for ribbons and prizes.")
+	show_button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	if state.shows_unlocked():
+		show_button.pressed.connect(func(): Game.fish_show_requested.emit())
+	else:
+		show_button.disabled = true
+		show_button.tooltip_text = "Reach '%s' to open fish shows" % state.unlock_level_name("fish_show")
+	_tank_tabs.add_child(show_button)
 	var book := UI.small_button("Breeding book", "Recipes and mutations you've discovered.")
 	book.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	book.pressed.connect(func(): book_requested.emit())
@@ -188,6 +196,7 @@ func _fish_entry(f: Fish, roles: Dictionary) -> Control:
 		value.modulate = Color(1, 1, 1, 0.7)
 		info.add_child(value)
 		info.add_child(UI.purity_label(state, f))
+		UI.add_ribbons(info, f)
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 4)

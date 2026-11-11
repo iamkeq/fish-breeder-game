@@ -383,6 +383,20 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.18.0), fish shows and ribbons:**
+  - `data/shows.json` rotates through classes; the show number comes from the
+    calendar (`ceil(day / every_days)`), so cadence survives old saves.
+    `Shows` (scripts/core/shows.gd) holds the scoring helpers.
+  - Score = stars * 18 + value_step * 6 + hidden purity * 0.25 + judge swing;
+    value_step = max(1, round(trait multiplier)). Rivals are anonymous scores
+    around `rival_strength`; base was raised from 45 to 70 after simulation.
+    A 5★ pure Dragon wins almost always by design; raise `max` /
+    `grand_bonus` if that becomes too easy.
+  - Prizes go straight into money like book rewards (not a sale, not in
+    `total_earned`). Reputation amounts live only in `reputation.json`.
+  - `show_history` snapshots (fish traits, stars, name, purity) outlive the
+    fish, for the gallery. Hints use visible stars and variety only, never
+    hidden purity.
 - **2026-11-11 (v0.17.0), line purity and the Lab:**
   - `Fish.purity` / `Fish.scanned` are saved. `Purity` (scripts/core/purity.gd)
     holds the static rules. "Same variety" means identical `traits` (sex

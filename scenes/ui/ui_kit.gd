@@ -132,6 +132,46 @@ static func purity_label(state: GameState, f: Fish) -> Label:
 	return label
 
 
+const RIBBON_COLORS := [Color.WHITE, Color(0.27, 0.45, 0.85), Color(0.82, 0.3, 0.3), Color(0.93, 0.78, 0.28)]
+const RIBBON_TEXT := [Color.WHITE, Color.WHITE, Color.WHITE, Color(0.25, 0.18, 0.05)]
+
+
+## Small coloured chips for a fish's ribbons: 1st blue, 2nd red, 3rd yellow,
+## with a count when there are several ("1st ×2"). Adds nothing if it has none.
+static func add_ribbons(parent: Control, f: Fish) -> void:
+	if f.ribbons.is_empty():
+		return
+	var counts := [0, 0, 0, 0]
+	for r in f.ribbons:
+		counts[clampi(int(r["place"]), 1, 3)] += 1
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 4)
+	for place in [1, 2, 3]:
+		if counts[place] == 0:
+			continue
+		var chip := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = RIBBON_COLORS[place]
+		style.set_corner_radius_all(8)
+		style.content_margin_left = 7
+		style.content_margin_right = 7
+		style.content_margin_top = 0
+		style.content_margin_bottom = 0
+		chip.add_theme_stylebox_override("panel", style)
+		var label := Label.new()
+		label.text = Shows.PLACE_WORDS[place] + (" ×%d" % counts[place] if counts[place] > 1 else "")
+		label.add_theme_font_size_override("font_size", 11)
+		label.add_theme_color_override("font_color", RIBBON_TEXT[place])
+		chip.add_child(label)
+		var names := PackedStringArray()
+		for r in f.ribbons:
+			if int(r["place"]) == place:
+				names.append("%s, day %d" % [r["show"], int(r["day"])])
+		chip.tooltip_text = "\n".join(names)
+		row.add_child(chip)
+	parent.add_child(row)
+
+
 static func sex_symbol(f: Fish) -> String:
 	return "♂" if f.sex == Fish.MALE else "♀"
 

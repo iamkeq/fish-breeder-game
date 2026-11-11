@@ -72,6 +72,8 @@ var purity: int = 50
 var scanned: bool = false
 ## A keeper: never sold or handed to a customer, but still breeds and displays.
 var favorite: bool = false
+## Fish show ribbons won: [{"place": 1-3, "show": show name, "day": int}].
+var ribbons: Array = []
 
 
 func is_adult(species: Dictionary) -> bool:
@@ -110,6 +112,7 @@ func to_dict() -> Dictionary:
 		"favorite": favorite,
 		"purity": purity,
 		"scanned": scanned,
+		"ribbons": ribbons.duplicate(true),
 	}
 
 
@@ -131,4 +134,6 @@ static func from_dict(d: Dictionary, default_purity: int = 50) -> Fish:
 	f.favorite = bool(d.get("favorite", false))
 	f.purity = int(d.get("purity", default_purity))
 	f.scanned = bool(d.get("scanned", false))
+	for r in d.get("ribbons", []):
+		f.ribbons.append({"place": int(r.get("place", 3)), "show": str(r.get("show", "")), "day": int(r.get("day", 0))})
 	return f

@@ -11,6 +11,7 @@ const Goals := preload("res://scenes/ui/goals.gd")
 const NewGame := preload("res://scenes/ui/new_game.gd")
 const NameFish := preload("res://scenes/ui/name_fish.gd")
 const Lab := preload("res://scenes/ui/lab.gd")
+const FishShow := preload("res://scenes/ui/fish_show.gd")
 
 const SHOP_FLOOR_TEXT := "Shop floor"
 const BELL_TEXT := "● Shop floor"
@@ -35,6 +36,9 @@ var _bell: AudioStreamPlayer
 var _book: ColorRect
 var _name_box: ColorRect
 var _lab: ColorRect
+var _fish_show: ColorRect
+## The show number the morning reminder was last shown for.
+var _show_reminded := 0
 var _orders_room: Control
 var _goals: ColorRect
 var _goals_button: Button
@@ -60,6 +64,10 @@ func _ready() -> void:
 	_lab = Lab.new()
 	add_child(_lab)
 	Game.lab_requested.connect(func(): _lab.open())
+	_fish_show = FishShow.new()
+	add_child(_fish_show)
+	Game.fish_show_requested.connect(func(): _fish_show.open())
+	Game.day_started.connect(_remind_about_show)
 	_goals_button = Button.new()
 	_goals_button.pressed.connect(func(): _goals.open())
 	_market_button.add_sibling(_goals_button)
@@ -189,6 +197,18 @@ func _process(delta: float) -> void:
 	_toast.visible = _toast_time > 0.0
 
 
+## On show day morning: a nudge, once per show, if you could still enter.
+func _remind_about_show() -> void:
+	var state := Game.state
+	if not state.shows_unlocked() or state.show_entry_fish() != null:
+		return
+	var show := state.next_show()
+	if int(show["days_left"]) != 0 or int(show["number"]) == _show_reminded or not state.has_show_candidate():
+		return
+	_show_reminded = int(show["number"])
+	_show_toast("Fish show tonight! Enter a fish in the %s (back room)." % show["name"])
+
+
 func _on_goals_reached(goals: Array) -> void:
 	var lines := PackedStringArray()
 	for g in goals:
@@ -207,5 +227,6 @@ func _on_day_ended(summary: Dictionary) -> void:
 	_goals.close()
 	_name_box.close()
 	_lab.close()
+	_fish_show.close()
 	_day_summary.show_summary(summary)
 	_update_top_bar()

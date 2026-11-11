@@ -59,6 +59,14 @@ var _level_announced: int = 0
 var completed_goals: Dictionary = {}
 ## Shop upgrades bought: upgrade id -> the day it was bought.
 var upgrades: Dictionary = {}
+## The fish entered in the next fish show (fish id, 0 = none).
+var show_entry: int = 0
+## How many show days have passed (whether or not you entered).
+var shows_held: int = 0
+## Placings (1st to 3rd) won, newest last: {day, show_number, show_name, place, grand,
+## fish: {species_id, traits, sex, stars, nickname, purity, scanned}}. The fish is a
+## snapshot, so it stays even if the fish is sold.
+var show_history: Array = []
 
 ## Which starting pair and challenge mode this game began with ("" = the
 ## standard ones). See data/new_game.json.
@@ -430,6 +438,133 @@ func purity_tier(purity: int) -> String:
 ## Whether this fish's price includes the certified bonus (scanned, shop-bred, pure enough).
 func is_certified(f: Fish) -> bool:
 	return f.scanned and f.paid == 0 and f.strain_id == "" 		and Purity.certified_bonus(f.purity, db.economy["lab"]) > 0.0
+
+
+# --- Fish shows ----------------------------------------------------------------
+
+## True once the shop's reputation has opened fish shows.
+func shows_unlocked() -> bool:
+	return has_unlock("fish_show") and not db.shows.is_empty()
+
+
+## The show held at the end of the next show day (today, if it is one):
+## {number, day, days_left, id, name, description, grand, rule}. {} if no shows.
+func next_show() -> Dictionary:
+	if db.shows.is_empty():
+		return {}
+	var number := Shows.number_for_day(day, db.shows)
+	var show := Shows.describe(number, db.shows)
+	show["day"] = Shows.day_of(number, db.shows)
+	show["days_left"] = int(show["day"]) - day
+	return show
+
+
+## What a fish's looks add to its show score: the variety's price multiplier,
+## rounded (1 for plain looks, 4 for a Dragon).
+func show_value_step(f: Fish) -> int:
+	return maxi(1, roundi(Pricing.trait_multiplier(f, species_of(f))))
+
+
+## Why a fish can't be entered in the next show ("" if it can).
+func show_blocker(fish_id: int) -> String:
+	if not shows_unlocked():
+		return "Fish shows aren't open yet."
+	var f := inventory.get_fish(fish_id)
+	if f == null:
+		return "No such fish."
+	if not is_adult(f):
+		return "Only grown-up fish can enter."
+	if Fish.is_order(f.location):
+		return "Promised to a customer in an order tank."
+	return Shows.rule_blocker(next_show()["rule"], f.stars, f.rare_trait_count(species_of(f)) > 0,
+		is_mutation_fish(f), f.scanned, f.purity)
+
+
+func show_eligible(fish_id: int) -> bool:
+	return show_blocker(fish_id) == ""
+
+
+## Enters a fish in the next show (replacing any earlier entry).
+func enter_show(fish_id: int) -> bool:
+	if show_blocker(fish_id) != "":
+		return false
+	show_entry = fish_id
+	return true
+
+
+func withdraw_show() -> void:
+	show_entry = 0
+
+
+## The fish entered, or null if none (or it was sold or no longer qualifies).
+func show_entry_fish() -> Fish:
+	if show_entry == 0 or show_blocker(show_entry) != "":
+		return null
+	return inventory.get_fish(show_entry)
+
+
+## True if any fish you own could enter the next show.
+func has_show_candidate() -> bool:
+	return inventory.fish_list().any(func(f: Fish): return show_eligible(f.id))
+
+
+## "Looks promising" / "Good chance" / "Long shot", from what the player can see.
+func show_hint(f: Fish) -> String:
+	var show := next_show()
+	if show.is_empty():
+		return ""
+	return Shows.hint(int(show["number"]), bool(show["grand"]), f.stars, show_value_step(f), db.shows)
+
+
+## Cash prize for a place in a show (grand shows pay more).
+func show_prize(place: int, grand: bool) -> int:
+	return Shows.prize(place, grand, db.shows)
+
+
+## Judges tonight's show if today is a show day. The entry (if still valid)
+## is scored against the rivals; places 1-3 earn a ribbon, cash and reputation.
+## The result goes into summary["show"] (only when you had entered).
+func _hold_show(summary: Dictionary) -> void:
+	if db.shows.is_empty() or not Shows.is_show_day(day, db.shows):
+		return
+	var show := next_show()
+	var f := show_entry_fish()
+	shows_held += 1
+	show_entry = 0
+	if f == null:
+		return  # no entry, or it was sold: nothing happens, nothing is lost
+	var base := Shows.base_score(f.stars, show_value_step(f), f.purity, db.shows)
+	var result := Shows.judge(base, int(show["number"]), bool(show["grand"]), db.shows, rng)
+	var place: int = result["place"]
+	var rep_before := reputation
+	_count("shows_entered")
+	_rep("show_entered")
+	var prize := show_prize(place, bool(show["grand"]))
+	if place <= 3:
+		var key: String = ["", "show_first", "show_second", "show_third"][place]
+		_rep(key)
+		_count(["", "ribbons_first", "ribbons_second", "ribbons_third"][place])
+		if place == 1 and bool(show["grand"]):
+			_count("grand_wins")
+		if prize > 0:
+			money += prize
+			_count("show_prizes", prize)
+		f.ribbons.append({"place": place, "show": show["name"], "day": day})
+		show_history.append({
+			"day": day, "show_number": show["number"], "show_name": show["name"],
+			"place": place, "grand": show["grand"],
+			"fish": {"species_id": f.species_id, "traits": f.traits.duplicate(), "sex": f.sex,
+				"stars": f.stars, "nickname": f.nickname, "purity": f.purity, "scanned": f.scanned},
+		})
+	var top := []
+	for r in result["rivals"].slice(0, 3):
+		top.append({"name": r["name"], "score": roundi(r["score"])})
+	summary["show"] = {
+		"entered": true, "show_name": show["name"], "grand": show["grand"], "place": place,
+		"prize": prize, "rep": reputation - rep_before,
+		"fish_label": f.nickname if f.nickname != "" else fish_display_name(f),
+		"top_rivals": top, "your_score": roundi(result["your_score"]),
+	}
 
 
 # --- Selling -----------------------------------------------------------------
@@ -1225,6 +1360,7 @@ func end_day() -> Dictionary:
 	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING))
 	_count("fish_bred", summary["fry_born"])
 	_record_best("best_day", earned_today)
+	_hold_show(summary)
 	check_goals()
 	summary["goals"] = day_log["goals"].duplicate(true)
 	summary["reputation"] = {
@@ -1582,6 +1718,8 @@ func goal_value(metric: String) -> int:
 			return reputation_level() + 1
 		"best_purity_scanned":
 			return int(records.get("purest_fish", {}).get("amount", 0))
+		"ribbons":
+			return stat("ribbons_first") + stat("ribbons_second") + stat("ribbons_third")
 	return stat(metric)
 
 
@@ -1806,6 +1944,9 @@ func to_dict() -> Dictionary:
 		"challenge_id": challenge_id,
 		"completed_goals": completed_goals.duplicate(),
 		"upgrades": upgrades.duplicate(),
+		"show_entry": show_entry,
+		"shows_held": shows_held,
+		"show_history": show_history.duplicate(true),
 	}
 
 
@@ -1842,6 +1983,9 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	s.start_id = str(d.get("start_id", ""))
 	s.challenge_id = str(d.get("challenge_id", ""))
 	s.completed_goals = d.get("completed_goals", {}).duplicate()
+	s.show_entry = int(d.get("show_entry", 0))
+	s.shows_held = int(d.get("shows_held", 0))
+	s.show_history = d.get("show_history", []).duplicate(true)
 	for id in d.get("upgrades", {}):
 		if p_db.upgrades.has(id):
 			s.upgrades[id] = int(d["upgrades"][id])

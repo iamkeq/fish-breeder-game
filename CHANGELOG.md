@@ -2,6 +2,27 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.18.0] - 2026-11-11
+
+### Added
+- **Fish shows** (unlock at reputation level 4, "Hobbyists' Choice"): a show
+  is judged at the end of every 7th day. Open **Fish Show** in the back room,
+  see the class and prizes, and enter one adult fish. Classes rotate: Open,
+  Quality (3★+), Rare Colours, Oddity (mutations) and Pure Line (scanned 70%+).
+  Every 4th show is a **Grand Show** with double prizes and tougher rivals.
+- Judging is overnight against five rival entries. Your fish's score comes
+  from its stars, how valuable its variety is, its hidden purity and a little
+  judge's luck. Places 1 to 3 earn **ribbons** (blue, red, yellow) shown as
+  chips on the fish's cards, cash prizes ($75 / $40 / $20, doubled at a Grand
+  Show) and reputation. Skipping a show, or placing outside the top three,
+  costs nothing. If the entered fish is sold, the entry quietly lapses.
+- Each ribbon win saves a snapshot of the fish in your show history, ready for
+  the gallery in a later update.
+- Day summary "Fish show results" with the top rivals; a morning reminder on
+  show day; hints (Long shot / Good chance / Looks promising) for each entry.
+- Five new goals (first show, first ribbon, blue ribbon, five ribbons, Grand
+  champion) and a Fish shows section on the Stats tab.
+
 ## [0.17.0] - 2026-11-11
 
 ### Added

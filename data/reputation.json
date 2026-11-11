@@ -7,7 +7,11 @@
 		"collector_sale": 6,
 		"goal_reached": 5,
 		"recipe_discovered": 3,
-		"mutation_discovered": 8
+		"mutation_discovered": 8,
+		"show_entered": 3,
+		"show_first": 25,
+		"show_second": 15,
+		"show_third": 8
 	},
 	"customer_speed_per_extra": 0.08,
 	"levels": [
