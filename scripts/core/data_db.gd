@@ -49,7 +49,7 @@ const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "displa
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
 	"reputation_level", "fish_scanned", "best_purity_scanned", "shows_entered", "ribbons_first", "ribbons",
-	"grand_wins"]
+	"grand_wins", "hall_of_fame", "pinned"]
 ## What a reputation level can change. See GameState.reputation_effect().
 const REPUTATION_EFFECTS := ["extra_customers", "extra_orders"]
 ## What earns reputation points. See GameState._rep().
@@ -478,6 +478,10 @@ func _validate_economy() -> void:
 	if not (favorites is Dictionary and (favorites.get("max") is int or favorites.get("max") is float)
 			and int(favorites["max"]) >= 1):
 		errors.append("economy/favorites: needs a 'max' number of 1 or more")
+	var gallery = economy.get("gallery")
+	if not (gallery is Dictionary and (gallery.get("pin_slots") is int or gallery.get("pin_slots") is float)
+			and int(gallery["pin_slots"]) >= 1):
+		errors.append("economy/gallery: needs a 'pin_slots' number of 1 or more")
 	_validate_purity()
 	var collector = economy["customers"].get("collector")
 	if collector != null and not (collector is Dictionary and collector.has("min_stars")

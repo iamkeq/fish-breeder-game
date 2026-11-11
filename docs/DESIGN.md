@@ -383,6 +383,16 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.19.0), gallery:**
+  - Gallery entries are plain dictionaries: `gallery_favorites()` (live
+    favourites, keys `fav:<id>`) and `gallery_hall()` (one per `show_history`
+    record, keys `hof:<index>`, which stays valid because the history is
+    append-only). Purely cosmetic: no money or star effects.
+  - `gallery_pins` (saved) hold entry keys; pins whose favourite was
+    un-marked are dropped lazily and don't count. Slots come from
+    `economy.gallery.pin_slots` and need `has_unlock("gallery_wall")`.
+  - The shop floor has no free wall, so pinned frames sit at the foot of the
+    Retail shelf panel. A strip above the tank would cost about 80px of tank.
 - **2026-11-11 (v0.18.0), fish shows and ribbons:**
   - `data/shows.json` rotates through classes; the show number comes from the
     calendar (`ceil(day / every_days)`), so cadence survives old saves.

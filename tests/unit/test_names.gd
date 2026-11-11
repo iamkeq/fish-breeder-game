@@ -316,7 +316,7 @@ func test_the_new_goals_follow_their_metrics() -> void:
 func test_real_data_has_the_name_goals_and_favourites_cap() -> void:
 	var db := DataDB.load_from_dir("res://data")
 	assert_eq(db.errors, [] as Array[String])
-	assert_eq(db.goals.size(), 43)
+	assert_eq(db.goals.size(), 46)
 	var ids := db.goals.map(func(g): return g["id"])
 	assert_true("first_name" in ids and "favorites_5" in ids)
 	assert_eq(int(db.economy["favorites"]["max"]), 24)

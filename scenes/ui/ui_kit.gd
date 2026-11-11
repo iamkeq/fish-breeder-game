@@ -139,10 +139,15 @@ const RIBBON_TEXT := [Color.WHITE, Color.WHITE, Color.WHITE, Color(0.25, 0.18, 0
 ## Small coloured chips for a fish's ribbons: 1st blue, 2nd red, 3rd yellow,
 ## with a count when there are several ("1st ×2"). Adds nothing if it has none.
 static func add_ribbons(parent: Control, f: Fish) -> void:
-	if f.ribbons.is_empty():
+	add_ribbon_chips(parent, f.ribbons)
+
+
+## Same chips, from a plain list of ribbons [{place, show, day}] (gallery entries).
+static func add_ribbon_chips(parent: Control, ribbons: Array) -> void:
+	if ribbons.is_empty():
 		return
 	var counts := [0, 0, 0, 0]
-	for r in f.ribbons:
+	for r in ribbons:
 		counts[clampi(int(r["place"]), 1, 3)] += 1
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 4)
@@ -164,12 +169,69 @@ static func add_ribbons(parent: Control, f: Fish) -> void:
 		label.add_theme_color_override("font_color", RIBBON_TEXT[place])
 		chip.add_child(label)
 		var names := PackedStringArray()
-		for r in f.ribbons:
+		for r in ribbons:
 			if int(r["place"]) == place:
 				names.append("%s, day %d" % [r["show"], int(r["day"])])
 		chip.tooltip_text = "\n".join(names)
 		row.add_child(chip)
 	parent.add_child(row)
+
+
+const FRAME_COLORS := [Color(0.5, 0.34, 0.2), Color(0.27, 0.45, 0.85), Color(0.82, 0.3, 0.3), Color(0.93, 0.78, 0.28)]
+const FRAME_EDGE := Color(0.2, 0.12, 0.07)
+const WATER_TOP := Color(0.36, 0.62, 0.7)
+const WATER_BOTTOM := Color(0.14, 0.3, 0.42)
+
+
+## The best (lowest) place among ribbons: 1-3, or 0 when there are none.
+static func best_place(ribbons: Array) -> int:
+	var best := 0
+	for r in ribbons:
+		var place := int(r["place"])
+		if place >= 1 and place <= 3 and (best == 0 or place < best):
+			best = place
+	return best
+
+
+## A framed portrait of a gallery entry: a wooden frame (blue, red or yellow for
+## the best ribbon, plain wood for none), an underwater backdrop and the fish.
+static func portrait(state: GameState, entry: Dictionary, art: Vector2, fish_scale: float,
+		border: int = 7) -> Control:
+	var frame := PanelContainer.new()
+	var style := StyleBoxFlat.new()
+	style.bg_color = FRAME_COLORS[best_place(entry["ribbons"])]
+	style.border_color = FRAME_EDGE
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(3)
+	style.set_content_margin_all(border)
+	style.shadow_color = Color(0, 0, 0, 0.25)
+	style.shadow_size = 3
+	style.shadow_offset = Vector2(1, 2)
+	frame.add_theme_stylebox_override("panel", style)
+	var water := TextureRect.new()
+	var gradient := Gradient.new()
+	gradient.set_color(0, WATER_TOP)
+	gradient.set_color(1, WATER_BOTTOM)
+	var tex := GradientTexture2D.new()
+	tex.gradient = gradient
+	tex.fill_from = Vector2(0.5, 0)
+	tex.fill_to = Vector2(0.5, 1)
+	water.texture = tex
+	water.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	water.custom_minimum_size = art
+	water.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	water.clip_contents = true
+	frame.add_child(water)
+	if state.db.species.has(entry["species_id"]):
+		var fish := state.entry_fish(entry)
+		var sprite := FishSprite.new()
+		sprite.swims = false
+		sprite.scale = Vector2.ONE * fish_scale
+		sprite.position = art * Vector2(0.55, 0.5)
+		water.add_child(sprite)
+		sprite.setup(fish, state.db.species[entry["species_id"]], Rect2(sprite.position, Vector2.ONE))
+	frame.mouse_filter = Control.MOUSE_FILTER_PASS
+	return frame
 
 
 static func sex_symbol(f: Fish) -> String:

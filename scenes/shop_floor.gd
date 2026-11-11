@@ -18,9 +18,13 @@ const TEXT_WIDTH := 262.0
 
 ## Last thing that happened at the counter ("Sold ... for $8").
 var _counter_news := ""
+## The gallery wall at the foot of the shelf panel: pinned portraits (hidden when none).
+var _wall: VBoxContainer
+var _wall_grid: GridContainer
 
 
 func _ready() -> void:
+	_build_wall()
 	Game.changed.connect(refresh)
 	Game.customer_changed.connect(_refresh_counter)
 	refresh()
@@ -30,6 +34,43 @@ func refresh() -> void:
 	_refresh_shelf()
 	_refresh_tank()
 	_refresh_counter()
+	_refresh_wall()
+
+
+# --- Gallery wall ------------------------------------------------------------
+
+## The wall sits under the shelf list, in the shelf panel's own spare room, so
+## it never covers the tank, the counter or any buttons.
+func _build_wall() -> void:
+	_wall = VBoxContainer.new()
+	_wall.add_theme_constant_override("separation", 4)
+	_wall.visible = false
+	var title := _label("On the wall")
+	title.add_theme_font_size_override("font_size", 14)
+	title.modulate = Color(1, 1, 1, 0.7)
+	_wall.add_child(title)
+	_wall_grid = GridContainer.new()
+	_wall_grid.columns = 2
+	_wall_grid.add_theme_constant_override("h_separation", 6)
+	_wall_grid.add_theme_constant_override("v_separation", 6)
+	_wall.add_child(_wall_grid)
+	$Columns/ShelfPanel/Shelf.add_child(_wall)
+
+
+func _refresh_wall() -> void:
+	var state := Game.state
+	_clear(_wall_grid)
+	var pinned: Array = state.pinned_entries().slice(0, state.pin_slots())
+	_wall.visible = not pinned.is_empty()
+	for entry in pinned:
+		var frame := UI.portrait(state, entry, Vector2(80, 50), 0.75, 5)
+		frame.tooltip_text = "%s\nOpen the gallery" % entry["title"]
+		frame.mouse_filter = Control.MOUSE_FILTER_STOP
+		frame.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		frame.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				Game.gallery_requested.emit())
+		_wall_grid.add_child(frame)
 
 
 # --- Shelf -------------------------------------------------------------------

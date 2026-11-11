@@ -92,6 +92,10 @@ func _refresh_tabs(state: GameState, roles: Dictionary) -> void:
 		show_button.disabled = true
 		show_button.tooltip_text = "Reach '%s' to open fish shows" % state.unlock_level_name("fish_show")
 	_tank_tabs.add_child(show_button)
+	var gallery := UI.small_button("Gallery", "Your favourite fish and show winners, framed.")
+	gallery.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	gallery.pressed.connect(func(): Game.gallery_requested.emit())
+	_tank_tabs.add_child(gallery)
 	var book := UI.small_button("Breeding book", "Recipes and mutations you've discovered.")
 	book.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	book.pressed.connect(func(): book_requested.emit())

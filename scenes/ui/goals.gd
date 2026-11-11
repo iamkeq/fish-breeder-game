@@ -346,6 +346,8 @@ func _add_stats(state: GameState) -> void:
 		["1st place ribbons", str(state.stat("ribbons_first"))],
 		["2nd place ribbons", str(state.stat("ribbons_second"))],
 		["3rd place ribbons", str(state.stat("ribbons_third"))],
+		["Hall of fame portraits", str(state.show_history.size())],
+		["Portraits on the wall", str(state.pinned_entries().size())],
 	])
 
 	_section(right, "Orders and stock", [

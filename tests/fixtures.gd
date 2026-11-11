@@ -77,6 +77,7 @@ static func economy() -> Dictionary:
 			"bred_wait_days": 7, "bred_reference_stars": 3},
 		"wholesale": {"fraction": 0.4, "fry_price": 1},
 		"favorites": {"max": 3},
+		"gallery": {"pin_slots": 2},
 		"fish_market": {"price_multiplier": 1.5, "tiers": [{"tier": 1, "name": "Starter"}, {"tier": 2, "name": "Fancy"}]},
 		"starting_state": {
 			"money": 100,
@@ -133,7 +134,7 @@ static func reputation() -> Dictionary:
 			{"name": "Start", "points": 0, "effects": {}, "unlocks": [], "description": "Start."},
 			{"name": "Known", "points": 20, "effects": {"extra_customers": 1}, "unlocks": ["lab"], "description": "Lab."},
 			{"name": "Liked", "points": 60, "effects": {"extra_customers": 2, "extra_orders": 1}, "unlocks": ["fish_show"], "description": "Shows."},
-			{"name": "Famous", "points": 100, "effects": {}, "unlocks": [], "description": "Top."},
+			{"name": "Famous", "points": 100, "effects": {}, "unlocks": ["gallery_wall"], "description": "Wall."},
 		],
 	}
 

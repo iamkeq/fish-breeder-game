@@ -25,6 +25,8 @@ signal name_requested(fish_id: int)
 signal lab_requested
 ## The player wants the Fish Show screen opened.
 signal fish_show_requested
+## The player wants the Gallery opened.
+signal gallery_requested
 
 var save_path := "user://save.json"
 
@@ -241,6 +243,20 @@ func withdraw_show() -> void:
 
 func set_favorite(fish_id: int, value: bool) -> bool:
 	var ok := state.set_favorite(fish_id, value)
+	if ok:
+		changed.emit()
+	return ok
+
+
+func pin_portrait(key: String) -> bool:
+	var ok := state.pin_portrait(key)
+	if ok:
+		changed.emit()
+	return ok
+
+
+func unpin_portrait(key: String) -> bool:
+	var ok := state.unpin_portrait(key)
 	if ok:
 		changed.emit()
 	return ok

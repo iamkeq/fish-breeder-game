@@ -2,6 +2,20 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.19.0] - 2026-11-11
+
+### Added
+- **The Gallery** (button in the back room): framed portraits of your
+  favourite fish, and a **Hall of Fame** of every fish that won a show
+  ribbon. Each portrait shows the fish, its name, variety, stars, purity if
+  scanned, and its ribbons, in a frame coloured for its best placing. The
+  Hall of Fame keeps winners even after you sell them.
+- **Gallery wall:** at reputation level 6 ("Regional Legend") you can pin up
+  to six portraits. They hang as small framed pictures at the foot of the
+  shop-floor shelf panel; click one to open the Gallery.
+- Three new goals (3 Hall of Fame portraits, first pin, full wall) and Stats
+  lines for Hall of Fame portraits and portraits on the wall.
+
 ## [0.18.0] - 2026-11-11
 
 ### Added

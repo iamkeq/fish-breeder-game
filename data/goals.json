@@ -42,6 +42,9 @@
 		{"id": "first_ribbon", "name": "Placed!", "description": "Win any ribbon at a fish show.", "metric": "ribbons", "target": 1, "reward": 60},
 		{"id": "blue_ribbon", "name": "Blue ribbon", "description": "Take 1st place at a fish show.", "metric": "ribbons_first", "target": 1, "reward": 100},
 		{"id": "ribbons_5", "name": "Ribbon collection", "description": "Win 5 ribbons.", "metric": "ribbons", "target": 5, "reward": 150},
-		{"id": "grand_win", "name": "Grand champion", "description": "Win a Grand Show.", "metric": "grand_wins", "target": 1, "reward": 300}
+		{"id": "grand_win", "name": "Grand champion", "description": "Win a Grand Show.", "metric": "grand_wins", "target": 1, "reward": 300},
+		{"id": "hall_3", "name": "Hall of fame", "description": "Hang 3 winning portraits in the Hall of Fame.", "metric": "hall_of_fame", "target": 3, "reward": 80},
+		{"id": "first_pin", "name": "Gallery wall", "description": "Pin a portrait on the shop wall.", "metric": "pinned", "target": 1, "reward": 30},
+		{"id": "full_wall", "name": "Full wall", "description": "Fill the wall with 6 portraits.", "metric": "pinned", "target": 6, "reward": 150}
 	]
 }

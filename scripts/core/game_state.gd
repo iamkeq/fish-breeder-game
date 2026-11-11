@@ -67,6 +67,8 @@ var shows_held: int = 0
 ## fish: {species_id, traits, sex, stars, nickname, purity, scanned}}. The fish is a
 ## snapshot, so it stays even if the fish is sold.
 var show_history: Array = []
+## Gallery entry keys ("fav:<fish id>" or "hof:<show_history index>") pinned on the shop wall.
+var gallery_pins: Array = []
 
 ## Which starting pair and challenge mode this game began with ("" = the
 ## standard ones). See data/new_game.json.
@@ -391,6 +393,134 @@ func set_favorite(fish_id: int, value: bool) -> bool:
 	return true
 
 
+# --- The Gallery -------------------------------------------------------------------
+
+## A throwaway Fish drawn from a gallery entry's looks, so the UI can reuse the
+## normal fish sprite. It is full-grown and is never added to the inventory.
+func entry_fish(entry: Dictionary) -> Fish:
+	var f := Fish.new()
+	f.id = int(entry.get("fish_id", 0))
+	f.species_id = entry.get("species_id", "")
+	f.traits = entry.get("traits", {}).duplicate()
+	f.sex = entry.get("sex", Fish.FEMALE)
+	f.stars = int(entry.get("stars", 0))
+	f.nickname = entry.get("nickname", "")
+	f.purity = int(entry.get("purity", 50))
+	f.scanned = bool(entry.get("scanned", false))
+	var species: Dictionary = db.species.get(f.species_id, {})
+	f.age_days = int(species.get("days_to_adult", 1))
+	return f
+
+
+## A gallery entry (see gallery_favorites / gallery_hall) from a Fish.
+func _gallery_entry(key: String, f: Fish, ribbons: Array) -> Dictionary:
+	return {
+		"key": key, "fish_id": f.id, "title": fish_title(f), "species_id": f.species_id,
+		"traits": f.traits.duplicate(), "sex": f.sex, "stars": f.stars, "purity": f.purity,
+		"scanned": f.scanned, "ribbons": ribbons.duplicate(true), "age_days": f.age_days,
+		"nickname": f.nickname,
+	}
+
+
+## Every favourite fish as a portrait entry, best stars first (then by id).
+func gallery_favorites() -> Array:
+	var list := []
+	for f in inventory.fish_list():
+		if f.favorite:
+			list.append(_gallery_entry("fav:%d" % f.id, f, f.ribbons))
+	list.sort_custom(func(a: Dictionary, b: Dictionary):
+		return a["stars"] > b["stars"] or (a["stars"] == b["stars"] and a["fish_id"] < b["fish_id"]))
+	return list
+
+
+## One entry per show win in show_history, newest first. They come from the
+## saved snapshots, so they stay after the fish is sold. The key's number is
+## the index in show_history.
+func gallery_hall() -> Array:
+	var list := []
+	for i in show_history.size():
+		var record: Dictionary = show_history[i]
+		var snapshot: Dictionary = record.get("fish", {})
+		var entry := _gallery_entry("hof:%d" % i, entry_fish(snapshot), [
+			{"place": int(record.get("place", 3)), "show": str(record.get("show_name", "")),
+				"day": int(record.get("day", 0))}])
+		entry["day"] = int(record.get("day", 0))
+		entry["show_number"] = int(record.get("show_number", 0))
+		entry["show_name"] = str(record.get("show_name", ""))
+		entry["place"] = int(record.get("place", 3))
+		entry["grand"] = bool(record.get("grand", false))
+		entry["fish"] = snapshot.duplicate(true)
+		list.append(entry)
+	list.reverse()
+	return list
+
+
+## How many portraits can hang on the shop wall (0 until the wall is unlocked).
+func pin_slots() -> int:
+	if not has_unlock("gallery_wall"):
+		return 0
+	return int(db.economy.get("gallery", {}).get("pin_slots", 6))
+
+
+## The entry for a key, or an empty dictionary if it isn't in the gallery now.
+func _gallery_lookup(key: String) -> Dictionary:
+	var entries := gallery_favorites() if key.begins_with("fav:") else gallery_hall()
+	for entry in entries:
+		if entry["key"] == key:
+			return entry
+	return {}
+
+
+## Why a portrait can't be pinned, or "" if it can.
+func pin_blocker(key: String) -> String:
+	if not has_unlock("gallery_wall"):
+		return "Reach '%s' to pin portraits" % unlock_level_name("gallery_wall")
+	if _gallery_lookup(key).is_empty():
+		return "That portrait isn't in your gallery"
+	if key in gallery_pins:
+		return "Already pinned"
+	if pinned_entries().size() >= pin_slots():
+		return "The wall is full"
+	return ""
+
+
+func pin_portrait(key: String) -> bool:
+	if pin_blocker(key) != "":
+		return false
+	gallery_pins = _live_pins()  # tidy up pins that no longer resolve
+	gallery_pins.append(key)
+	return true
+
+
+func unpin_portrait(key: String) -> bool:
+	if not key in gallery_pins:
+		return false
+	gallery_pins.erase(key)
+	return true
+
+
+## The pinned keys that still resolve to a portrait.
+func _live_pins() -> Array:
+	var keys := []
+	for entry in pinned_entries():
+		keys.append(entry["key"])
+	return keys
+
+
+## The pinned portraits in pin order. A pin whose favourite has been un-marked
+## is quietly skipped (and dropped from the saved list when it next changes).
+func pinned_entries() -> Array:
+	var favourites := gallery_favorites()
+	var hall := gallery_hall()
+	var list := []
+	for key in gallery_pins:
+		for entry in (favourites if str(key).begins_with("fav:") else hall):
+			if entry["key"] == key:
+				list.append(entry)
+				break
+	return list
+
+
 # --- The Lab ---------------------------------------------------------------------
 
 ## True once the shop's reputation has opened the Lab.
@@ -553,7 +683,7 @@ func _hold_show(summary: Dictionary) -> void:
 		show_history.append({
 			"day": day, "show_number": show["number"], "show_name": show["name"],
 			"place": place, "grand": show["grand"],
-			"fish": {"species_id": f.species_id, "traits": f.traits.duplicate(), "sex": f.sex,
+			"fish": {"fish_id": f.id, "species_id": f.species_id, "traits": f.traits.duplicate(), "sex": f.sex,
 				"stars": f.stars, "nickname": f.nickname, "purity": f.purity, "scanned": f.scanned},
 		})
 	var top := []
@@ -1720,6 +1850,10 @@ func goal_value(metric: String) -> int:
 			return int(records.get("purest_fish", {}).get("amount", 0))
 		"ribbons":
 			return stat("ribbons_first") + stat("ribbons_second") + stat("ribbons_third")
+		"hall_of_fame":
+			return show_history.size()
+		"pinned":
+			return pinned_entries().size()
 	return stat(metric)
 
 
@@ -1947,6 +2081,7 @@ func to_dict() -> Dictionary:
 		"show_entry": show_entry,
 		"shows_held": shows_held,
 		"show_history": show_history.duplicate(true),
+		"gallery_pins": gallery_pins.duplicate(),
 	}
 
 
@@ -1986,6 +2121,7 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	s.show_entry = int(d.get("show_entry", 0))
 	s.shows_held = int(d.get("shows_held", 0))
 	s.show_history = d.get("show_history", []).duplicate(true)
+	s.gallery_pins = d.get("gallery_pins", []).duplicate()
 	for id in d.get("upgrades", {}):
 		if p_db.upgrades.has(id):
 			s.upgrades[id] = int(d["upgrades"][id])

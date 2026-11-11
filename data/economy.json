@@ -44,6 +44,7 @@
 		"theme": 15
 	},
 	"favorites": {"max": 24},
+	"gallery": {"pin_slots": 6},
 	"breeding_tank_capacity": 12,
 	"breeding_tanks": {
 		"max": 4,
