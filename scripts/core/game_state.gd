@@ -50,6 +50,11 @@ var stats: Dictionary = {}
 ## "tie": int}. Keys: "best_sale", "rarest_sold", "best_bred". `tie` breaks a tie
 ## on `amount`. See _record().
 var records: Dictionary = {}
+## Shop reputation points. Only ever goes up. See data/reputation.json.
+var reputation: int = 0
+## Reputation when today began, and the level the player has already been told about.
+var _rep_day_start: int = 0
+var _level_announced: int = 0
 ## Goals reached: goal id -> the day it was reached.
 var completed_goals: Dictionary = {}
 ## Shop upgrades bought: upgrade id -> the day it was bought.
@@ -563,7 +568,8 @@ func make_request(template_id: String = "") -> Dictionary:
 
 ## How many special orders you can hold at once.
 func max_orders() -> int:
-	return int(db.economy["requests"]["max_orders"]) + int(upgrade_effect("max_orders"))
+	return int(db.economy["requests"]["max_orders"]) + int(upgrade_effect("max_orders")) \
+		+ reputation_effect("extra_orders")
 
 
 func can_accept_request() -> bool:
@@ -655,6 +661,7 @@ func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionar
 	orders.remove_at(order_index)
 	_earn(result["payout"], "order")
 	_count("orders_delivered")
+	_rep("order_delivered")
 	_record("best_sale", int(result["payout"]), what)
 	return result
 
@@ -796,6 +803,9 @@ func serve_customer() -> int:
 	if customer_blocker() != "" or customer["kind"] in ["request", "wish_item", "wish_fish"]:
 		return 0
 	var earned := 0
+	var fish_sold: Fish = null
+	if customer["kind"] in ["fish", "collector"]:
+		fish_sold = inventory.get_fish(customer["fish_id"])
 	match customer["kind"]:
 		"fish":
 			earned = sell_fish(customer["fish_id"])
@@ -805,6 +815,9 @@ func serve_customer() -> int:
 			earned = sell_display_tank(customer.get("with_fish", true))
 		"collector":
 			earned = _sell_to_collector(customer["fish_id"])
+	if earned > 0:
+		# Reputation comes only from selling to customers, never from buying.
+		_rep("sale", _star_bonus(fish_sold.stars) if fish_sold != null else 0)
 	day_log["served"] = day_log.get("served", 0) + 1
 	_count("customers_served")
 	_customer_leaves()
@@ -868,6 +881,7 @@ func _sell_to_collector(fish_id: int) -> int:
 	_earn(price, "collector")
 	_count_fish_sold(f, price, " to a collector")
 	_count("collector_sales")
+	_rep("collector_sale")
 	return price
 
 
@@ -1088,6 +1102,7 @@ func fulfil_backorder(index: int) -> int:
 	backorders.remove_at(index)
 	_earn(order["price"], "backorder")
 	_count("backorders_filled")
+	_rep("backorder_filled")
 	return order["price"]
 
 
@@ -1125,12 +1140,14 @@ func _new_customer() -> Dictionary:
 func _customer_leaves() -> void:
 	customer = {}
 	minutes_to_customer = Customers.next_arrival_minutes(shop_appeal(), db.economy["customers"], rng) \
-		/ (1.0 + upgrade_effect("customer_speed"))
+		/ customer_speed()
 
 
 # --- Day cycle ---------------------------------------------------------------
 
 func open_day() -> void:
+	_rep_day_start = reputation
+	_level_announced = reputation_level()
 	earned_today = 0
 	_reset_day_log()
 	clock.open_shop()
@@ -1160,6 +1177,11 @@ func end_day() -> Dictionary:
 	_record_best("best_day", earned_today)
 	check_goals()
 	summary["goals"] = day_log["goals"].duplicate(true)
+	summary["reputation"] = {
+		"before_level": reputation_level_at(_rep_day_start), "after_level": reputation_level(),
+		"gained": reputation - _rep_day_start, "points": reputation, "level_name": reputation_level_name(),
+	}
+	_level_announced = reputation_level()  # the summary tells the player
 	summary["money_end"] = money
 	day += 1
 	# Looking ahead to tomorrow.
@@ -1249,6 +1271,7 @@ func _discover(summary: Dictionary, source: String, species: Dictionary, trait_n
 	if book.has(key):
 		return
 	book[key] = day
+	_rep("recipe_discovered" if source == "recipe" else "mutation_discovered")
 	var generation := 0
 	var reward := mutation_reward()
 	if source == "recipe":
@@ -1498,6 +1521,8 @@ func goal_value(metric: String) -> int:
 			return maxi(stat("best_day"), earned_today)
 		"favorites":
 			return favorite_count()
+		"reputation_level":
+			return reputation_level() + 1
 	return stat(metric)
 
 
@@ -1516,18 +1541,120 @@ func goal_progress(goal: Dictionary) -> int:
 ## (once). Returns the goals reached this time.
 func check_goals() -> Array:
 	var reached := []
-	for goal in db.goals:
-		if is_goal_done(goal["id"]) or goal_value(goal["metric"]) < int(goal["target"]):
-			continue
-		completed_goals[goal["id"]] = day
-		var reward := int(goal["reward"])
-		money += reward
-		_count("goal_rewards", reward)
-		if day_log.is_empty():
-			_reset_day_log()
-		day_log["goals"].append({"name": goal["name"], "reward": reward})
-		reached.append(goal)
+	# A goal pays reputation, which can finish a reputation goal, so go round
+	# again until nothing new is reached. Each goal completes once, so it ends.
+	var found := true
+	while found:
+		found = false
+		for goal in db.goals:
+			if is_goal_done(goal["id"]) or goal_value(goal["metric"]) < int(goal["target"]):
+				continue
+			completed_goals[goal["id"]] = day
+			var reward := int(goal["reward"])
+			money += reward
+			_count("goal_rewards", reward)
+			_rep("goal_reached")
+			if day_log.is_empty():
+				_reset_day_log()
+			day_log["goals"].append({"name": goal["name"], "reward": reward})
+			reached.append(goal)
+			found = true
 	return reached
+
+
+# --- Shop reputation -----------------------------------------------------------
+
+## Adds the points for one source (see data/reputation.json), plus `extra`.
+func _rep(key: String, extra: int = 0) -> void:
+	reputation += maxi(0, int(db.reputation.get("points", {}).get(key, 0)) + extra)
+
+
+## Public form: awards a source's points `amount_multiplier` times.
+func award_reputation(source: String, amount_multiplier: int = 1) -> void:
+	for i in maxi(0, amount_multiplier):
+		_rep(source)
+
+
+## The extra reputation for selling a fish of this many stars.
+func _star_bonus(stars: int) -> int:
+	var list: Array = db.reputation.get("points", {}).get("star_bonus", [])
+	return int(list[stars]) if stars >= 0 and stars < list.size() else 0
+
+
+func reputation_levels() -> Array:
+	return db.reputation.get("levels", [])
+
+
+## The 0-based level these points reach.
+func reputation_level_at(points: int) -> int:
+	var level := 0
+	var levels := reputation_levels()
+	for i in levels.size():
+		if points >= int(levels[i]["points"]):
+			level = i
+	return level
+
+
+func reputation_level() -> int:
+	return reputation_level_at(reputation)
+
+
+func reputation_level_name() -> String:
+	var levels := reputation_levels()
+	return str(levels[reputation_level()]["name"]) if not levels.is_empty() else ""
+
+
+## The next level as {name, points}, or {} at the top.
+func reputation_next() -> Dictionary:
+	var levels := reputation_levels()
+	var next := reputation_level() + 1
+	if next >= levels.size():
+		return {}
+	return {"name": levels[next]["name"], "points": int(levels[next]["points"])}
+
+
+## How far through the current level you are, 0..1 (1 at the top level).
+func reputation_progress() -> float:
+	var next := reputation_next()
+	if next.is_empty():
+		return 1.0
+	var start := int(reputation_levels()[reputation_level()]["points"])
+	return clampf(float(reputation - start) / float(int(next["points"]) - start), 0.0, 1.0)
+
+
+## The total of one effect across every level reached (like upgrade_effect).
+func reputation_effect(effect: String) -> int:
+	var total := 0
+	var levels := reputation_levels()
+	for i in mini(reputation_level() + 1, levels.size()):
+		total += int(levels[i]["effects"].get(effect, 0))
+	return total
+
+
+## True when this level or any lower one lists the unlock id ("lab", ...).
+func has_unlock(unlock_id: String) -> bool:
+	var levels := reputation_levels()
+	for i in mini(reputation_level() + 1, levels.size()):
+		if unlock_id in levels[i]["unlocks"]:
+			return true
+	return false
+
+
+## How much faster customers come than the base rate (1 = base): upgrades
+## and reputation. The arrival floor (min_interval_minutes) still applies.
+func customer_speed() -> float:
+	return 1.0 + upgrade_effect("customer_speed") \
+		+ reputation_effect("extra_customers") * float(db.reputation.get("customer_speed_per_extra", 0.0))
+
+
+## The new level (0-based) if the shop has reached one the player hasn't been
+## told about yet, else -1. Asking marks it told. For the level-up toast.
+func take_level_up() -> int:
+	var level := reputation_level()
+	if level <= _level_announced:
+		return -1
+	_level_announced = level
+	return level
 
 
 # --- Shop upgrades -------------------------------------------------------------
@@ -1606,6 +1733,7 @@ func to_dict() -> Dictionary:
 		"discovered_mutations": discovered_mutations.duplicate(),
 		"book_bonuses": book_bonuses.duplicate(),
 		"stats": stats.duplicate(),
+		"reputation": reputation,
 		"records": records.duplicate(true),
 		"start_id": start_id,
 		"challenge_id": challenge_id,
@@ -1635,6 +1763,14 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 			if s.is_generation_complete(g):
 				s.book_bonuses[str(g)] = 0
 	s.stats = d.get("stats", {}).duplicate()
+	if d.has("reputation"):
+		s.reputation = int(d["reputation"])
+	else:
+		# Older save: credit the sales and orders already made.
+		var points: Dictionary = p_db.reputation.get("points", {})
+		s.reputation = s.stat("fish_sold") * int(points.get("sale", 0)) \
+			+ s.stat("orders_delivered") * int(points.get("order_delivered", 0)) \
+			+ s.stat("backorders_filled") * int(points.get("backorder_filled", 0))
 	s.records = d.get("records", {}).duplicate(true)
 	s.start_id = str(d.get("start_id", ""))
 	s.challenge_id = str(d.get("challenge_id", ""))

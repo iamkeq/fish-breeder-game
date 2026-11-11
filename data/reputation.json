@@ -1,0 +1,29 @@
+{
+	"points": {
+		"sale": 1,
+		"star_bonus": [0, 0, 1, 2, 4, 6],
+		"order_delivered": 10,
+		"backorder_filled": 4,
+		"collector_sale": 6,
+		"goal_reached": 5,
+		"recipe_discovered": 3,
+		"mutation_discovered": 8
+	},
+	"customer_speed_per_extra": 0.08,
+	"levels": [
+		{"name": "Corner Tank", "points": 0, "effects": {}, "unlocks": [],
+			"description": "Where every shop starts."},
+		{"name": "Neighbourhood Favourite", "points": 40, "effects": {"extra_customers": 1}, "unlocks": [],
+			"description": "More customers wander in."},
+		{"name": "Known in Town", "points": 120, "effects": {"extra_customers": 1}, "unlocks": ["lab"],
+			"description": "More customers. Unlocks: the Lab."},
+		{"name": "Hobbyists' Choice", "points": 280, "effects": {"extra_customers": 1, "extra_orders": 1}, "unlocks": ["fish_show"],
+			"description": "More customers and one more special order at once. Unlocks: fish shows."},
+		{"name": "Breeder of Note", "points": 550, "effects": {"extra_customers": 1}, "unlocks": ["staff"],
+			"description": "More customers. Unlocks: hiring staff."},
+		{"name": "Regional Legend", "points": 1000, "effects": {"extra_customers": 1, "extra_orders": 1}, "unlocks": ["gallery_wall"],
+			"description": "More customers and one more special order at once. Unlocks: the gallery wall."},
+		{"name": "Famous Fish Shop", "points": 1800, "effects": {"extra_customers": 1}, "unlocks": [],
+			"description": "More customers than ever."}
+	]
+}

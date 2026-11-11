@@ -2,6 +2,23 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.16.0] - 2026-11-11
+
+### Added
+- **Shop reputation:** a shop-wide score that only ever goes up. You earn
+  points for counter sales (more for higher stars), delivered special orders,
+  back-orders, collector sales, goals, and first-time recipe and mutation
+  discoveries. Buying earns nothing, so there is no money loop.
+- **Seven reputation levels**, from Corner Tank up to Famous Fish Shop. Each
+  level makes customers arrive more often (+8% per step) and two of them
+  allow one more special order. Levels also unlock features that later
+  updates add: the Lab, fish shows, hiring staff and the gallery wall.
+- A "★ Lv N" chip in the top bar, a level toast, a reputation line (and a
+  level-up line) in the day summary, a progress bar in the Goals window, and
+  a new **Perks** tab listing what each level gives.
+- Three new goals for reaching levels 3, 5 and 7. Older saves are credited
+  with points for the sales and orders they already made.
+
 ## [0.15.0] - 2026-11-11
 
 ### Added

@@ -267,6 +267,25 @@ func test_names_and_favourites_round_trip_in_a_full_save() -> void:
 	assert_eq(JSON.stringify(SaveFile.normalize(loaded.to_dict())), JSON.stringify(SaveFile.normalize(gs.to_dict())))
 
 
+func test_reputation_round_trips() -> void:
+	gs.reputation = 77
+	var loaded := _reload(gs)
+	assert_eq(loaded.reputation, 77)
+	assert_eq(loaded.reputation_level(), 2)
+
+
+func test_an_old_save_without_reputation_gets_a_back_fill() -> void:
+	gs.stats["fish_sold"] = 10
+	gs.stats["orders_delivered"] = 2
+	gs.stats["backorders_filled"] = 3
+	var d: Dictionary = SaveFile.parse(JSON.stringify(gs.to_dict()))
+	d.erase("reputation")
+	var loaded := GameState.from_dict(F.db(), F.rng(99), d)
+	assert_eq(loaded.reputation, 10 + 20 + 12)
+	d["reputation"] = 5
+	assert_eq(GameState.from_dict(F.db(), F.rng(99), d).reputation, 5, "a present key is never back-filled")
+
+
 func test_an_old_save_without_names_loads() -> void:
 	var d: Dictionary = SaveFile.parse(JSON.stringify(gs.to_dict()))
 	for fish_data in d["fish"]:

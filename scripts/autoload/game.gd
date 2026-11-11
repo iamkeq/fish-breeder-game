@@ -17,6 +17,8 @@ signal customer_changed
 signal customer_arrived
 ## One or more goals were just reached (entries from data/goals.json).
 signal goals_reached(goals: Array)
+## The shop just reached a new reputation level (0-based index and its name).
+signal reputation_level_up(level: int, level_name: String)
 ## A screen wants the "name your fish" box opened for this fish.
 signal name_requested(fish_id: int)
 
@@ -118,6 +120,9 @@ func _check_goals() -> void:
 	if not reached.is_empty():
 		goals_reached.emit(reached)
 		changed.emit()  # money went up
+	var level := state.take_level_up()
+	if level >= 0:
+		reputation_level_up.emit(level, state.reputation_levels()[level]["name"])
 
 
 func _process(delta: float) -> void:

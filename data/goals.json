@@ -30,6 +30,9 @@
 		{"id": "first_collector", "name": "Connoisseur", "description": "Sell a fish to a collector.", "metric": "collector_sales", "target": 1, "reward": 50},
 		{"id": "collectors_10", "name": "Reputation for quality", "description": "Sell 10 fish to collectors.", "metric": "collector_sales", "target": 10, "reward": 200},
 		{"id": "first_name", "name": "Pet name", "description": "Give a fish a name.", "metric": "fish_named", "target": 1, "reward": 10},
-		{"id": "favorites_5", "name": "Family", "description": "Keep 5 favourite fish.", "metric": "favorites", "target": 5, "reward": 40}
+		{"id": "favorites_5", "name": "Family", "description": "Keep 5 favourite fish.", "metric": "favorites", "target": 5, "reward": 40},
+		{"id": "rep_level_3", "name": "Rising name", "description": "Reach shop reputation level 3.", "metric": "reputation_level", "target": 3, "reward": 80},
+		{"id": "rep_level_5", "name": "Breeder of Note", "description": "Reach shop reputation level 5.", "metric": "reputation_level", "target": 5, "reward": 200},
+		{"id": "rep_max", "name": "Famous", "description": "Reach the top reputation level.", "metric": "reputation_level", "target": 7, "reward": 400}
 	]
 }

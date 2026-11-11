@@ -28,6 +28,9 @@ var goals: Array = []
 ## Shop upgrades by id, and their listed order (data/upgrades.json).
 var upgrades: Dictionary = {}
 var upgrade_order: Array = []
+## Shop reputation: points per source, and the levels (data/reputation.json).
+## Empty when a test builds a DataDB without it (reputation then does nothing).
+var reputation: Dictionary = {}
 ## Starting pairs and challenge modes for a new game, in listed order
 ## (data/new_game.json). With no starts listed there is one implicit "standard"
 ## start built from economy.starting_state.fish; challenges may be empty.
@@ -41,7 +44,14 @@ const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
 ## What a goal can count. See GameState.goal_value().
 const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
-	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites"]
+	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
+	"reputation_level"]
+## What a reputation level can change. See GameState.reputation_effect().
+const REPUTATION_EFFECTS := ["extra_customers", "extra_orders"]
+## What earns reputation points. See GameState._rep().
+const REPUTATION_POINTS := ["sale", "star_bonus", "order_delivered", "backorder_filled",
+	"collector_sale", "goal_reached", "recipe_discovered", "mutation_discovered"]
+const REPUTATION_LEVEL_FIELDS := ["name", "points", "effects", "unlocks", "description"]
 const START_FIELDS := ["id", "name", "description"]
 const CHALLENGE_FIELDS := ["id", "name", "description", "rules"]
 ## What a challenge rule can change. See GameState.challenge_rule().
@@ -65,6 +75,7 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 	var economy_data = _read_file(root.path_join("economy.json"), read_errors)
 	var goal_data = _read_file(root.path_join("goals.json"), read_errors)
 	var upgrade_data = _read_file(root.path_join("upgrades.json"), read_errors)
+	var reputation_data = _read_file(root.path_join("reputation.json"), read_errors)
 	# Optional: without it there is one standard start and no challenges.
 	var new_game_data = null
 	if FileAccess.file_exists(root.path_join("new_game.json")):
@@ -74,7 +85,8 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 		goal_data.get("goals", []) if goal_data is Dictionary else [],
 		upgrade_data.get("upgrades", []) if upgrade_data is Dictionary else [],
 		new_game_data.get("starts", []) if new_game_data is Dictionary else [],
-		new_game_data.get("challenges", []) if new_game_data is Dictionary else [])
+		new_game_data.get("challenges", []) if new_game_data is Dictionary else [],
+		reputation_data if reputation_data is Dictionary else {})
 	read_errors.append_array(db.errors)
 	db.errors = read_errors
 	return db
@@ -82,8 +94,9 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 
 static func from_dicts(species_list: Array, item_list: Array, template_list: Array,
 		economy_data: Dictionary, strain_list: Array = [], goal_list: Array = [],
-		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = []) -> DataDB:
+		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = [], reputation_data: Dictionary = {}) -> DataDB:
 	var db := DataDB.new()
+	db.reputation = reputation_data
 	for s in species_list:
 		db._add_unique(db.species, s, "species")
 	for i in item_list:
@@ -147,6 +160,41 @@ func items_in_category(category: String) -> Array:
 	return result
 
 
+func _validate_reputation() -> void:
+	if reputation.is_empty():
+		return
+	var points = reputation.get("points")
+	if not points is Dictionary:
+		errors.append("reputation: missing 'points'")
+	else:
+		for key in points:
+			if not key in REPUTATION_POINTS:
+				errors.append("reputation: unknown point source '%s'" % key)
+		for key in REPUTATION_POINTS:
+			if not points.has(key):
+				errors.append("reputation: missing point source '%s'" % key)
+		if points.has("star_bonus") and not (points["star_bonus"] is Array and points["star_bonus"].size() >= 6):
+			errors.append("reputation: star_bonus needs 6 numbers (index = stars)")
+	var levels = reputation.get("levels")
+	if not levels is Array or levels.is_empty():
+		errors.append("reputation: needs a list of levels")
+		return
+	var last := -1
+	for i in levels.size():
+		var lv = levels[i]
+		var ctx := "reputation/level %d" % (i + 1)
+		if not lv is Dictionary or not _require(lv, REPUTATION_LEVEL_FIELDS, ctx):
+			continue
+		if i == 0 and int(lv["points"]) != 0:
+			errors.append("%s: the first level must start at 0 points" % ctx)
+		if int(lv["points"]) <= last:
+			errors.append("%s: levels must be in ascending order of points" % ctx)
+		last = int(lv["points"])
+		for effect in lv["effects"]:
+			if not effect in REPUTATION_EFFECTS:
+				errors.append("%s: unknown effect '%s'" % [ctx, effect])
+
+
 func validate() -> void:
 	for id in species:
 		_validate_species(species[id])
@@ -170,6 +218,7 @@ func validate() -> void:
 				errors.append("%s: unknown effect '%s'" % [upgrade_ctx, effect])
 		if u.has("requires") and not upgrades.has(u["requires"]):
 			errors.append("%s: requires unknown upgrade '%s'" % [upgrade_ctx, u["requires"]])
+	_validate_reputation()
 	_validate_economy()
 	for st in starts:
 		if not _implicit_start:

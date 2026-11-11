@@ -116,8 +116,23 @@ static func upgrades() -> Array:
 	]
 
 
+static func reputation() -> Dictionary:
+	return {
+		"points": {"sale": 1, "star_bonus": [0, 0, 1, 2, 4, 6], "order_delivered": 10, "backorder_filled": 4,
+			"collector_sale": 6, "goal_reached": 5, "recipe_discovered": 3, "mutation_discovered": 8},
+		"customer_speed_per_extra": 0.1,
+		"levels": [
+			{"name": "Start", "points": 0, "effects": {}, "unlocks": [], "description": "Start."},
+			{"name": "Known", "points": 20, "effects": {"extra_customers": 1}, "unlocks": ["lab"], "description": "Lab."},
+			{"name": "Liked", "points": 60, "effects": {"extra_customers": 2, "extra_orders": 1}, "unlocks": ["fish_show"], "description": "Shows."},
+			{"name": "Famous", "points": 100, "effects": {}, "unlocks": [], "description": "Top."},
+		],
+	}
+
+
 static func db() -> DataDB:
-	return DataDB.from_dicts([species()], items(), [template()], economy(), strains(), goals(), upgrades())
+	return DataDB.from_dicts([species()], items(), [template()], economy(), strains(), goals(), upgrades(),
+		[], [], reputation())
 
 
 static func rng(seed_value: int = 1234) -> RandomNumberGenerator:

@@ -383,6 +383,17 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.16.0), shop reputation:**
+  - `data/reputation.json`: point values per source, seven levels with
+    `effects` (`extra_customers`, `extra_orders`) and `unlocks` ids
+    (`lab`, `fish_show`, `staff`, `gallery_wall`). Later features gate on
+    `GameState.has_unlock(id)`. Reputation never decreases and is never
+    earned by spending.
+  - Customers arrive on a timer, so `extra_customers` is an arrival-rate
+    boost via `customer_speed()` (`customer_speed_per_extra` 0.08 per point),
+    stacking with the shop-sign upgrades; the minimum-interval floor stays.
+  - `check_goals` now loops, because goal rewards earn reputation that may
+    complete a reputation goal.
 - **2026-11-11 (v0.15.0), fish names and favourites:**
   - `Fish.nickname` and `Fish.favorite` are saved. `GameState.fish_title()`
     is the name used in text. `economy.favorites.max` caps favourites.

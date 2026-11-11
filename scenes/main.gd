@@ -36,6 +36,7 @@ var _name_box: ColorRect
 var _orders_room: Control
 var _goals: ColorRect
 var _goals_button: Button
+var _rep_label: Label
 var _toast: PanelContainer
 var _toast_label: Label
 var _toast_time := 0.0
@@ -57,6 +58,10 @@ func _ready() -> void:
 	_goals_button = Button.new()
 	_goals_button.pressed.connect(func(): _goals.open())
 	_market_button.add_sibling(_goals_button)
+	_rep_label = Label.new()
+	_rep_label.mouse_filter = Control.MOUSE_FILTER_STOP  # so the tooltip shows
+	_rep_label.add_theme_font_size_override("font_size", 18)
+	_money_label.add_sibling(_rep_label)
 	_build_toast()
 	_day_summary = DaySummary.new()
 	add_child(_day_summary)
@@ -94,6 +99,8 @@ func _ready() -> void:
 	Game.customer_arrived.connect(_on_customer_arrived)
 	Game.customer_changed.connect(_update_bell_badge)
 	Game.goals_reached.connect(_on_goals_reached)
+	Game.reputation_level_up.connect(func(_level: int, level_name: String):
+		_show_toast("★ Your shop is now %s!" % level_name))
 	if Game.loaded_from_save:
 		_show_toast("Welcome back! Your shop is just as you left it.")
 
@@ -117,6 +124,12 @@ func _update_top_bar() -> void:
 	_restock_button.set_pressed_no_signal(state.restocking)
 	_restock_button.text = "Reopen" if state.restocking else "Restock"
 	_money_label.text = "$%d" % state.money
+	_rep_label.text = "★ Lv %d" % (state.reputation_level() + 1)
+	var next := state.reputation_next()
+	_rep_label.tooltip_text = "Shop reputation: %s
+%d points%s" % [state.reputation_level_name(), state.reputation,
+		"" if next.is_empty() else "
+Next: %s at %d" % [next["name"], int(next["points"])]]
 	_orders_button.text = "Orders (%d)" % state.orders.size() if not state.orders.is_empty() else "Orders"
 	_goals_button.text = "Goals"
 	_goals_button.tooltip_text = "%d of %d goals reached" % [state.completed_goals.size(), Game.db.goals.size()]

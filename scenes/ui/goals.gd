@@ -1,14 +1,17 @@
 extends ColorRect
-## Goals and Stats, in two tabs. Goals: things to aim for, each with a progress
+## Goals, Perks and Stats, in three tabs. A reputation bar sits under the title. Goals: things to aim for, each with a progress
 ## bar and a one-off cash reward (open ones first, finished ones below). Stats:
 ## lifetime numbers and personal bests. Both tabs have the "start a new game"
 ## button. Pauses the shop clock while open.
 
 const GOOD := Color(0.25, 0.5, 0.35)
-const TABS := ["Goals", "Stats"]
+const TABS := ["Goals", "Perks", "Stats"]
 const DIM := Color(1, 1, 1, 0.7)
 
 var _progress: Label
+var _rep_name: Label
+var _rep_bar: ProgressBar
+var _rep_points: Label
 var _body: VBoxContainer
 var _new_game_button: Button
 var _confirming := false
@@ -48,6 +51,7 @@ func _ready() -> void:
 	close_button.pressed.connect(close)
 	header.add_child(close_button)
 	box.add_child(header)
+	box.add_child(_build_reputation_bar())
 	box.add_child(_build_tabs())
 
 	var scroll := ScrollContainer.new()
@@ -75,6 +79,26 @@ func _ready() -> void:
 	footer.add_child(_new_game_button)
 	box.add_child(footer)
 	Game.changed.connect(func(): if visible: _refresh())
+
+
+## Shop reputation: level name, a bar toward the next level, and the points.
+func _build_reputation_bar() -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	_rep_name = Label.new()
+	_rep_name.add_theme_font_size_override("font_size", 17)
+	row.add_child(_rep_name)
+	_rep_bar = ProgressBar.new()
+	_rep_bar.max_value = 1.0
+	_rep_bar.show_percentage = false
+	_rep_bar.custom_minimum_size = Vector2(260, 14)
+	_rep_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_rep_bar)
+	_rep_points = Label.new()
+	_rep_points.add_theme_font_size_override("font_size", 14)
+	_rep_points.modulate = DIM
+	row.add_child(_rep_points)
+	return row
 
 
 ## Same tab buttons as the Market.
@@ -133,8 +157,12 @@ func _refresh() -> void:
 	for i in _tab_buttons.size():
 		_tab_buttons[i].set_pressed_no_signal(i == _tab)
 	_new_game_button.text = "Really start over? Click again" if _confirming else "Start a new game"
-	if _tab == 1:
+	_refresh_reputation(state)
+	if _tab == 2:
 		_add_stats(state)
+		return
+	if _tab == 1:
+		_add_perks(state)
 		return
 	for g in goals:
 		if not state.is_goal_done(g["id"]):
@@ -147,6 +175,51 @@ func _refresh() -> void:
 		for g in done:
 			_body.add_child(_goal_row(g, true))
 
+
+
+func _refresh_reputation(state: GameState) -> void:
+	_rep_name.text = "★ Lv %d  %s" % [state.reputation_level() + 1, state.reputation_level_name()]
+	_rep_bar.value = state.reputation_progress()
+	var next := state.reputation_next()
+	_rep_points.text = "%d points" % state.reputation if next.is_empty() 		else "%d / %d points to %s" % [state.reputation, int(next["points"]), next["name"]]
+
+
+## One row per reputation level: what it gave (or gives), greyed until reached.
+func _add_perks(state: GameState) -> void:
+	var intro := Label.new()
+	intro.text = "Your reputation grows with every sale, order, goal and discovery. It never goes down."
+	intro.add_theme_font_size_override("font_size", 14)
+	intro.modulate = DIM
+	_body.add_child(intro)
+	var levels := state.reputation_levels()
+	for i in levels.size():
+		var reached := i <= state.reputation_level()
+		var panel := PanelContainer.new()
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 14)
+		panel.add_child(row)
+		var info := VBoxContainer.new()
+		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		info.add_theme_constant_override("separation", 1)
+		var name := Label.new()
+		name.text = "%s Lv %d  %s" % ["✔" if reached else "·", i + 1, levels[i]["name"]]
+		info.add_child(name)
+		var what := Label.new()
+		what.text = levels[i]["description"]
+		what.add_theme_font_size_override("font_size", 13)
+		what.modulate = Color(1, 1, 1, 0.7)
+		what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		info.add_child(what)
+		row.add_child(info)
+		var need := Label.new()
+		need.text = "%d points" % int(levels[i]["points"])
+		need.add_theme_font_size_override("font_size", 14)
+		need.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		need.modulate = GOOD if reached else Color.WHITE
+		row.add_child(need)
+		if not reached:
+			panel.modulate = Color(1, 1, 1, 0.55)
+		_body.add_child(panel)
 
 
 func _goal_row(goal: Dictionary, done: bool) -> Control:
@@ -253,6 +326,7 @@ func _add_stats(state: GameState) -> void:
 		_record_row(state, "Rarest fish sold", "rarest_sold", _variety_of),
 	])
 	var progress := [
+		["Shop reputation", "%s  (%d pts)" % [state.reputation_level_name(), state.reputation]],
 		["Goals reached", "%d/%d" % [state.completed_goals.size(), Game.db.goals.size()]],
 		["Recipes found", "%d/%d" % [state.discovered_recipes.size(), _count_book(state, true)]],
 		["Mutations found", "%d/%d" % [state.discovered_mutations.size(), _count_book(state, false)]],

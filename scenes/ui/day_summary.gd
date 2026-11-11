@@ -78,6 +78,13 @@ func _add_money(s: Dictionary) -> void:
 			_line("%s: %d  ($%d)" % [SALE_NAMES[key], sales[key][0], sales[key][1]])
 	if log["spent"] > 0:
 		_line("Spent at the Market: $%d" % log["spent"])
+	var rep: Dictionary = s.get("reputation", {})
+	if int(rep.get("gained", 0)) > 0:
+		_line("Shop reputation: +%d  (%d points, %s)" % [int(rep["gained"]), int(rep["points"]), rep["level_name"]])
+	if int(rep.get("after_level", 0)) > int(rep.get("before_level", 0)):
+		var up := _line("★ Your shop is now %s!  (Lv %d)" % [rep["level_name"], int(rep["after_level"]) + 1])
+		up.add_theme_font_size_override("font_size", 18)
+		up.modulate = GOOD
 	for g in s.get("goals", []):
 		_line("★ Goal reached: %s  (+$%d)" % [g["name"], int(g["reward"])]).modulate = GOOD
 	var people := "Customers served: %d" % log["served"]

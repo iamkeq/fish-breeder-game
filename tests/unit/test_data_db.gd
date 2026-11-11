@@ -16,6 +16,21 @@ func test_fixture_data_is_valid() -> void:
 	assert_true(F.db().is_valid(), str(F.db().errors))
 
 
+func test_bad_reputation_data_is_reported() -> void:
+	var bad := F.reputation()
+	bad["levels"][0]["points"] = 5
+	bad["levels"][2]["points"] = 10
+	bad["levels"][1]["effects"] = {"free_money": 1}
+	bad["points"]["mystery"] = 1
+	var db := DataDB.from_dicts([F.species()], F.items(), [F.template()], F.economy(), F.strains(),
+		F.goals(), F.upgrades(), [], [], bad)
+	var text := str(db.errors)
+	assert_true("first level must start at 0" in text, text)
+	assert_true("ascending" in text, text)
+	assert_true("free_money" in text, text)
+	assert_true("mystery" in text, text)
+
+
 func test_missing_field_is_reported() -> void:
 	var items := F.items()
 	items[0].erase("price")
