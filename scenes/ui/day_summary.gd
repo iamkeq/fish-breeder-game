@@ -174,6 +174,8 @@ func _fish_row(fish: Array, show_stars: bool) -> void:
 		caption.add_theme_font_size_override("font_size", 11)
 		caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		caption.text = UI.sex_symbol(f) + (" " + UI.stars_text(f.stars) if show_stars else "")
+		if f.nickname != "":
+			caption.text = f.nickname + (" ♥" if f.favorite else "") + "\n" + caption.text
 		card.add_child(caption)
 		row.add_child(card)
 	if fish.size() > MAX_PREVIEWS:

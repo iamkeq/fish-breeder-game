@@ -253,3 +253,27 @@ func test_real_data_goals_and_upgrades_are_valid() -> void:
 	assert_eq(db.upgrade_order.size(), db.upgrades.size())
 	var top: Dictionary = db.goals.filter(func(g): return g["id"] == "all_upgrades")[0]
 	assert_eq(int(top["target"]), db.upgrades.size(), "the 'every upgrade' goal matches the upgrade count")
+
+
+func test_names_and_favourites_round_trip_in_a_full_save() -> void:
+	var f := _male()
+	gs.rename_fish(f.id, "Bubbles")
+	gs.set_favorite(f.id, true)
+	var loaded := _reload(gs)
+	var back := loaded.inventory.get_fish(f.id)
+	assert_eq(back.nickname, "Bubbles")
+	assert_true(back.favorite)
+	assert_eq(loaded.stat("fish_named"), 1)
+	assert_eq(JSON.stringify(SaveFile.normalize(loaded.to_dict())), JSON.stringify(SaveFile.normalize(gs.to_dict())))
+
+
+func test_an_old_save_without_names_loads() -> void:
+	var d: Dictionary = SaveFile.parse(JSON.stringify(gs.to_dict()))
+	for fish_data in d["fish"]:
+		fish_data.erase("nickname")
+		fish_data.erase("favorite")
+	var loaded := GameState.from_dict(F.db(), F.rng(99), d)
+	assert_true(loaded != null)
+	for f in loaded.inventory.fish_list():
+		assert_eq(f.nickname, "")
+		assert_false(f.favorite)

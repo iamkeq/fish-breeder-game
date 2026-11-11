@@ -18,6 +18,7 @@
 		"layering": 15,
 		"theme": 15
 	},
+	"favorites": {"max": 24},
 	"breeding_tank_capacity": 12,
 	"breeding_tanks": {
 		"max": 4,

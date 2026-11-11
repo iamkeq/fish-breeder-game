@@ -99,7 +99,8 @@ func _tank_contents(state: GameState, tank: Tank, roles: Dictionary) -> Label:
 				fry_looks.append(look)
 	var lines := PackedStringArray()
 	for f in adults.slice(0, MAX_LISTED):
-		lines.append("%s %s %s%s" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars),
+		lines.append("%s %s%s %s%s" % [UI.sex_symbol(f), f.nickname if f.nickname != "" else UI.traits_text(f),
+			" ♥" if f.favorite else "", "★".repeat(f.stars),
 			" · " + roles[f.id] if roles.has(f.id) else ""])
 	if adults.size() > MAX_LISTED:
 		lines.append("+ %d more" % (adults.size() - MAX_LISTED))
@@ -158,9 +159,9 @@ func _fish_entry(f: Fish, roles: Dictionary) -> Control:
 	info.add_theme_constant_override("separation", 2)
 	var title := Label.new()
 	if state.is_adult(f):
-		title.text = "%s %s   %s" % [UI.sex_symbol(f), state.fish_display_name(f), UI.stars_text(f.stars)]
+		title.text = "%s %s   %s" % [UI.sex_symbol(f), UI.fish_heading(state, f), UI.stars_text(f.stars)]
 	else:
-		title.text = "%s Fry, day %d of %d   ★ ?" % [UI.sex_symbol(f), f.age_days, int(species["days_to_adult"])]
+		title.text = "%s %s, day %d of %d   ★ ?" % [UI.sex_symbol(f), UI.fish_heading(state, f), f.age_days, int(species["days_to_adult"])]
 	var traits := Label.new()
 	traits.text = UI.traits_text(f)
 	# Adults of one-trait species already say it in their name ("Koi Guppy").
@@ -187,7 +188,12 @@ func _fish_entry(f: Fish, roles: Dictionary) -> Control:
 		"Sell to the wholesaler right away. Customers would pay more (%s)." %
 		("$%d" % state.fish_price(f) if state.is_adult(f) else "they don't buy fry"))
 	sell.pressed.connect(_on_sell_pressed.bind(sell, f.id, price))
+	if f.favorite:
+		sell.disabled = true
+		sell.tooltip_text = "A favourite. Un-favourite it to sell it."
 	buttons.add_child(sell)
+	buttons.add_child(UI.name_button(f))
+	buttons.add_child(UI.favorite_button(state, f))
 	info.add_child(buttons)
 	entry.add_child(info)
 	return entry
@@ -195,7 +201,7 @@ func _fish_entry(f: Fish, roles: Dictionary) -> Control:
 
 func _on_move(to: String, fish_id: int) -> void:
 	var f: Fish = Game.state.inventory.get_fish(fish_id)
-	var name := Game.state.fish_display_name(f) if Game.state.is_adult(f) else "fry"
+	var name := Game.state.fish_title(f) if Game.state.is_adult(f) else (f.nickname if f.nickname != "" else "fry")
 	if Game.move_fish(fish_id, to):
 		_status.text = "Moved the %s to the %s." % [name, UI.location_name(to, Game.state).to_lower()]
 
@@ -207,7 +213,7 @@ func _on_sell_pressed(button: Button, fish_id: int, price: int) -> void:
 		button.text = "Sure? +$%d" % price
 		return
 	var f: Fish = Game.state.inventory.get_fish(fish_id)
-	var name := Game.state.fish_display_name(f) if Game.state.is_adult(f) else "fry"
+	var name := Game.state.fish_title(f) if Game.state.is_adult(f) else (f.nickname if f.nickname != "" else "fry")
 	var earned := Game.sell_fish_wholesale(fish_id)
 	if earned > 0:
 		_status.text = "Sold the %s to the wholesaler for $%d." % [name, earned]

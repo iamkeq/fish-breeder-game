@@ -17,6 +17,8 @@ signal customer_changed
 signal customer_arrived
 ## One or more goals were just reached (entries from data/goals.json).
 signal goals_reached(goals: Array)
+## A screen wants the "name your fish" box opened for this fish.
+signal name_requested(fish_id: int)
 
 var save_path := "user://save.json"
 
@@ -195,6 +197,20 @@ func buy_strain(strain_id: String, sex: String) -> Fish:
 
 func move_fish(fish_id: int, to: String) -> bool:
 	var ok := state.move_fish(fish_id, to)
+	if ok:
+		changed.emit()
+	return ok
+
+
+func rename_fish(fish_id: int, nickname: String) -> bool:
+	var ok := state.rename_fish(fish_id, nickname)
+	if ok:
+		changed.emit()
+	return ok
+
+
+func set_favorite(fish_id: int, value: bool) -> bool:
+	var ok := state.set_favorite(fish_id, value)
 	if ok:
 		changed.emit()
 	return ok

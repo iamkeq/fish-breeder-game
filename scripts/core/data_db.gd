@@ -41,7 +41,7 @@ const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
 ## What a goal can count. See GameState.goal_value().
 const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
-	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales"]
+	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites"]
 const START_FIELDS := ["id", "name", "description"]
 const CHALLENGE_FIELDS := ["id", "name", "description", "rules"]
 ## What a challenge rule can change. See GameState.challenge_rule().
@@ -326,6 +326,10 @@ func _validate_economy() -> void:
 	if tanks.has("air_stone") and not ResourceLoader.exists(tanks["air_stone"].get("sheet", "")):
 		errors.append("economy/breeding_tanks: air stone sheet '%s' not found" % tanks["air_stone"].get("sheet", ""))
 	_validate_breeding_book()
+	var favorites = economy.get("favorites")
+	if not (favorites is Dictionary and (favorites.get("max") is int or favorites.get("max") is float)
+			and int(favorites["max"]) >= 1):
+		errors.append("economy/favorites: needs a 'max' number of 1 or more")
 	var collector = economy["customers"].get("collector")
 	if collector != null and not (collector is Dictionary and collector.has("min_stars")
 			and collector.get("price_multipliers") is Dictionary):

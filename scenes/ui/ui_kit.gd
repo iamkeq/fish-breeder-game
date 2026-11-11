@@ -88,6 +88,37 @@ static func fish_preview(fish: Fish, species: Dictionary, box: Vector2 = Vector2
 	return holder
 
 
+## "Bubbles (Gold Guppy) ♥": the fish's name for lists, with a heart if it's a favourite.
+## Fry with no name are just "Fry".
+static func fish_heading(state: GameState, f: Fish) -> String:
+	var text := state.fish_title(f) if state.is_adult(f) else \
+		("%s (fry)" % f.nickname if f.nickname != "" else "Fry")
+	return text + (" ♥" if f.favorite else "")
+
+
+## The Name button: opens the naming box for this fish.
+static func name_button(f: Fish) -> Button:
+	var b := small_button("Rename" if f.nickname != "" else "Name", "Give this fish a name.")
+	b.pressed.connect(func(): Game.name_requested.emit(f.id))
+	return b
+
+
+## The ♥ Favourite toggle: favourites are kept, never sold or handed to customers.
+static func favorite_button(state: GameState, f: Fish) -> Button:
+	var b := small_button("♥ Favourite" if not f.favorite else "♥ Kept",
+		"Keep this fish: it's never sold or handed to a customer, but still breeds and can be on display."
+		if not f.favorite else "A keeper. Press to let it be sold again.")
+	b.toggle_mode = true
+	b.set_pressed_no_signal(f.favorite)
+	if not f.favorite:
+		var blocker := state.favorite_blocker(f.id)
+		b.disabled = blocker != ""
+		if blocker != "":
+			b.tooltip_text = blocker
+	b.pressed.connect(func(): Game.set_favorite(f.id, not f.favorite))
+	return b
+
+
 static func sex_symbol(f: Fish) -> String:
 	return "♂" if f.sex == Fish.MALE else "♀"
 

@@ -86,6 +86,11 @@ func _refresh_tank() -> void:
 		_display_fish.add_child(hint)
 	for f in state.tank_fish(tank):
 		_display_fish.add_child(_display_card(f))
+	if state.tank_fish(tank).any(func(f): return f.favorite):
+		var kept := _label("Favourites are kept back")
+		kept.add_theme_font_size_override("font_size", 12)
+		kept.modulate = Color(1, 1, 1, 0.7)
+		_display_fish.add_child(kept)
 
 
 func _display_card(f: Fish) -> Control:
@@ -96,7 +101,7 @@ func _display_card(f: Fish) -> Control:
 	var top := HBoxContainer.new()
 	top.add_child(UI.fish_preview(f, state.species_of(f), Vector2(64, 34), 0.45))
 	var paid := "  (paid $%d)" % f.paid if f.paid > 0 else ""
-	var name := _label("%s %s\n%s  $%d%s" % [UI.sex_symbol(f), state.fish_display_name(f),
+	var name := _label("%s %s\n%s  $%d%s" % [UI.sex_symbol(f), UI.fish_heading(state, f),
 		UI.stars_text(f.stars), state.fish_price(f), paid])
 	name.add_theme_font_size_override("font_size", 12)
 	top.add_child(name)
@@ -108,6 +113,8 @@ func _display_card(f: Fish) -> Control:
 	buttons.add_child(back)
 	# Breeding tanks and anywhere else, as a menu (there can be up to 4 tanks).
 	buttons.add_child(UI.move_menu(state, f, func(to: String): Game.move_fish(f.id, to)))
+	buttons.add_child(UI.name_button(f))
+	buttons.add_child(UI.favorite_button(state, f))
 	box.add_child(buttons)
 	card.add_child(box)
 	return card
@@ -153,7 +160,7 @@ func _add_customer_card() -> void:
 		"fish":
 			var f := state.inventory.get_fish(c["fish_id"])
 			if f != null:
-				text = "%s would love your %s %s (%s)." % [who, UI.sex_symbol(f), state.fish_display_name(f), UI.stars_text(f.stars)]
+				text = "%s would love your %s %s (%s)." % [who, UI.sex_symbol(f), state.fish_title(f), UI.stars_text(f.stars)]
 				var card := HBoxContainer.new()
 				card.add_child(UI.fish_preview(f, state.species_of(f), Vector2(90, 46)))
 				_counter.add_child(card)
@@ -170,7 +177,7 @@ func _add_customer_card() -> void:
 				var how := "double the usual $%d" % usual if is_equal_approx(ratio, 2.0) \
 					else "%s× the usual $%d" % [("%.1f" % ratio).trim_suffix(".0"), usual]
 				text = "%s is a collector, looking for show-quality fish bred in your shop. They'll pay $%d for your %s %s %s (%s)." % [
-					who, price, UI.stars_text(f.stars), UI.sex_symbol(f), state.fish_display_name(f), how]
+					who, price, UI.stars_text(f.stars), UI.sex_symbol(f), state.fish_title(f), how]
 				var card := HBoxContainer.new()
 				card.add_child(UI.fish_preview(f, state.species_of(f), Vector2(90, 46)))
 				_counter.add_child(card)

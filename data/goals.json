@@ -28,6 +28,8 @@
 		{"id": "all_upgrades", "name": "Dream shop", "description": "Buy every shop upgrade.", "metric": "upgrades", "target": 10, "reward": 300},
 		{"id": "first_third_gen", "name": "Deep roots", "description": "Discover a third-generation recipe.", "metric": "third_gen_recipes", "target": 1, "reward": 100},
 		{"id": "first_collector", "name": "Connoisseur", "description": "Sell a fish to a collector.", "metric": "collector_sales", "target": 1, "reward": 50},
-		{"id": "collectors_10", "name": "Reputation for quality", "description": "Sell 10 fish to collectors.", "metric": "collector_sales", "target": 10, "reward": 200}
+		{"id": "collectors_10", "name": "Reputation for quality", "description": "Sell 10 fish to collectors.", "metric": "collector_sales", "target": 10, "reward": 200},
+		{"id": "first_name", "name": "Pet name", "description": "Give a fish a name.", "metric": "fish_named", "target": 1, "reward": 10},
+		{"id": "favorites_5", "name": "Family", "description": "Keep 5 favourite fish.", "metric": "favorites", "target": 5, "reward": 40}
 	]
 }

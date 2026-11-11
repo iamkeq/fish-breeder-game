@@ -383,6 +383,14 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.15.0), fish names and favourites:**
+  - `Fish.nickname` and `Fish.favorite` are saved. `GameState.fish_title()`
+    is the name used in text. `economy.favorites.max` caps favourites.
+  - Favourites are excluded in `fish_for_sale` (so customers, collectors and
+    wishes), `sell_fish`, wholesale, back-order hand-over, tank pricing and
+    order scoring; display-tank sale/delivery leaves them in holding. They
+    cannot be moved into order tanks. Later features (gallery, shows) build
+    on the favourite flag.
 - **2026-11-11 (v0.14.0), harem breeding, stats, starting choices:**
   - `GameState.breeding_group()` is the sire (first adult male with an adult
     female of his species in the tank) and up to

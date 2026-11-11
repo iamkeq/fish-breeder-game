@@ -246,6 +246,8 @@ func _add_stats(state: GameState) -> void:
 		["Sold to customers", str(sold_to_customers)],
 		["Sold to collectors", str(state.stat("collector_sales"))],
 		["Sold wholesale", str(state.stat("wholesale_sold"))],
+		["Fish named", str(state.stat("fish_named"))],
+		["Favourites kept", str(state.favorite_count())],
 		_record_row(state, "Best stars bred", "best_bred", _stars_of, true),
 		["Best stars sold", "★".repeat(best_stars_sold) if best_stars_sold > 0 else "–"],
 		_record_row(state, "Rarest fish sold", "rarest_sold", _variety_of),

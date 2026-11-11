@@ -2,6 +2,21 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.15.0] - 2026-11-11
+
+### Added
+- **Fish names:** give any fish (fry too) a name, up to 16 characters, with
+  the **Name** / **Rename** button on its card in the back room or on the shop
+  floor. Names show in tank lists, the day summary and your records
+  ("Bubbles (Gold Guppy)").
+- **Favourites:** mark up to 24 fish with **♥ Favourite**. A favourite is a
+  keeper: customers never buy it and it is never handed over to a back-order,
+  collector or special order, and it adds nothing to a tank's sale price. It
+  still breeds and can sit in the display tank. Selling or delivering the
+  display tank leaves favourites with you (in holding).
+- Two goals, "Pet name" and "Family" (5 favourites), and Stats lines for fish
+  named and favourites kept.
+
 ## [0.14.0] - 2026-11-11
 
 ### Added

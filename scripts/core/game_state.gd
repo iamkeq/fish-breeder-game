@@ -63,6 +63,8 @@ var challenge_id: String = ""
 const SAVE_VERSION := 1
 ## A challenge can raise a species' mutation chance, but never above this.
 const MAX_MUTATION_CHANCE := 0.5
+## Longest name a fish can be given.
+const MAX_NAME_LENGTH := 16
 
 
 ## Starts a game. `options` may hold "start_id" (a starting pair from
@@ -176,7 +178,8 @@ func tank_price(tank: Tank, include_fish: bool) -> int:
 	var fish_total := 0
 	if include_fish:
 		for f in tank_fish(tank):
-			fish_total += fish_price(f)
+			if not f.favorite:  # favourites never go with a tank
+				fish_total += fish_price(f)
 	return Pricing.tank_price(tank, db.items, tank_aesthetics(tank), fish_total, db.economy)
 
 
@@ -309,6 +312,71 @@ func fish_display_name(f: Fish) -> String:
 	return species_of(f)["name"]
 
 
+## The fish's name for lists and messages: "Bubbles (Gold Guppy)" if it has a
+## nickname, otherwise just the variety name.
+func fish_title(f: Fish) -> String:
+	if f.nickname == "":
+		return fish_display_name(f)
+	return "%s (%s)" % [f.nickname, fish_display_name(f)]
+
+
+# --- Names and favourites ------------------------------------------------------
+
+## Gives a fish a name: trimmed, control characters removed, at most
+## MAX_NAME_LENGTH characters. An empty name clears it. Any fish (fry too).
+func rename_fish(fish_id: int, nickname: String) -> bool:
+	var f := inventory.get_fish(fish_id)
+	if f == null:
+		return false
+	var clean := ""
+	for i in nickname.length():
+		var code := nickname.unicode_at(i)
+		if code >= 32 and code != 127 and not (code >= 128 and code < 160):
+			clean += nickname[i]
+	clean = clean.strip_edges().left(MAX_NAME_LENGTH).strip_edges()
+	if f.nickname == "" and clean != "":
+		_count("fish_named")
+	f.nickname = clean
+	return true
+
+
+func favorite_max() -> int:
+	return int(db.economy.get("favorites", {}).get("max", 24))
+
+
+func favorite_count() -> int:
+	var n := 0
+	for f in inventory.fish_list():
+		if f.favorite:
+			n += 1
+	return n
+
+
+## Why a fish can't be marked as a favourite, or "" if it can.
+func favorite_blocker(fish_id: int) -> String:
+	var f := inventory.get_fish(fish_id)
+	if f == null:
+		return "That fish isn't yours."
+	if f.favorite:
+		return "Already a favourite."
+	if Fish.is_order(f.location):
+		return "Take it out of the order tank first"
+	if favorite_count() >= favorite_max():
+		return "You can keep up to %d favourites." % favorite_max()
+	return ""
+
+
+## Marks or unmarks a favourite. Unmarking always works.
+func set_favorite(fish_id: int, value: bool) -> bool:
+	var f := inventory.get_fish(fish_id)
+	if f == null:
+		return false
+	if value and not f.favorite and favorite_blocker(fish_id) != "":
+		return false
+	f.favorite = value
+	return true
+
+
 # --- Selling -----------------------------------------------------------------
 
 func _earn(amount: int, category: String) -> void:
@@ -346,7 +414,7 @@ func sell_item(item_id: String) -> int:
 ## Sells an adult fish from wherever it is. Returns the money earned (0 if it couldn't).
 func sell_fish(fish_id: int) -> int:
 	var f := inventory.get_fish(fish_id)
-	if f == null or not is_adult(f):
+	if f == null or not is_adult(f) or f.favorite:
 		return 0
 	var price := fish_price(f)
 	_release_fish(f)
@@ -366,7 +434,7 @@ func wholesale_price(f: Fish) -> int:
 ## but for less than a customer would pay. Returns the money earned.
 func sell_fish_wholesale(fish_id: int) -> int:
 	var f := inventory.get_fish(fish_id)
-	if f == null:
+	if f == null or f.favorite:
 		return 0
 	var price := wholesale_price(f)
 	_release_fish(f)
@@ -445,6 +513,8 @@ func move_blocker(fish_id: int, to: String) -> String:
 		return "That fish isn't yours."
 	if f.location == to:
 		return "Already there."
+	if Fish.is_order(to) and f.favorite:
+		return "Favourites stay with you. Un-favourite it first."
 	if (to == Fish.DISPLAY or Fish.is_order(to)) and not is_adult(f):
 		return "Fry stay in the back room until they grow up."
 	var target := tank_at(to)
@@ -561,7 +631,7 @@ func preview_delivery(order_index: int, from_order_tank: bool = false) -> Dictio
 	var tank := order_tank(order_index) if from_order_tank else display_tank
 	if tank == null:
 		return {}
-	return RequestScoring.score(orders[order_index], tank, tank_fish(tank),
+	return RequestScoring.score(orders[order_index], tank, tank_fish(tank).filter(func(f): return not f.favorite),
 		db.items, tank_aesthetics(tank), tank_price(tank, true), db.economy)
 
 
@@ -663,11 +733,12 @@ func tick_customers(minutes: float) -> bool:
 	return true
 
 
-## Fish customers can see and buy: adults on display or in holding.
+## Fish customers can see and buy: adults on display or in holding, except
+## favourites (those are kept back).
 func fish_for_sale() -> Array:
 	var result := []
 	for f in inventory.fish_list(Fish.DISPLAY) + inventory.fish_list(Fish.HOLDING):
-		if is_adult(f):
+		if is_adult(f) and not f.favorite:
 			result.append(f)
 	return result
 
@@ -697,7 +768,7 @@ func customer_blocker() -> String:
 	match customer.get("kind", ""):
 		"fish":
 			var f := inventory.get_fish(customer["fish_id"])
-			if f == null or not is_adult(f):
+			if f == null or not is_adult(f) or f.favorite:
 				return "That fish isn't available any more."
 		"collector":
 			var cf := inventory.get_fish(customer["fish_id"])
@@ -753,7 +824,7 @@ func collector_rules() -> Dictionary:
 ## the Market charges, so that would be a buy-and-resell money loop.
 func is_collector_fish(f: Fish) -> bool:
 	var rules := collector_rules()
-	if rules.is_empty() or f.paid != 0 or f.strain_id != "" or f.stars < int(rules["min_stars"]):
+	if rules.is_empty() or f.favorite or f.paid != 0 or f.strain_id != "" or f.stars < int(rules["min_stars"]):
 		return false
 	if bool(challenge_rule("customers_buy_only_mutations", false)) and not is_mutation_fish(f):
 		return false
@@ -924,7 +995,7 @@ func backorder_customer() -> bool:
 ## The fish you'd hand over for a fish back-order: a matching adult (same look
 ## and sex) from holding, the display tank or a breeding tank, but never one of
 ## a tank's current breeding group (the sire and its mothers), nor a fish you
-## chose to keep.
+## chose to keep (or marked as a favourite).
 func backorder_fish(order: Dictionary) -> Fish:
 	var candidates: Array = inventory.fish_list(Fish.HOLDING) + inventory.fish_list(Fish.DISPLAY)
 	for i in breeding_tanks.size():
@@ -933,7 +1004,7 @@ func backorder_fish(order: Dictionary) -> Fish:
 			if not f in group:
 				candidates.append(f)
 	for f in candidates:
-		if f.id == int(order.get("keep_id", -1)):
+		if f.favorite or f.id == int(order.get("keep_id", -1)):
 			continue
 		if _matches_breed_order(f, order):
 			return f
@@ -981,7 +1052,7 @@ func customer_can_breed_order() -> bool:
 	if customer.get("kind") != "fish" or not can_backorder():
 		return false
 	var f := inventory.get_fish(customer["fish_id"])
-	return f != null and is_adult(f) and customer_price() < f.paid
+	return f != null and is_adult(f) and not f.favorite and customer_price() < f.paid
 
 
 ## Promise the customer a fish like the one they asked for (same look and sex),
@@ -1388,7 +1459,7 @@ func _count_fish_sold(f: Fish, price: int, suffix: String) -> void:
 
 ## "★★★★★ Koi Guppy": stars, then the fish's name. For the records.
 func _fish_label(f: Fish) -> String:
-	return ("%s %s" % ["★".repeat(f.stars), fish_display_name(f)]).strip_edges()
+	return ("%s %s" % ["★".repeat(f.stars), fish_title(f)]).strip_edges()
 
 
 ## How much a fish's looks multiply its price, times 100 (a whole number so it
@@ -1425,6 +1496,8 @@ func goal_value(metric: String) -> int:
 			return tank_aesthetics(display_tank) if display_tank != null else 0
 		"best_day":
 			return maxi(stat("best_day"), earned_today)
+		"favorites":
+			return favorite_count()
 	return stat(metric)
 
 
@@ -1645,7 +1718,7 @@ func _release_fish(f: Fish) -> void:
 ## Removes the display tank; its fish leave with it or go back to holding.
 func _remove_display_tank(fish_leave_with_tank: bool) -> void:
 	for f in tank_fish(display_tank):
-		if fish_leave_with_tank:
+		if fish_leave_with_tank and not f.favorite:  # favourites always stay with you
 			inventory.remove_fish(f.id)
 		else:
 			f.location = Fish.HOLDING

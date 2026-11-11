@@ -63,6 +63,10 @@ var age_days: int = 0
 ## Becomes false after a night without food. Fry fed every night roll better stars.
 var fed_every_night: bool = true
 var location: String = HOLDING
+## A name the player gave it ("" = none). Up to GameState.MAX_NAME_LENGTH characters.
+var nickname: String = ""
+## A keeper: never sold or handed to a customer, but still breeds and displays.
+var favorite: bool = false
 
 
 func is_adult(species: Dictionary) -> bool:
@@ -97,6 +101,8 @@ func to_dict() -> Dictionary:
 		"age_days": age_days,
 		"fed_every_night": fed_every_night,
 		"location": location,
+		"nickname": nickname,
+		"favorite": favorite,
 	}
 
 
@@ -113,4 +119,6 @@ static func from_dict(d: Dictionary) -> Fish:
 	f.age_days = int(d.get("age_days", 0))
 	f.fed_every_night = bool(d.get("fed_every_night", true))
 	f.location = d.get("location", HOLDING)
+	f.nickname = str(d.get("nickname", ""))
+	f.favorite = bool(d.get("favorite", false))
 	return f

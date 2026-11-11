@@ -375,7 +375,8 @@ func _refresh_fish(t: Tank) -> void:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
 		var name := Label.new()
-		name.text = "%s %s %s" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars)]
+		name.text = "%s %s%s %s" % [UI.sex_symbol(f), f.nickname if f.nickname != "" else UI.traits_text(f),
+			" ♥" if f.favorite else "", "★".repeat(f.stars)]
 		name.add_theme_font_size_override("font_size", 13)
 		name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(name)
@@ -395,7 +396,8 @@ func _refresh_fish(t: Tank) -> void:
 			candidates.append(f)
 	for f in candidates:
 		var index := popup.item_count
-		popup.add_item("%s %s %s  (%s)" % [UI.sex_symbol(f), UI.traits_text(f), "★".repeat(f.stars),
+		popup.add_item("%s %s%s %s  (%s)" % [UI.sex_symbol(f), f.nickname if f.nickname != "" else UI.traits_text(f),
+			" ♥" if f.favorite else "", "★".repeat(f.stars),
 			UI.location_name(f.location, state).to_lower()], index)
 		popup.set_item_metadata(index, f.id)
 		var blocker := state.move_blocker(f.id, location)
