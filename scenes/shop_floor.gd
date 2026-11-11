@@ -106,6 +106,8 @@ func _display_card(f: Fish) -> Control:
 	name.add_theme_font_size_override("font_size", 12)
 	top.add_child(name)
 	box.add_child(top)
+	if state.is_adult(f):
+		box.add_child(UI.purity_label(state, f))
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 4)
 	var back := UI.small_button("To back room", state.move_blocker(f.id, Fish.HOLDING))

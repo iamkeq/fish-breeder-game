@@ -65,6 +65,11 @@ var fed_every_night: bool = true
 var location: String = HOLDING
 ## A name the player gave it ("" = none). Up to GameState.MAX_NAME_LENGTH characters.
 var nickname: String = ""
+## How true-breeding this fish's line is, 0-100. Set at birth, never changes.
+## Hidden until the fish is scanned in the Lab. See Purity.
+var purity: int = 50
+## True once the fish has been scanned in the Lab (purity is then shown).
+var scanned: bool = false
 ## A keeper: never sold or handed to a customer, but still breeds and displays.
 var favorite: bool = false
 
@@ -103,10 +108,13 @@ func to_dict() -> Dictionary:
 		"location": location,
 		"nickname": nickname,
 		"favorite": favorite,
+		"purity": purity,
+		"scanned": scanned,
 	}
 
 
-static func from_dict(d: Dictionary) -> Fish:
+## `default_purity` is for saves from before purity existed (economy.purity.baseline).
+static func from_dict(d: Dictionary, default_purity: int = 50) -> Fish:
 	var f := Fish.new()
 	f.id = int(d.get("id", 0))
 	f.species_id = d.get("species_id", "")
@@ -121,4 +129,6 @@ static func from_dict(d: Dictionary) -> Fish:
 	f.location = d.get("location", HOLDING)
 	f.nickname = str(d.get("nickname", ""))
 	f.favorite = bool(d.get("favorite", false))
+	f.purity = int(d.get("purity", default_purity))
+	f.scanned = bool(d.get("scanned", false))
 	return f

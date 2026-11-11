@@ -33,6 +33,10 @@
 		{"id": "favorites_5", "name": "Family", "description": "Keep 5 favourite fish.", "metric": "favorites", "target": 5, "reward": 40},
 		{"id": "rep_level_3", "name": "Rising name", "description": "Reach shop reputation level 3.", "metric": "reputation_level", "target": 3, "reward": 80},
 		{"id": "rep_level_5", "name": "Breeder of Note", "description": "Reach shop reputation level 5.", "metric": "reputation_level", "target": 5, "reward": 200},
-		{"id": "rep_max", "name": "Famous", "description": "Reach the top reputation level.", "metric": "reputation_level", "target": 7, "reward": 400}
+		{"id": "rep_max", "name": "Famous", "description": "Reach the top reputation level.", "metric": "reputation_level", "target": 7, "reward": 400},
+		{"id": "first_scan", "name": "Under the microscope", "description": "Scan a fish in the Lab.", "metric": "fish_scanned", "target": 1, "reward": 20},
+		{"id": "pure_line", "name": "Pure line", "description": "Scan a fish with 70% line purity.", "metric": "best_purity_scanned", "target": 70, "reward": 80},
+		{"id": "champion_line", "name": "Champion line", "description": "Scan a fish with 90% line purity.", "metric": "best_purity_scanned", "target": 90, "reward": 200},
+		{"id": "scans_10", "name": "Lab regular", "description": "Scan 10 fish in the Lab.", "metric": "fish_scanned", "target": 10, "reward": 100}
 	]
 }

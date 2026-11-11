@@ -7,12 +7,15 @@ static func quality_multiplier(stars: int, economy: Dictionary) -> float:
 	return float(economy["quality_multipliers"][str(stars)])
 
 
-## Fry can't be sold, so their price is 0.
+## Fry can't be sold, so their price is 0. A fish bred in the shop and scanned
+## in the Lab earns a "certified" bonus for high purity (never for bought fish).
 static func fish_price(fish: Fish, species: Dictionary, economy: Dictionary) -> int:
 	if not fish.is_adult(species):
 		return 0
 	var price := float(species["base_price"]) * quality_multiplier(fish.stars, economy) \
 		* trait_multiplier(fish, species)
+	if fish.scanned and fish.paid == 0 and fish.strain_id == "":
+		price *= 1.0 + Purity.certified_bonus(fish.purity, economy.get("lab", {}))
 	return maxi(1, roundi(price))
 
 

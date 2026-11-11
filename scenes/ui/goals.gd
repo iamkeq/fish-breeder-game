@@ -324,6 +324,8 @@ func _add_stats(state: GameState) -> void:
 		_record_row(state, "Best stars bred", "best_bred", _stars_of, true),
 		["Best stars sold", "★".repeat(best_stars_sold) if best_stars_sold > 0 else "–"],
 		_record_row(state, "Rarest fish sold", "rarest_sold", _variety_of),
+		["Fish scanned", str(state.stat("fish_scanned"))],
+		_record_row(state, "Purest fish", "purest_fish", func(r): return "%d%%" % int(r["amount"])),
 	])
 	var progress := [
 		["Shop reputation", "%s  (%d pts)" % [state.reputation_level_name(), state.reputation]],

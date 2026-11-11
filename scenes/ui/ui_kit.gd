@@ -119,6 +119,19 @@ static func favorite_button(state: GameState, f: Fish) -> Button:
 	return b
 
 
+## "Purity: ?" (greyed) until scanned, then "Purity 74% · Pure Line". Fry: nothing, so use for adults.
+static func purity_label(state: GameState, f: Fish) -> Label:
+	var label := Label.new()
+	label.add_theme_font_size_override("font_size", 12)
+	if f.scanned:
+		label.text = "Purity %d%% · %s" % [f.purity, state.purity_tier(f.purity)]
+		label.modulate = Color(0.75, 0.95, 0.7, 0.95)
+	else:
+		label.text = "Purity: ?"
+		label.modulate = Color(1, 1, 1, 0.45)
+	return label
+
+
 static func sex_symbol(f: Fish) -> String:
 	return "♂" if f.sex == Fish.MALE else "♀"
 

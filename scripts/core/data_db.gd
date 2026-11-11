@@ -15,7 +15,7 @@ const TEMPLATE_FIELDS := ["id", "species", "theme_tags", "fish_count", "constrai
 const STRAIN_FIELDS := ["id", "name", "species", "tier", "stars", "traits"]
 const ECONOMY_FIELDS := ["quality_multipliers", "offspring_quality_nudge", "tank_pricing",
 	"aesthetics", "breeding_tank_capacity", "breeding_tanks", "clock", "customers", "requests", "backorders", "wholesale",
-	"fish_market", "starting_state"]
+	"fish_market", "starting_state", "purity", "lab"]
 
 var species: Dictionary = {}
 var items: Dictionary = {}
@@ -45,7 +45,7 @@ const GOAL_FIELDS := ["id", "name", "description", "metric", "target", "reward"]
 const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "display_looks",
 	"orders_delivered", "backorders_filled", "breeding_tanks", "upgrades", "best_day",
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
-	"reputation_level"]
+	"reputation_level", "fish_scanned", "best_purity_scanned"]
 ## What a reputation level can change. See GameState.reputation_effect().
 const REPUTATION_EFFECTS := ["extra_customers", "extra_orders"]
 ## What earns reputation points. See GameState._rep().
@@ -360,6 +360,46 @@ func _validate_template(t: Dictionary) -> void:
 			errors.append("%s: constraint '%s' is not a trait of %s" % [ctx, c, t["species"]])
 
 
+## economy.purity (creation numbers, star nudge, tiers) and economy.lab (scan fee, certified bonus).
+func _validate_purity() -> void:
+	var rules = economy["purity"]
+	var lab = economy["lab"]
+	if not (rules is Dictionary and lab is Dictionary):
+		errors.append("economy: 'purity' and 'lab' must be objects")
+		return
+	if _require(rules, ["baseline", "market", "true_gain", "outcross_loss", "floor", "new_line", "star_nudge", "tiers"], "economy/purity"):
+		for key in ["baseline", "market", "true_gain", "outcross_loss", "floor", "new_line"]:
+			var v = rules[key]
+			if not ((v is int or v is float) and v >= 0 and v <= 100):
+				errors.append("economy/purity: '%s' must be a number from 0 to 100" % key)
+		for key in ["star_nudge", "tiers"]:
+			if not (rules[key] is Array and not rules[key].is_empty()):
+				errors.append("economy/purity: '%s' must be a non-empty list" % key)
+				return
+		for tier in rules["star_nudge"]:
+			if not (tier is Dictionary and tier.has("min") and (tier.get("shift") is float or tier.get("shift") is int)):
+				errors.append("economy/purity/star_nudge: each entry needs 'min' and 'shift'")
+			elif not (float(tier["shift"]) >= 0.0 and float(tier["shift"]) <= 1.0):
+				errors.append("economy/purity/star_nudge: 'shift' must be between 0 and 1")
+		var has_zero := false
+		for tier in rules["tiers"]:
+			if not (tier is Dictionary and tier.has("min") and tier.has("name")):
+				errors.append("economy/purity/tiers: each tier needs 'min' and 'name'")
+			elif int(tier["min"]) == 0:
+				has_zero = true
+		if not has_zero:
+			errors.append("economy/purity/tiers: needs a tier starting at 0")
+	if _require(lab, ["scan_cost", "certified_bonus"], "economy/lab"):
+		if not ((lab["scan_cost"] is int or lab["scan_cost"] is float) and int(lab["scan_cost"]) >= 0):
+			errors.append("economy/lab: 'scan_cost' must be a number")
+		if not lab["certified_bonus"] is Array:
+			errors.append("economy/lab: 'certified_bonus' must be a list")
+		else:
+			for tier in lab["certified_bonus"]:
+				if not (tier is Dictionary and tier.has("min") and tier.has("bonus")):
+					errors.append("economy/lab/certified_bonus: each entry needs 'min' and 'bonus'")
+
+
 func _validate_economy() -> void:
 	if not _require(economy, ECONOMY_FIELDS, "economy"):
 		return
@@ -379,6 +419,7 @@ func _validate_economy() -> void:
 	if not (favorites is Dictionary and (favorites.get("max") is int or favorites.get("max") is float)
 			and int(favorites["max"]) >= 1):
 		errors.append("economy/favorites: needs a 'max' number of 1 or more")
+	_validate_purity()
 	var collector = economy["customers"].get("collector")
 	if collector != null and not (collector is Dictionary and collector.has("min_stars")
 			and collector.get("price_multipliers") is Dictionary):

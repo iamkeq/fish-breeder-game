@@ -47,7 +47,7 @@ var book_bonuses: Dictionary = {}
 ## Lifetime counters ("fish_sold", "best_day", ...), used by goals.
 var stats: Dictionary = {}
 ## Personal bests that need words: key -> {"amount": int, "what": String, "day": int,
-## "tie": int}. Keys: "best_sale", "rarest_sold", "best_bred". `tie` breaks a tie
+## "tie": int}. Keys: "best_sale", "rarest_sold", "best_bred", "purest_fish". `tie` breaks a tie
 ## on `amount`. See _record().
 var records: Dictionary = {}
 ## Shop reputation points. Only ever goes up. See data/reputation.json.
@@ -90,7 +90,7 @@ static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator, options: Dictio
 	s._add_breeding_tank()
 	s._apply_starter_layout(s.display_tank, start.get("display_tank_layout", {}))
 	for fish_data in s._starting_fish(chosen_start):
-		var f := Fish.from_dict(fish_data)
+		var f := Fish.from_dict(fish_data, int(p_db.economy["purity"]["market"]))
 		f.location = Fish.HOLDING
 		if not fish_data.has("age_days"):
 			f.age_days = int(p_db.species[f.species_id]["days_to_adult"])
@@ -299,6 +299,7 @@ func buy_strain(strain_id: String, sex: String) -> Fish:
 	for trait_name in strain["traits"]:
 		f.traits[trait_name] = strain["traits"][trait_name]
 	f.strain_id = strain_id
+	f.purity = int(db.economy["purity"]["market"])
 	f.paid = cost
 	f.location = Fish.HOLDING
 	_spend(cost)
@@ -380,6 +381,55 @@ func set_favorite(fish_id: int, value: bool) -> bool:
 		return false
 	f.favorite = value
 	return true
+
+
+# --- The Lab ---------------------------------------------------------------------
+
+## True once the shop's reputation has opened the Lab.
+func lab_unlocked() -> bool:
+	return has_unlock("lab")
+
+
+func scan_cost() -> int:
+	return int(db.economy["lab"]["scan_cost"])
+
+
+## Why a fish can't be scanned right now ("" if it can).
+func scan_blocker(fish_id: int) -> String:
+	if not lab_unlocked():
+		return "The Lab isn't open yet."
+	var f := inventory.get_fish(fish_id)
+	if f == null:
+		return "No such fish."
+	if not is_adult(f):
+		return "Only grown-up fish can be scanned."
+	if f.scanned:
+		return "Already scanned."
+	if not can_afford(scan_cost()):
+		return "You need $%d more." % (scan_cost() - money)
+	return ""
+
+
+## Pays the fee and reveals a fish's purity. Returns {"purity", "tier"}, or {}
+## if it couldn't be scanned.
+func scan_fish(fish_id: int) -> Dictionary:
+	if scan_blocker(fish_id) != "":
+		return {}
+	var f := inventory.get_fish(fish_id)
+	_spend(scan_cost())
+	f.scanned = true
+	_count("fish_scanned")
+	_record("purest_fish", f.purity, _fish_label(f))
+	return {"purity": f.purity, "tier": purity_tier(f.purity)}
+
+
+func purity_tier(purity: int) -> String:
+	return Purity.tier_name(purity, db.economy["purity"])
+
+
+## Whether this fish's price includes the certified bonus (scanned, shop-bred, pure enough).
+func is_certified(f: Fish) -> bool:
+	return f.scanned and f.paid == 0 and f.strain_id == "" 		and Purity.certified_bonus(f.purity, db.economy["lab"]) > 0.0
 
 
 # --- Selling -----------------------------------------------------------------
@@ -1218,7 +1268,7 @@ func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
 			continue
 		f.age_days += 1
 		if is_adult(f):
-			f.stars = Quality.roll_offspring_stars(f.parent_stars, f.fed_every_night, _star_nudges(), rng)
+			f.stars = Quality.roll_offspring_stars(f.parent_stars, f.fed_every_night, _star_nudges(f.purity), rng)
 			_count("fish_grown")
 			_record_best("best_stars_bred", f.stars)
 			_record("best_bred", f.stars, _fish_label(f), _variety_value(f))
@@ -1244,6 +1294,7 @@ func _night_breed(summary: Dictionary, tank_index: int) -> void:
 		for fry in Genetics.breed(mother, father, breeding_rules, rng):
 			if not tank.has_room_for_fish():
 				return
+			fry.purity = Purity.offspring_purity(mother, father, fry, db.economy["purity"])
 			fry.location = Fish.breeding_location(tank_index)
 			inventory.add_fish(fry)
 			tank.add_fish(fry.id)
@@ -1433,11 +1484,17 @@ func brood_interval(species: Dictionary) -> int:
 
 ## The star-nudge odds for fry growing up. Conditioning food swaps the
 ## "fed every night" odds for the better "premium" ones.
-func _star_nudges() -> Dictionary:
+## A high-purity line shifts both sets of odds towards better stars (Purity.star_shift).
+func _star_nudges(purity: int = -1) -> Dictionary:
 	var nudges: Dictionary = db.economy["offspring_quality_nudge"]
+	var result: Dictionary = nudges
 	if upgrade_effect("premium_food") > 0.0 and nudges.has("premium"):
-		return {"normal": nudges["normal"], "fed": nudges["premium"]}
-	return nudges
+		result = {"normal": nudges["normal"], "fed": nudges["premium"]}
+	var shift := Purity.star_shift(purity, db.economy["purity"]) if purity >= 0 else 0.0
+	if shift > 0.0:
+		result = {"normal": Purity.shift_weights(result["normal"], shift),
+			"fed": Purity.shift_weights(result["fed"], shift)}
+	return result
 
 
 func food_count() -> int:
@@ -1523,6 +1580,8 @@ func goal_value(metric: String) -> int:
 			return favorite_count()
 		"reputation_level":
 			return reputation_level() + 1
+		"best_purity_scanned":
+			return int(records.get("purest_fish", {}).get("amount", 0))
 	return stat(metric)
 
 
@@ -1638,6 +1697,14 @@ func has_unlock(unlock_id: String) -> bool:
 		if unlock_id in levels[i]["unlocks"]:
 			return true
 	return false
+
+
+## The name of the lowest reputation level that lists this unlock ("" if none).
+func unlock_level_name(unlock_id: String) -> String:
+	for level in reputation_levels():
+		if unlock_id in level["unlocks"]:
+			return level["name"]
+	return ""
 
 
 ## How much faster customers come than the base rate (1 = base): upgrades
@@ -1784,7 +1851,7 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 			s.inventory.add(item_id, int(stock[item_id]))
 	for fish_data in d.get("fish", []):
 		if p_db.species.has(fish_data.get("species_id", "")):
-			s.inventory.add_fish(Fish.from_dict(fish_data))
+			s.inventory.add_fish(Fish.from_dict(fish_data, int(p_db.economy["purity"]["baseline"])))
 	s.inventory.set_next_fish_id(int(d.get("next_fish_id", 1)))
 	if d.get("display_tank") != null:
 		s.display_tank = Tank.from_dict(d["display_tank"])

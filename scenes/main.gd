@@ -10,6 +10,7 @@ const OrdersRoom := preload("res://scenes/orders_room.gd")
 const Goals := preload("res://scenes/ui/goals.gd")
 const NewGame := preload("res://scenes/ui/new_game.gd")
 const NameFish := preload("res://scenes/ui/name_fish.gd")
+const Lab := preload("res://scenes/ui/lab.gd")
 
 const SHOP_FLOOR_TEXT := "Shop floor"
 const BELL_TEXT := "● Shop floor"
@@ -33,6 +34,7 @@ var _day_summary: ColorRect
 var _bell: AudioStreamPlayer
 var _book: ColorRect
 var _name_box: ColorRect
+var _lab: ColorRect
 var _orders_room: Control
 var _goals: ColorRect
 var _goals_button: Button
@@ -55,6 +57,9 @@ func _ready() -> void:
 	_name_box = NameFish.new()
 	add_child(_name_box)
 	Game.name_requested.connect(func(fish_id: int): _name_box.open(fish_id))
+	_lab = Lab.new()
+	add_child(_lab)
+	Game.lab_requested.connect(func(): _lab.open())
 	_goals_button = Button.new()
 	_goals_button.pressed.connect(func(): _goals.open())
 	_market_button.add_sibling(_goals_button)
@@ -201,5 +206,6 @@ func _on_day_ended(summary: Dictionary) -> void:
 	_book.close()
 	_goals.close()
 	_name_box.close()
+	_lab.close()
 	_day_summary.show_summary(summary)
 	_update_top_bar()

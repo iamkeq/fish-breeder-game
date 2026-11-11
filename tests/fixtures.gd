@@ -47,6 +47,13 @@ static func economy() -> Dictionary:
 	return {
 		"quality_multipliers": {"1": 0.6, "2": 0.8, "3": 1.0, "4": 1.5, "5": 2.25},
 		"offspring_quality_nudge": {"normal": [0.2, 0.6, 0.2], "fed": [0.1, 0.6, 0.3], "premium": [0.0, 0.0, 1.0]},
+		"purity": {
+			"baseline": 50, "market": 50, "true_gain": 8, "outcross_loss": 12, "floor": 10, "new_line": 30,
+			"star_nudge": [{"min": 70, "shift": 0.08}, {"min": 90, "shift": 0.16}],
+			"tiers": [{"min": 0, "name": "Mixed"}, {"min": 40, "name": "Developing"},
+				{"min": 70, "name": "Pure Line"}, {"min": 90, "name": "Champion Line"}],
+		},
+		"lab": {"scan_cost": 20, "certified_bonus": [{"min": 70, "bonus": 0.10}, {"min": 90, "bonus": 0.25}]},
 		"tank_pricing": {"item_markup": 1.2, "aesthetics_bonus_per_point": 0.5},
 		"aesthetics": {
 			"substrate": 15, "coverage": 25, "hardscape_and_plants": 15,

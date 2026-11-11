@@ -21,6 +21,8 @@ signal goals_reached(goals: Array)
 signal reputation_level_up(level: int, level_name: String)
 ## A screen wants the "name your fish" box opened for this fish.
 signal name_requested(fish_id: int)
+## The player wants the Lab opened.
+signal lab_requested
 
 var save_path := "user://save.json"
 
@@ -212,6 +214,14 @@ func rename_fish(fish_id: int, nickname: String) -> bool:
 	if ok:
 		changed.emit()
 	return ok
+
+
+## Scans a fish in the Lab. Returns {"purity", "tier"}, or {} if it couldn't.
+func scan_fish(fish_id: int) -> Dictionary:
+	var result := state.scan_fish(fish_id)
+	if not result.is_empty():
+		changed.emit()
+	return result
 
 
 func set_favorite(fish_id: int, value: bool) -> bool:

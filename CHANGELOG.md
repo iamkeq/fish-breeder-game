@@ -2,6 +2,26 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.17.0] - 2026-11-11
+
+### Added
+- **Line purity:** every fish now has a hidden purity score (0-100) for its
+  line. Breeding a variety true (both parents match the fry) raises it by 8;
+  an outcross (the fry matches only one parent) lowers it by 12; a new
+  recipe or mutation starts a fresh line at 30. Bought fish and your starting
+  pair begin at 50. Old saves give existing fish 50.
+- **Purity helps stars:** a purer line shifts the star roll when fry grow up
+  (a little at 70+, more at 90+). Fed fry, parent stars and food upgrades all
+  still matter, and purity is never the only way to reach 5 stars.
+- **The Lab** (unlocks at reputation level 3, "Known in Town"): open it from
+  the back room and pay $20 to scan an adult fish. A scan reveals its purity,
+  its tier (Mixed, Developing, Pure Line, Champion Line) and, for fish bred
+  in your shop, a **Certified** price bonus: +10% at 70+ purity, +25% at 90+.
+  Bought fish never get the bonus, so scanning is no resale trick.
+- Purity lines on fish cards ("Purity ?" until scanned), and Stats lines for
+  fish scanned and purest fish.
+- Four new goals: first scan, a Pure Line, a Champion Line and 10 scans.
+
 ## [0.16.0] - 2026-11-11
 
 ### Added

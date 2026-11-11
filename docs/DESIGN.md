@@ -383,6 +383,17 @@ reputation. The design keeps room for all of these.
     reselling". The breed-to-order offer still triggers only below cost.
   - **Fry art:** fry use their own variety's sprite at 40%→100% size by age;
     the sheet's generic baby frames are no longer used.
+- **2026-11-11 (v0.17.0), line purity and the Lab:**
+  - `Fish.purity` / `Fish.scanned` are saved. `Purity` (scripts/core/purity.gd)
+    holds the static rules. "Same variety" means identical `traits` (sex
+    ignored). Numbers live in `economy.purity` and `economy.lab`.
+  - Purity applies through `_star_nudges` as a flat probability shift on top
+    of the food odds. It is hidden until scanned.
+  - The certified price bonus lives in `Pricing.fish_price` and applies only
+    when `scanned and paid == 0 and strain_id == ""`, so Market fish never get
+    it. Typical extra revenue per scan is below the $20 fee; the Lab is for
+    information and records, not profit.
+  - Lab gated by `has_unlock("lab")` (reputation level 3).
 - **2026-11-11 (v0.16.0), shop reputation:**
   - `data/reputation.json`: point values per source, seven levels with
     `effects` (`extra_customers`, `extra_orders`) and `unlocks` ids
