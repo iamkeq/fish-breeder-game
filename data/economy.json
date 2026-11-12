@@ -65,6 +65,7 @@
 		"spawn_interval_minutes": [30, 90],
 		"min_interval_minutes": 12,
 		"first_arrival_minutes": 10,
+		"auto_sell_shelf_items": true,
 		"request_chance": 0.25,
 		"patience_minutes": 90,
 		"wants": { "fish": 3, "item": 2, "tank": 1, "wish": 1.5, "collector": 1.5 },

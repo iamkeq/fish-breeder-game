@@ -35,6 +35,7 @@ const BELL_TEXT := "● Shop floor"
 var _tank_editor: ColorRect
 var _day_summary: ColorRect
 var _bell: AudioStreamPlayer
+var _ding: AudioStreamPlayer
 var _book: ColorRect
 var _name_box: ColorRect
 var _lab: ColorRect
@@ -103,6 +104,9 @@ func _ready() -> void:
 	_bell = AudioStreamPlayer.new()
 	_bell.stream = ShopBell.make_stream()
 	add_child(_bell)
+	_ding = AudioStreamPlayer.new()
+	_ding.stream = ShopBell.make_ding()
+	add_child(_ding)
 	if Game.needs_setup:
 		var setup := NewGame.new()
 		add_child(setup)  # on top of everything: you must pick a start
@@ -132,6 +136,7 @@ func _ready() -> void:
 	Game.changed.connect(_update_top_bar)
 	Game.day_ended.connect(_on_day_ended)
 	Game.customer_arrived.connect(_on_customer_arrived)
+	Game.auto_sale.connect(_on_auto_sale)
 	Game.customer_changed.connect(_update_bell_badge)
 	Game.goals_reached.connect(_on_goals_reached)
 	Game.reputation_level_up.connect(func(_level: int, level_name: String):
@@ -219,6 +224,12 @@ func _on_customer_arrived() -> void:
 	if not _shop_floor.visible or _fish_market.visible or _tank_editor.visible:
 		_bell.play()
 	_update_bell_badge()
+
+
+## A shelf item sold itself: a soft ding and a toast.
+func _on_auto_sale(item_name: String, price: int) -> void:
+	_ding.play()
+	_show_toast("Sold %s from the shelf  +$%d" % [item_name, price])
 
 
 ## "● Shop floor" while someone waits at the counter and you're elsewhere.

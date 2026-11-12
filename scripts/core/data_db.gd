@@ -447,6 +447,9 @@ func _validate_item(item: Dictionary) -> void:
 	var category: String = item["category"]
 	if not category in ITEM_CATEGORIES:
 		errors.append("%s: unknown category '%s'" % [ctx, category])
+	if item.has("growth_days") and (not (item["growth_days"] is int or item["growth_days"] is float) \
+			or int(item["growth_days"]) < 1 or float(item["growth_days"]) != float(int(item["growth_days"]))):
+		errors.append("%s: growth_days must be a whole number of 1 or more" % ctx)
 	if category in PLACEABLE_CATEGORIES and not item.get("height") in HEIGHTS:
 		errors.append("%s: placeable items need 'height' (short/medium/tall)" % ctx)
 	if category == "tank" and not item.has("capacity"):

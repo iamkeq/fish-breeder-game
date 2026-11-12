@@ -474,6 +474,20 @@ reputation. The design keeps room for all of these.
     order scoring; display-tank sale/delivery leaves them in holding. They
     cannot be moved into order tanks. Later features (gallery, shows) build
     on the favourite flag.
+- **2026-11-12 (v0.26.0), auto shelf sales, Growth Flakes, holding fed first:**
+  - `tick_customers()` serves an `item` customer on arrival when it's in stock
+    (`economy.customers.auto_sell_shelf_items`), through `serve_customer()` so
+    money, reputation and stats match a manual sale. Sales queue in the
+    transient `auto_sales`; `Game` drains it and emits `auto_sale` (ding and
+    toast), never `customer_arrived` (no bell).
+  - Food items may have `growth_days`; `_use_food()` uses the fastest food in
+    stock and returns its growth. Growth is capped at `days_to_adult`, so the
+    grow-up star roll still happens exactly once. The Auto-Feeder is free
+    growth of 1 unless faster food is in stock.
+  - `end_day()` feeds holding before the breeding tanks; `unfed_places` in the
+    summary names hungry groups.
+  - `tools/playbot.gd` books auto shelf sales and the standing orders they set
+    off, so its money reconciliation still balances.
 - **2026-11-11 (v0.14.0), harem breeding, stats, starting choices:**
   - `GameState.breeding_group()` is the sire (first adult male with an adult
     female of his species in the tank) and up to

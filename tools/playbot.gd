@@ -138,7 +138,15 @@ func _run_shop() -> void:
 		var minutes := s.clock.advance(step_seconds)
 		if minutes <= 0.0:
 			break
-		if s.tick_customers(minutes) and not s.customer.is_empty():
+		# Shelf items sell themselves inside the tick (and may set off standing
+		# orders), so book both sides the way _act() does.
+		var spent_before := s.stat("total_spent")
+		var arrived := s.tick_customers(minutes)
+		for sale in s.auto_sales:
+			_add(income, "item_sales", int(sale["price"]))
+		s.auto_sales.clear()
+		_add(spend, "standing_orders", s.stat("total_spent") - spent_before)
+		if arrived and not s.customer.is_empty():
 			_handle_customer()
 	if guard >= 1000:
 		print("WARN,day=%d,clock loop guard hit" % s.day)

@@ -41,3 +41,22 @@ static func make_stream() -> AudioStreamWAV:
 	stream.stereo = false
 	stream.data = data
 	return stream
+
+
+## A soft "ding" for a shelf item that sold itself: one short high note that
+## fades quickly, much quieter than the door bell.
+static func make_ding() -> AudioStreamWAV:
+	var length := 0.35
+	var frames := int(RATE * length)
+	var data := PackedByteArray()
+	data.resize(frames * 2)
+	for i in frames:
+		var t := float(i) / RATE
+		var v := sin(TAU * 2093.0 * t) * exp(-12.0 * t) * minf(t / 0.003, 1.0)  # C7
+		data.encode_s16(i * 2, int(clampf(v * 0.22, -1.0, 1.0) * 32767.0))
+	var stream := AudioStreamWAV.new()
+	stream.format = AudioStreamWAV.FORMAT_16_BITS
+	stream.mix_rate = RATE
+	stream.stereo = false
+	stream.data = data
+	return stream

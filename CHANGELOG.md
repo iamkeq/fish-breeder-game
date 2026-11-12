@@ -2,6 +2,23 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.26.0] - 2026-11-12
+
+### Added
+- **Shelf items sell themselves.** A customer who wants something you have
+  on the shelf is served straight away: a soft ding and a "Sold … from the
+  shelf" note, no need to go to the counter. Fish buyers, collectors, orders
+  and wishes for things you're out of still come to the counter.
+- **Growth Flakes** (Market, $8): a richer fish food. When you have some, fry
+  eat it first and grow 2 days per night instead of 1 (never past grown-up).
+  When it runs out they go back to normal food. With the Auto-Feeder, fry
+  still eat Flakes if you have them. The day summary says when they were used.
+
+### Fixed
+- **Fry in the holding tanks no longer go hungry first.** Holding is now fed
+  before the breeding tanks, so when food runs low its fry keep growing. The
+  day summary now says where fry went without food (for example "Tank 2").
+
 ## [0.25.0] - 2026-11-11
 
 ### Added

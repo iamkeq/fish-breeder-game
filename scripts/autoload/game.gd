@@ -15,6 +15,8 @@ signal day_started
 signal customer_changed
 ## A new customer just walked in (rings the shop bell).
 signal customer_arrived
+## A shelf item sold itself (customer served instantly): item name and price.
+signal auto_sale(item_name: String, price: int)
 ## One or more goals were just reached (entries from data/goals.json).
 signal goals_reached(goals: Array)
 ## The shop just reached a new reputation level (0-based index and its name).
@@ -150,6 +152,13 @@ func _process(delta: float) -> void:
 			customer_changed.emit()
 			if not state.customer.is_empty():
 				customer_arrived.emit()
+		if not state.auto_sales.is_empty():
+			var sales := state.auto_sales.duplicate()
+			state.auto_sales.clear()
+			for sale in sales:
+				auto_sale.emit(sale["name"], int(sale["price"]))
+			changed.emit()  # money changed (also runs the goal check)
+			customer_changed.emit()
 	if not clock.is_open:
 		_finish_day()  # reached the hard-close hour
 

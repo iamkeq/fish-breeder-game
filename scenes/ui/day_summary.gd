@@ -191,8 +191,13 @@ func _add_back_room(s: Dictionary) -> void:
 	if not grown.is_empty():
 		_line("Grown up: %d (now ready to sell or breed)" % grown.size())
 		_fish_row(grown, true)
+	if int(s.get("growth_food_used", 0)) > 0:
+		_line("Growth Flakes: fry grew %d days tonight (%d used)" % [int(s.get("growth_food_days", 2)), int(s["growth_food_used"])]).modulate = GOOD
 	if s["fry_unfed"] > 0:
-		_line("%d fry had no food tonight, so they didn't grow. Restock fish food and they'll carry on." % s["fry_unfed"]).modulate = WARN
+		var places := ""
+		if not s.get("unfed_places", []).is_empty():
+			places = " (%s)" % ", ".join(s["unfed_places"])
+		_line("%d fry had no food tonight%s, so they didn't grow. Restock fish food and they'll carry on." % [s["fry_unfed"], places]).modulate = WARN
 
 
 func _add_tomorrow(s: Dictionary) -> void:

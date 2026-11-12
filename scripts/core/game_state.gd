@@ -1061,6 +1061,11 @@ func shop_appeal() -> float:
 		breeding_fish(), looks, db.species, db.economy["customers"])
 
 
+## Shelf sales made by themselves since the UI last looked: {item_id, name, price}.
+## Transient, not saved. The Game autoload drains it after each tick.
+var auto_sales: Array = []
+
+
 ## Moves customer timers on by `minutes` of in-game time while the shop is open.
 ## Returns true if someone arrived at or left the counter.
 func tick_customers(minutes: float) -> bool:
@@ -1078,7 +1083,19 @@ func tick_customers(minutes: float) -> bool:
 	if minutes_to_customer > 0.0:
 		return false
 	customer = _new_customer()
+	if customer.get("kind", "") == "item" and bool(db.economy["customers"].get("auto_sell_shelf_items", true)) \
+			and customer_blocker() == "":
+		_auto_sell_shelf_item()
 	return true
+
+
+## A shelf-item customer is served on the spot, exactly like a manual sale.
+## The sale is queued in `auto_sales` for the UI to announce.
+func _auto_sell_shelf_item() -> void:
+	var item: Dictionary = db.items[customer["item_id"]]
+	var earned := serve_customer()
+	if earned > 0:
+		auto_sales.append({"item_id": item["id"], "name": item["name"], "price": earned})
 
 
 ## Fish customers can see and buy: adults on display or in holding, except
@@ -1508,16 +1525,17 @@ func end_day() -> Dictionary:
 		_reset_day_log()
 	var summary := {
 		"day": day, "earned": earned_today, "food_used": 0,
-		"fry_unfed": 0, "fry_grown_up": 0, "fry_born": 0,
+		"fry_unfed": 0, "unfed_places": [], "growth_food_used": 0, "fry_grown_up": 0, "fry_born": 0,
 		"log": day_log.duplicate(true), "money_end": money,
 		"born_ids": [], "grown_ids": [], "mutations": [], "discoveries": [], "book_bonuses": [],
 	}
+	# Fry moved out to holding (to make room) are fed first, so they don't go
+	# hungry while a breeding tank takes the last portion.
+	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING), "Holding")
 	# Each breeding tank is separate: its own food, growth and pair.
 	for i in breeding_tanks.size():
-		_night_feed_and_grow(summary, tank_fish(breeding_tanks[i]))
+		_night_feed_and_grow(summary, tank_fish(breeding_tanks[i]), "Tank %d" % (i + 1))
 		_night_breed(summary, i)
-	# Fry moved out to holding (to make room) keep growing there too.
-	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING))
 	_count("fish_bred", summary["fry_born"])
 	_staff_finish_night(summary)
 	# Last of all, so food used tonight is noticed. Placed orders arrive tomorrow morning.
@@ -1550,28 +1568,43 @@ func end_day() -> Dictionary:
 
 
 ## Feeds one group of fish (a breeding tank, or holding): if it has fry, it
-## uses one portion of food and they all grow a day. No food = no growth
-## tonight, but no harm.
-func _night_feed_and_grow(summary: Dictionary, group: Array) -> void:
+## uses one portion of food and they all grow (a day, or more with a dearer
+## food), never past adulthood. No food = no growth tonight, but no harm.
+## `place` names the group in the summary if it goes hungry.
+func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "") -> void:
 	var fry: Array[Fish] = []
 	for f in group:
 		if not is_adult(f):
 			fry.append(f)
 	if fry.is_empty():
 		return
-	var auto := upgrade_effect("auto_feed") > 0.0  # auto-feeders use no food
-	var fed := auto or _use_food()
-	if not fed and _staff_buys_food():
-		fed = _use_food()
+	# Auto-feeders give a day's growth for free, unless Growth Flakes are in
+	# stock: then they use one (the player bought them to grow fry faster).
+	var auto := upgrade_effect("auto_feed") > 0.0
+	var growth := 0
+	var used_food := false
+	if not auto or _best_food_growth() > 1:
+		growth = _use_food()
+		used_food = growth > 0
+	if growth == 0 and auto:
+		growth = 1
+	if growth == 0 and _staff_buys_food():
+		growth = _use_food()
+		used_food = growth > 0
 		_staff_night["feeder_fry"] = int(_staff_night.get("feeder_fry", 0)) + fry.size()
-	if fed and not auto:
+	if used_food:
 		summary["food_used"] += 1
+		if growth > 1:
+			summary["growth_food_used"] += 1
+			summary["growth_food_days"] = maxi(int(summary.get("growth_food_days", 0)), growth)
+	if growth == 0 and place != "":
+		summary["unfed_places"].append(place)
 	for f in fry:
-		if not fed:
+		if growth == 0:
 			f.fed_every_night = false
 			summary["fry_unfed"] += 1
 			continue
-		f.age_days += 1
+		f.age_days = mini(f.age_days + growth, maxi(f.age_days + 1, int(species_of(f)["days_to_adult"])))
 		if is_adult(f):
 			f.stars = Quality.roll_offspring_stars(f.parent_stars, f.fed_every_night, _star_nudges(f.purity), rng)
 			_count("fish_grown")
@@ -1811,7 +1844,8 @@ func food_count() -> int:
 
 ## A guess at how many portions of fish food tonight's feeding will use: one for
 ## every group of fish (each breeding tank, and holding) that has fry. The
-## auto-feeder upgrade uses none. Matches _night_feed_and_grow().
+## auto-feeder upgrade uses none. Matches _night_feed_and_grow(). (Holding is
+## fed first, then each breeding tank; that matters only when food runs short.)
 func food_use_per_night() -> int:
 	if upgrade_effect("auto_feed") > 0.0:
 		return 0
@@ -1826,11 +1860,32 @@ func food_use_per_night() -> int:
 	return used
 
 
-func _use_food() -> bool:
+## Growth days one portion of this food gives (items' `growth_days`, default 1).
+func food_growth_days(item_id: String) -> int:
+	return maxi(1, int(db.items[item_id].get("growth_days", 1)))
+
+
+## The best growth any food in stock gives (0 if there is none).
+func _best_food_growth() -> int:
+	var best := 0
 	for item_id in db.items_in_category("food"):
-		if inventory.remove(item_id):
-			return true
-	return false
+		if inventory.count(item_id) > 0:
+			best = maxi(best, food_growth_days(item_id))
+	return best
+
+
+## Uses one portion of the food that grows fry fastest. Returns the days of
+## growth it gives (0 = no food in stock).
+func _use_food() -> int:
+	var best_id := ""
+	var best := 0
+	for item_id in db.items_in_category("food"):
+		if inventory.count(item_id) > 0 and food_growth_days(item_id) > best:
+			best = food_growth_days(item_id)
+			best_id = item_id
+	if best_id != "" and inventory.remove(best_id):
+		return best
+	return 0
 
 
 # --- Standing orders -----------------------------------------------------------

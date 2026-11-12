@@ -1,6 +1,7 @@
 {
 	"items": [
 		{ "id": "fish_food", "name": "Fish Food", "category": "food", "cost": 2, "price": 3, "tags": [], "color": "#c2703d" },
+		{ "id": "growth_food", "name": "Growth Flakes", "category": "food", "cost": 8, "price": 10, "tags": [], "color": "#7fb04a", "growth_days": 2 },
 		{ "id": "tank_20l", "name": "20L Tank", "category": "tank", "cost": 25, "price": 29, "tags": [], "capacity": 6, "color": "#bfe3f2" }
 	]
 }
