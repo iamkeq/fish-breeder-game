@@ -85,6 +85,11 @@ var deliveries: Array = []
 var last_deliveries: Array = []
 ## Orders placed so far today: [{item_id, name, quantity, cost}]. For the day summary.
 var _orders_placed_today: Array = []
+## Regular customers' progress: regular id -> {met, visits, loyalty, purchases,
+## last_day}. Saved. See data/regulars.json and Regulars.
+var regulars_state: Dictionary = {}
+## Regulars who have already visited today (not saved: a day is never saved midway).
+var _regulars_today: Array = []
 
 ## Which starting pair and challenge mode this game began with ("" = the
 ## standard ones). See data/new_game.json.
@@ -740,7 +745,8 @@ func _spend(amount: int) -> void:
 
 
 func _reset_day_log() -> void:
-	day_log = {"money_start": money, "sales": {}, "spent": 0, "served": 0, "walked_out": 0, "goals": []}
+	day_log = {"money_start": money, "sales": {}, "spent": 0, "served": 0, "walked_out": 0, "goals": [],
+		"regulars_served": [], "regulars_met": [], "tips": 0}
 
 
 ## Sells one item from stock. Returns the money earned (0 if it couldn't).
@@ -755,14 +761,17 @@ func sell_item(item_id: String) -> int:
 
 
 ## Sells an adult fish from wherever it is. Returns the money earned (0 if it couldn't).
-func sell_fish(fish_id: int) -> int:
+## `tip_rate` is a regular's extra share on top of the price (0 for everyone else).
+func sell_fish(fish_id: int, tip_rate: float = 0.0) -> int:
 	var f := inventory.get_fish(fish_id)
 	if f == null or not is_adult(f) or f.favorite:
 		return 0
-	var price := fish_price(f)
+	var tip := Regulars.tip_amount(fish_price(f), tip_rate)
+	var price := fish_price(f) + tip
 	_release_fish(f)
 	_earn(price, "fish")
 	_count_fish_sold(f, price, "")
+	_book_tip(tip)
 	return price
 
 
@@ -978,8 +987,14 @@ func preview_delivery(order_index: int, from_order_tank: bool = false) -> Dictio
 	var tank := order_tank(order_index) if from_order_tank else display_tank
 	if tank == null:
 		return {}
-	return RequestScoring.score(orders[order_index], tank, tank_fish(tank).filter(func(f): return not f.favorite),
+	var result := RequestScoring.score(orders[order_index], tank, tank_fish(tank).filter(func(f): return not f.favorite),
 		db.items, tank_aesthetics(tank), tank_price(tank, true), db.economy)
+	# A regular's tip goes on the bonus only: the tank's value follows Market
+	# prices, so tipping that would make building tanks to order a money loop.
+	var regular_id := str(orders[order_index].get("regular_id", ""))
+	result["tip"] = Regulars.tip(int(result["bonus"]), regular_level(regular_id), regular_rules()) if regular_id != "" else 0
+	result["payout"] = int(result["payout"]) + int(result["tip"])
+	return result
 
 
 ## Hands a tank (with its fish) to the customer: the order's own tank, or the
@@ -1001,9 +1016,11 @@ func deliver_order(order_index: int, from_order_tank: bool = false) -> Dictionar
 		_dismantle_order_tank(order)  # a half-built order tank goes back to stock
 	orders.remove_at(order_index)
 	_earn(result["payout"], "order")
+	_book_tip(int(result["tip"]))
 	_count("orders_delivered")
 	_rep("order_delivered")
 	_record("best_sale", int(result["payout"]), what)
+	_regular_purchase(str(order.get("regular_id", "")))
 	return result
 
 
@@ -1113,7 +1130,7 @@ func customer_price() -> int:
 	match customer.get("kind", ""):
 		"fish":
 			var f := inventory.get_fish(customer["fish_id"])
-			return fish_price(f) if f != null else 0
+			return fish_price(f) + Regulars.tip_amount(fish_price(f), customer_tip_rate()) if f != null else 0
 		"item":
 			return Pricing.item_price(db.items[customer["item_id"]])
 		"tank":
@@ -1124,7 +1141,7 @@ func customer_price() -> int:
 			return fish_wish_terms(customer["wish"])["price"]
 		"collector":
 			var cf := inventory.get_fish(customer["fish_id"])
-			return collector_price(cf) if cf != null else 0
+			return collector_price(cf) + Regulars.tip_amount(collector_price(cf), customer_tip_rate()) if cf != null else 0
 	return 0
 
 
@@ -1162,20 +1179,22 @@ func serve_customer() -> int:
 		return 0
 	var earned := 0
 	var fish_sold: Fish = null
+	var tip_rate := customer_tip_rate()
 	if customer["kind"] in ["fish", "collector"]:
 		fish_sold = inventory.get_fish(customer["fish_id"])
 	match customer["kind"]:
 		"fish":
-			earned = sell_fish(customer["fish_id"])
+			earned = sell_fish(customer["fish_id"], tip_rate)
 		"item":
 			earned = sell_item(customer["item_id"])
 		"tank":
 			earned = sell_display_tank(customer.get("with_fish", true))
 		"collector":
-			earned = _sell_to_collector(customer["fish_id"])
+			earned = _sell_to_collector(customer["fish_id"], tip_rate)
 	if earned > 0:
 		# Reputation comes only from selling to customers, never from buying.
 		_rep("sale", _star_bonus(fish_sold.stars) if fish_sold != null else 0)
+		_regular_purchase(str(customer.get("regular_id", "")))
 	day_log["served"] = day_log.get("served", 0) + 1
 	_count("customers_served")
 	_customer_leaves()
@@ -1230,13 +1249,15 @@ func collector_price(f: Fish) -> int:
 	return roundi(fish_price(f) * float(multipliers.get(str(f.stars), 1.0)))
 
 
-func _sell_to_collector(fish_id: int) -> int:
+func _sell_to_collector(fish_id: int, tip_rate: float = 0.0) -> int:
 	var f := inventory.get_fish(fish_id)
 	if f == null or not is_collector_fish(f):
 		return 0
-	var price := collector_price(f)
+	var tip := Regulars.tip_amount(collector_price(f), tip_rate)
+	var price := collector_price(f) + tip
 	_release_fish(f)
 	_earn(price, "collector")
+	_book_tip(tip)
 	_count_fish_sold(f, price, " to a collector")
 	_count("collector_sales")
 	_rep("collector_sale")
@@ -1347,6 +1368,8 @@ func backorder_customer() -> bool:
 	if not customer_can_backorder():
 		return false
 	var order := {"name": customer["name"]}
+	if customer.has("regular_id"):
+		order["regular_id"] = customer["regular_id"]
 	if customer.has("item_id"):
 		order["item_id"] = customer["item_id"]
 		order["price"] = Customers.backorder_price(wish_full_price(order), db.economy["backorders"])
@@ -1441,27 +1464,45 @@ func breed_order_for_customer() -> bool:
 		"traits": f.traits.duplicate(), "price": customer_price(),
 		"due_day": day + rng.randi_range(int(wait[0]), int(wait[1])),
 	})
+	if customer.has("regular_id"):
+		backorders[-1]["regular_id"] = customer["regular_id"]  # their price already has the tip
 	_customer_leaves()
 	return true
+
+
+## What handing over a back-order pays: its price, plus a regular's tip on a
+## bred-fish order (Market orders and items are already priced near cost, and
+## breed-orders were quoted with the tip, so those get none).
+func backorder_payout(index: int) -> int:
+	if index < 0 or index >= backorders.size():
+		return 0
+	var order: Dictionary = backorders[index]
+	var price := int(order["price"])
+	if order.has("regular_id") and not order.has("item_id") and order.get("source") == "bred":
+		price += Regulars.tip(price, regular_level(str(order["regular_id"])), regular_rules())
+	return price
 
 
 func fulfil_backorder(index: int) -> int:
 	if backorder_blocker(index) != "":
 		return 0
 	var order: Dictionary = backorders[index]
+	var payout := backorder_payout(index)
 	if order.has("item_id"):
 		inventory.remove(order["item_id"])
 	else:
 		var f := backorder_fish(order)
 		_release_fish(f)
-		_count_fish_sold(f, int(order["price"]), " for %s" % order["name"])
+		_count_fish_sold(f, payout, " for %s" % order["name"])
 	if order.has("item_id"):
-		_record("best_sale", int(order["price"]), "%s for %s" % [db.items[order["item_id"]]["name"], order["name"]])
+		_record("best_sale", payout, "%s for %s" % [db.items[order["item_id"]]["name"], order["name"]])
 	backorders.remove_at(index)
-	_earn(order["price"], "backorder")
+	_earn(payout, "backorder")
+	_book_tip(payout - int(order["price"]))
 	_count("backorders_filled")
 	_rep("backorder_filled")
-	return order["price"]
+	_regular_purchase(str(order.get("regular_id", "")))
+	return payout
 
 
 func cancel_backorder(index: int) -> bool:
@@ -1488,11 +1529,156 @@ func _new_customer() -> Dictionary:
 	}
 	if not can_backorder():
 		ctx["all_items"] = []
-	var c := Customers.make_walk_in(ctx, db.economy["customers"], rng)
+	var regular_id := _pick_regular()
+	var c: Dictionary
+	if regular_id != "":
+		c = _regular_walk_in(regular_id, ctx)
+	else:
+		c = Customers.make_walk_in(ctx, db.economy["customers"], rng)
 	c["patience"] *= 1.0 + upgrade_effect("patience")
-	if c["kind"] == "request":
+	if c["kind"] == "request" and not c.has("request"):
 		c["request"] = make_request()
 	return c
+
+
+# --- Regular customers ---------------------------------------------------------
+
+func regular_rules() -> Dictionary:
+	return db.regulars.get("rules", {})
+
+
+## One regular's saved progress, with defaults for anything missing.
+func regular_state(regular_id: String) -> Dictionary:
+	var st: Dictionary = regulars_state.get(regular_id, {})
+	return {"met": bool(st.get("met", false)), "visits": int(st.get("visits", 0)),
+		"loyalty": int(st.get("loyalty", 0)), "purchases": int(st.get("purchases", 0)),
+		"last_day": int(st.get("last_day", 0))}
+
+
+## Loyalty level (0 to 5 hearts) of a regular.
+func regular_level(regular_id: String) -> int:
+	if regular_id == "":
+		return 0
+	return Regulars.level(int(regular_state(regular_id)["loyalty"]), regular_rules())
+
+
+## The regular at the counter, or {}.
+func customer_regular() -> Dictionary:
+	return db.regular_by_id(str(customer.get("regular_id", "")))
+
+
+## The tip rate the customer at the counter adds to a fish sale (0 if not a
+## regular, or buying something that gets no tip).
+func customer_tip_rate() -> float:
+	var regular_id := str(customer.get("regular_id", ""))
+	if regular_id == "" or not customer.get("kind", "") in ["fish", "collector"]:
+		return 0.0
+	return Regulars.tip_rate(regular_level(regular_id), regular_rules())
+
+
+## The tip that is part of customer_price() (0 for everyone but a tipping regular).
+func customer_tip() -> int:
+	match customer.get("kind", ""):
+		"fish":
+			var f := inventory.get_fish(customer["fish_id"])
+			return Regulars.tip_amount(fish_price(f), customer_tip_rate()) if f != null else 0
+		"collector":
+			var cf := inventory.get_fish(customer["fish_id"])
+			return Regulars.tip_amount(collector_price(cf), customer_tip_rate()) if cf != null else 0
+	return 0
+
+
+## Who walks in as a regular right now, or "" for an ordinary customer.
+func _pick_regular() -> String:
+	var rules := regular_rules()
+	if rules.is_empty() or day < int(rules["unlock_day"]) or rng.randf() >= float(rules["visit_chance"]):
+		return ""
+	return Regulars.pick(db.regulars["regulars"], regulars_state, _regulars_today, rng)
+
+
+## Builds the counter customer for a regular and records the visit.
+func _regular_walk_in(regular_id: String, ctx: Dictionary) -> Dictionary:
+	var reg := db.regular_by_id(regular_id)
+	var rules := regular_rules()
+	var st := regular_state(regular_id)
+	var first := not bool(st["met"])
+	st["met"] = true
+	st["visits"] = int(st["visits"]) + 1
+	st["last_day"] = day
+	regulars_state[regular_id] = st
+	_regulars_today.append(regular_id)
+	if first:
+		if day_log.is_empty():
+			_reset_day_log()
+		day_log["regulars_met"].append(reg["name"])
+	var c := {"name": reg["name"], "waited": 0.0, "regular_id": regular_id, "new_regular": first,
+		"patience": float(db.economy["customers"]["patience_minutes"])}
+	var liked := Regulars.best_match(ctx["fish_for_sale"], reg)
+	if liked != null:
+		c["kind"] = "fish"
+		c["fish_id"] = liked.id
+		return c
+	if regular_level(regular_id) >= int(rules["order_level"]) and can_accept_request() \
+			and rng.randf() < float(rules["order_chance"]):
+		c["kind"] = "request"
+		c["request"] = _regular_request(reg)
+		return c
+	var fav: Dictionary = reg["favorite"]
+	for w in ctx["wishable"]:
+		if w["species_id"] == reg.get("species", "guppy") and w["trait"] == fav["trait"] and w["value"] == fav["value"]:
+			c["kind"] = "wish_fish"
+			c["wish"] = w
+			c["sex"] = Fish.MALE if rng.randf() < 0.5 else Fish.FEMALE
+			return c
+	# Nothing of theirs to ask for: an ordinary walk-in, but still themselves.
+	var plain := Customers.make_walk_in(ctx, db.economy["customers"], rng)
+	plain["name"] = reg["name"]
+	plain["regular_id"] = regular_id
+	plain["new_regular"] = first
+	return plain
+
+
+## A special order built around the regular's favourite look, paying more.
+func _regular_request(reg: Dictionary) -> Dictionary:
+	var request := make_request()
+	var fav: Dictionary = reg["favorite"]
+	if request["species_id"] == reg.get("species", "guppy"):
+		var found := false
+		for constraint in request["constraints"]:
+			if constraint["trait"] == fav["trait"]:
+				constraint["value"] = fav["value"]
+				found = true
+		if not found:
+			request["constraints"].append({"trait": fav["trait"], "value": fav["value"],
+				"min_count": request["fish_count"]})
+	request["base_reward"] = roundi(int(request["base_reward"]) * (1.0 + float(regular_rules()["order_bonus"])))
+	request["regular_id"] = reg["id"]
+	return request
+
+
+## A regular bought something: loyalty grows and today's summary remembers them.
+func _regular_purchase(regular_id: String) -> void:
+	if regular_id == "" or regular_rules().is_empty():
+		return
+	var st := regular_state(regular_id)
+	st["purchases"] = int(st["purchases"]) + 1
+	st["loyalty"] = int(st["loyalty"]) + int(regular_rules()["loyalty_per_purchase"])
+	regulars_state[regular_id] = st
+	_count("regular_purchases")
+	if day_log.is_empty():
+		_reset_day_log()
+	var who: String = db.regular_by_id(regular_id).get("name", "")
+	if who != "" and not who in day_log["regulars_served"]:
+		day_log["regulars_served"].append(who)
+
+
+func _book_tip(tip: int) -> void:
+	if tip <= 0:
+		return
+	_count("regular_tips", tip)
+	if day_log.is_empty():
+		_reset_day_log()
+	day_log["tips"] = int(day_log.get("tips", 0)) + tip
 
 
 func _customer_leaves() -> void:
@@ -1509,6 +1695,7 @@ func open_day() -> void:
 	earned_today = 0
 	_reset_day_log()
 	_orders_placed_today = []
+	_regulars_today = []
 	clock.open_shop()
 	customer = {}
 	minutes_to_customer = float(db.economy["customers"]["first_arrival_minutes"])
@@ -2320,6 +2507,13 @@ func goal_value(metric: String) -> int:
 			return staff.size()
 		"standing_orders_active":
 			return standing_orders_active()
+		"regulars_met":
+			return regulars_state.values().filter(func(st): return bool(st.get("met", false))).size()
+		"regulars_max_loyal":
+			if regular_rules().is_empty():
+				return 0
+			var top := Regulars.max_level(regular_rules())
+			return regulars_state.keys().filter(func(id): return regular_level(id) >= top).size()
 	return stat(metric)
 
 
@@ -2553,6 +2747,7 @@ func to_dict() -> Dictionary:
 		"standing_orders": standing_orders.duplicate(true),
 		"order_money_floor": order_money_floor,
 		"deliveries": deliveries.duplicate(true),
+		"regulars_state": regulars_state.duplicate(true),
 	}
 
 
@@ -2607,6 +2802,13 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 		if delivery is Dictionary and p_db.items.has(delivery.get("item_id", "")) and int(delivery.get("quantity", 0)) > 0:
 			s.deliveries.append({"item_id": delivery["item_id"], "quantity": int(delivery["quantity"]),
 				"arrive_day": int(delivery.get("arrive_day", s.day))})
+	var saved_regulars: Dictionary = d.get("regulars_state", {})
+	for id in saved_regulars:
+		if saved_regulars[id] is Dictionary:
+			var st: Dictionary = saved_regulars[id]
+			s.regulars_state[id] = {"met": bool(st.get("met", false)), "visits": int(st.get("visits", 0)),
+				"loyalty": int(st.get("loyalty", 0)), "purchases": int(st.get("purchases", 0)),
+				"last_day": int(st.get("last_day", 0))}
 	for id in d.get("upgrades", {}):
 		if p_db.upgrades.has(id):
 			s.upgrades[id] = int(d["upgrades"][id])

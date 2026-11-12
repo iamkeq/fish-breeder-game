@@ -474,6 +474,19 @@ reputation. The design keeps room for all of these.
     order scoring; display-tank sale/delivery leaves them in holding. They
     cannot be moved into order tanks. Later features (gallery, shows) build
     on the favourite flag.
+- **2026-11-12 (v0.27.0), regular customers:**
+  - `data/regulars.json` holds the rules and 8 characters (favourite
+    trait/value, min stars). `scripts/core/regulars.gd` is the pure maths
+    (loyalty level, tip). `regulars_state` (saved) tracks met, visits, loyalty
+    and purchases.
+  - `_new_customer()` may swap a walk-in for a regular: matching fish, then a
+    favourite-themed special order at loyalty 3+, then a wish_fish, else an
+    ordinary walk-in under their name. Met regulars are twice as likely, and
+    nobody visits twice a day.
+  - Tips round down and apply only to the shop's own fish prices (fish and
+    collector sales, bred-fish back-orders) and to a special order's bonus,
+    never to Market-priced goods or tank value, so the max +20% tip can't make
+    buy-and-resell pay (tested for every Market strain).
 - **2026-11-12 (v0.26.0), auto shelf sales, Growth Flakes, holding fed first:**
   - `tick_customers()` serves an `item` customer on arrival when it's in stock
     (`economy.customers.auto_sell_shelf_items`), through `serve_customer()` so

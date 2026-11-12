@@ -296,3 +296,12 @@ func test_an_old_save_without_names_loads() -> void:
 	for f in loaded.inventory.fish_list():
 		assert_eq(f.nickname, "")
 		assert_false(f.favorite)
+
+
+func test_regulars_progress_is_saved_and_old_saves_load() -> void:
+	gs.regulars_state["mrs_pike"] = {"met": true, "visits": 3, "loyalty": 7, "purchases": 4, "last_day": 2}
+	var loaded := _reload(gs)
+	assert_eq(loaded.regulars_state["mrs_pike"], {"met": true, "visits": 3, "loyalty": 7, "purchases": 4, "last_day": 2})
+	var old := SaveFile.parse(JSON.stringify(gs.to_dict()))
+	old.erase("regulars_state")
+	assert_eq(GameState.from_dict(F.db(), F.rng(99), old).regulars_state, {})

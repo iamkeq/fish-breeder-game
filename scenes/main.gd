@@ -223,6 +223,10 @@ Next: %s at %d" % [next["name"], int(next["points"])]]
 func _on_customer_arrived() -> void:
 	if not _shop_floor.visible or _fish_market.visible or _tank_editor.visible:
 		_bell.play()
+	var c: Dictionary = Game.state.customer
+	if c.has("regular_id"):
+		_show_toast("%s, a new regular, has come in!" % c["name"] if bool(c.get("new_regular", false)) \
+			else "%s is back!" % c["name"])
 	_update_bell_badge()
 
 

@@ -37,6 +37,9 @@ var shows: Dictionary = {}
 ## Shop staff rules (data/staff.json). Empty when a test builds a DataDB without
 ## it (hiring is then closed).
 var staff: Dictionary = {}
+## Regular customers: {rules, regulars} (data/regulars.json). Empty when a test
+## builds a DataDB without it (no regulars then visit).
+var regulars: Dictionary = {}
 ## Starting pairs and challenge modes for a new game, in listed order
 ## (data/new_game.json). With no starts listed there is one implicit "standard"
 ## start built from economy.starting_state.fish; challenges may be empty.
@@ -53,7 +56,7 @@ const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "displa
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
 	"reputation_level", "fish_scanned", "best_purity_scanned", "shows_entered", "ribbons_first", "ribbons",
 	"grand_wins", "hall_of_fame", "pinned", "staff_hired", "staff_count", "staff_actions",
-	"standing_orders_active", "items_delivered"]
+	"standing_orders_active", "items_delivered", "regulars_met", "regulars_max_loyal"]
 ## The jobs a hire can be given, in the order they run each night. See GameState.end_day().
 const STAFF_TASKS := ["feeder", "decorator", "stocker"]
 ## What a reputation level can change. See GameState.reputation_effect().
@@ -91,6 +94,9 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 	var reputation_data = _read_file(root.path_join("reputation.json"), read_errors)
 	var shows_data = _read_file(root.path_join("shows.json"), read_errors)
 	var staff_data = _read_file(root.path_join("staff.json"), read_errors)
+	var regulars_data = null
+	if FileAccess.file_exists(root.path_join("regulars.json")):
+		regulars_data = _read_file(root.path_join("regulars.json"), read_errors)
 	# Optional: without it there is one standard start and no challenges.
 	var new_game_data = null
 	if FileAccess.file_exists(root.path_join("new_game.json")):
@@ -103,7 +109,8 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 		new_game_data.get("challenges", []) if new_game_data is Dictionary else [],
 		reputation_data if reputation_data is Dictionary else {},
 		shows_data if shows_data is Dictionary else {},
-		staff_data if staff_data is Dictionary else {})
+		staff_data if staff_data is Dictionary else {},
+		regulars_data if regulars_data is Dictionary else {})
 	read_errors.append_array(db.errors)
 	db.errors = read_errors
 	return db
@@ -112,8 +119,9 @@ static func load_from_dir(root: String = "res://data") -> DataDB:
 static func from_dicts(species_list: Array, item_list: Array, template_list: Array,
 		economy_data: Dictionary, strain_list: Array = [], goal_list: Array = [],
 		upgrade_list: Array = [], start_list: Array = [], challenge_list: Array = [], reputation_data: Dictionary = {}, shows_data: Dictionary = {},
-		staff_data: Dictionary = {}) -> DataDB:
+		staff_data: Dictionary = {}, regulars_data: Dictionary = {}) -> DataDB:
 	var db := DataDB.new()
+	db.regulars = regulars_data
 	db.reputation = reputation_data
 	db.shows = shows_data
 	db.staff = staff_data
@@ -213,6 +221,68 @@ func _validate_reputation() -> void:
 		for effect in lv["effects"]:
 			if not effect in REPUTATION_EFFECTS:
 				errors.append("%s: unknown effect '%s'" % [ctx, effect])
+
+
+const REGULAR_RULES := ["visit_chance", "unlock_day", "loyalty_per_purchase", "loyalty_levels",
+	"tip_per_level", "order_level", "order_bonus", "order_chance"]
+const REGULAR_FIELDS := ["id", "name", "color", "favorite", "min_stars", "greeting", "bio"]
+
+
+func _validate_regulars() -> void:
+	if regulars.is_empty():
+		return
+	var rules = regulars.get("rules")
+	if not rules is Dictionary or not _require(rules, REGULAR_RULES, "regulars/rules"):
+		errors.append("regulars: needs 'rules'")
+		return
+	var levels = rules["loyalty_levels"]
+	if not levels is Array or levels.size() < 2 or int(levels[0]) != 0:
+		errors.append("regulars: loyalty_levels must start at 0 and list at least 2 levels")
+	else:
+		for i in range(1, levels.size()):
+			if int(levels[i]) <= int(levels[i - 1]):
+				errors.append("regulars: loyalty_levels must be in ascending order")
+		if int(rules["order_level"]) > levels.size() - 1:
+			errors.append("regulars: order_level is above the top loyalty level")
+	for key in ["visit_chance", "order_chance"]:
+		if float(rules[key]) < 0.0 or float(rules[key]) > 1.0:
+			errors.append("regulars: %s must be between 0 and 1" % key)
+	var list = regulars.get("regulars")
+	if not list is Array or list.is_empty():
+		errors.append("regulars: needs a list of regulars")
+		return
+	var seen := {}
+	for r in list:
+		if not r is Dictionary or not _require(r, REGULAR_FIELDS, "regulars/entry"):
+			continue
+		var ctx := "regular/%s" % r["id"]
+		if seen.has(r["id"]):
+			errors.append("%s: duplicate id" % ctx)
+		seen[r["id"]] = true
+		if not Color.html_is_valid(str(r["color"])):
+			errors.append("%s: color '%s' isn't a colour" % [ctx, r["color"]])
+		var species_id: String = r.get("species", "guppy")
+		var fav = r["favorite"]
+		if not species.has(species_id):
+			errors.append("%s: unknown species '%s'" % [ctx, species_id])
+		elif not fav is Dictionary or not fav.has("trait") or not fav.has("value"):
+			errors.append("%s: favorite needs a trait and a value" % ctx)
+		else:
+			var trait_def = species[species_id].get("traits", {}).get(fav["trait"])
+			if not trait_def is Dictionary:
+				errors.append("%s: species has no trait '%s'" % [ctx, fav["trait"]])
+			elif not fav["value"] in trait_def.get("common", []) and not fav["value"] in trait_def.get("rare", []):
+				errors.append("%s: '%s' isn't a %s value" % [ctx, fav["value"], fav["trait"]])
+		if not _is_whole(r["min_stars"]) or int(r["min_stars"]) < 1 or int(r["min_stars"]) > 5:
+			errors.append("%s: min_stars must be 1 to 5" % ctx)
+
+
+## One regular by id, or {}.
+func regular_by_id(regular_id: String) -> Dictionary:
+	for r in regulars.get("regulars", []):
+		if r["id"] == regular_id:
+			return r
+	return {}
 
 
 func _validate_staff() -> void:
@@ -336,6 +406,7 @@ func validate() -> void:
 	_validate_reputation()
 	_validate_shows()
 	_validate_staff()
+	_validate_regulars()
 	_validate_economy()
 	for st in starts:
 		if not _implicit_start:

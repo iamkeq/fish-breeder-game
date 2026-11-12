@@ -232,6 +232,7 @@ func _add_customer_card() -> void:
 	var c := state.customer
 	var who: String = c["name"]
 	var text := ""
+	_add_regular_header(c)
 	match c["kind"]:
 		"fish":
 			var f := state.inventory.get_fish(c["fish_id"])
@@ -311,7 +312,7 @@ func _add_customer_card() -> void:
 		"collector":
 			# Sell or not today: a collector can't be back-ordered or breed-ordered.
 			var sell := Button.new()
-			sell.text = "Sell $%d" % state.customer_price()
+			sell.text = "Sell " + _price_text(state.customer_price())
 			sell.disabled = blocker != ""
 			sell.tooltip_text = blocker
 			sell.pressed.connect(_on_serve)
@@ -326,7 +327,7 @@ func _add_customer_card() -> void:
 				buttons.add_child(_backorder_button(""))
 			else:
 				var sell := Button.new()
-				sell.text = "Sell $%d" % state.customer_price()
+				sell.text = "Sell " + _price_text(state.customer_price())
 				sell.disabled = blocker != ""
 				sell.tooltip_text = blocker
 				sell.pressed.connect(_on_serve)
@@ -337,15 +338,54 @@ func _add_customer_card() -> void:
 	_counter.add_child(buttons)
 
 
+## For a regular: their name in their colour, loyalty hearts, "New regular!"
+## on a first visit and their greeting.
+func _add_regular_header(c: Dictionary) -> void:
+	var reg := Game.state.customer_regular()
+	if reg.is_empty():
+		return
+	var colour := Color.from_string(str(reg["color"]), Color.WHITE)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 8)
+	var name_label := _label(reg["name"])
+	name_label.add_theme_font_size_override("font_size", 18)
+	name_label.add_theme_color_override("font_color", colour)
+	head.add_child(name_label)
+	var rules := Game.state.regular_rules()
+	var level := Game.state.regular_level(reg["id"])
+	var hearts := _label(Regulars.hearts(level, rules))
+	hearts.add_theme_color_override("font_color", Color(0.85, 0.3, 0.4))
+	hearts.tooltip_text = "Loyalty %d of %d: regulars tip %d%% more for each heart." % [
+		level, Regulars.max_level(rules), roundi(float(rules["tip_per_level"]) * 100)]
+	head.add_child(hearts)
+	if bool(c.get("new_regular", false)):
+		var fresh := _label("New regular!")
+		fresh.add_theme_color_override("font_color", Color(0.25, 0.55, 0.35))
+		head.add_child(fresh)
+	_counter.add_child(head)
+	var greeting := _wrapped("\"%s\"" % reg["greeting"])
+	greeting.add_theme_font_size_override("font_size", 14)
+	greeting.modulate = Color(1, 1, 1, 0.85)
+	_counter.add_child(greeting)
+
+
+## "$24 (+$2 tip)" for a tipping regular, otherwise "$24".
+func _price_text(price: int) -> String:
+	var tip := Game.state.customer_tip()
+	return "$%d (+$%d tip)" % [price, tip] if tip > 0 else "$%d" % price
+
+
 ## "You paid $44 · Priya will pay $30 (a $14 loss)."
 func _cost_line(f: Fish, who: String, offer: int) -> String:
 	var paid := Game.state.fish_paid(f)
+	var tip := Game.state.customer_tip()
+	var tip_note := " (+$%d tip)" % tip if tip > 0 else ""
 	if paid <= 0:
-		return "You bred this one, so $%d is all profit." % offer if f.strain_id == "" \
-			else "It cost you nothing. %s will pay $%d." % [who, offer]
+		return "You bred this one, so $%d%s is all profit." % [offer, tip_note] if f.strain_id == "" \
+			else "It cost you nothing. %s will pay $%d%s." % [who, offer, tip_note]
 	var diff := offer - paid
 	var outcome := "breaking even" if diff == 0 else ("a $%d profit" % diff if diff > 0 else "a $%d loss" % -diff)
-	return "You paid $%d · %s will pay $%d (%s)." % [paid, who, offer, outcome]
+	return "You paid $%d · %s will pay $%d%s (%s)." % [paid, who, offer, tip_note, outcome]
 
 
 func _breed_order_button() -> Button:
@@ -399,7 +439,7 @@ func _add_backorders() -> void:
 		var buttons := HBoxContainer.new()
 		buttons.add_theme_constant_override("separation", 4)
 		var blocker := state.backorder_blocker(i)
-		var hand := UI.small_button("Hand over $%d" % order["price"], blocker)
+		var hand := UI.small_button("Hand over $%d" % state.backorder_payout(i), blocker)
 		hand.disabled = blocker != ""
 		hand.pressed.connect(func():
 			var earned := Game.fulfil_backorder(i)
@@ -458,6 +498,8 @@ func _on_serve() -> void:
 	var earned := Game.serve_customer()
 	if earned > 0:
 		_counter_news = "Sold to %s for $%d." % [c["name"], earned]
+		if c.has("regular_id"):
+			_counter_news += " They'll remember this."
 		_refresh_counter()
 
 
@@ -471,9 +513,9 @@ func _on_deliver(index: int) -> void:
 	var r := Game.deliver_order(index)
 	if r.is_empty():
 		return
-	_counter_news = "Delivered! Match %d%% · Fish %d%% · Looks %d%%\nTank $%d + bonus $%d = $%d" % [
+	_counter_news = "Delivered! Match %d%% · Fish %d%% · Looks %d%%\nTank $%d + bonus $%d%s = $%d" % [
 		roundi(r["match"] * 100), roundi(r["quality"] * 100), roundi(r["looks"] * 100),
-		r["tank_value"], r["bonus"], r["payout"]]
+		r["tank_value"], r["bonus"], " + tip $%d" % r["tip"] if int(r["tip"]) > 0 else "", r["payout"]]
 	_refresh_counter()
 
 

@@ -1,11 +1,11 @@
 extends ColorRect
-## Goals, Perks and Stats, in three tabs. A reputation bar sits under the title. Goals: things to aim for, each with a progress
+## Goals, Regulars, Perks and Stats, in four tabs. A reputation bar sits under the title. Goals: things to aim for, each with a progress
 ## bar and a one-off cash reward (open ones first, finished ones below). Stats:
 ## lifetime numbers and personal bests. Both tabs have the "start a new game"
 ## button. Pauses the shop clock while open.
 
 const GOOD := Color(0.25, 0.5, 0.35)
-const TABS := ["Goals", "Perks", "Stats"]
+const TABS := ["Goals", "Regulars", "Perks", "Stats"]
 const DIM := Color(1, 1, 1, 0.7)
 
 var _progress: Label
@@ -158,11 +158,14 @@ func _refresh() -> void:
 		_tab_buttons[i].set_pressed_no_signal(i == _tab)
 	_new_game_button.text = "Really start over? Click again" if _confirming else "Start a new game"
 	_refresh_reputation(state)
-	if _tab == 2:
+	if _tab == 3:
 		_add_stats(state)
 		return
-	if _tab == 1:
+	if _tab == 2:
 		_add_perks(state)
+		return
+	if _tab == 1:
+		_add_regulars(state)
 		return
 	for g in goals:
 		if not state.is_goal_done(g["id"]):
@@ -182,6 +185,79 @@ func _refresh_reputation(state: GameState) -> void:
 	_rep_bar.value = state.reputation_progress()
 	var next := state.reputation_next()
 	_rep_points.text = "%d points" % state.reputation if next.is_empty() 		else "%d / %d points to %s" % [state.reputation, int(next["points"]), next["name"]]
+
+
+## One card per regular customer: met ones show who they are, what they love
+## and how loyal they are; the rest are a "?" until they first walk in.
+func _add_regulars(state: GameState) -> void:
+	var intro := Label.new()
+	intro.text = "Regulars come back, remember you and tip more as they grow fond of the shop (up to 5 hearts). They never mind if you say no."
+	intro.add_theme_font_size_override("font_size", 14)
+	intro.modulate = DIM
+	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_body.add_child(intro)
+	var rules := state.regular_rules()
+	var met_count := 0
+	for r in Game.db.regulars.get("regulars", []):
+		var st := state.regular_state(r["id"])
+		if bool(st["met"]):
+			met_count += 1
+		_body.add_child(_regular_card(r, st, rules))
+	_progress.text += "  ·  %d of %d regulars met" % [met_count, Game.db.regulars.get("regulars", []).size()]
+
+
+func _regular_card(r: Dictionary, st: Dictionary, rules: Dictionary) -> Control:
+	var met := bool(st["met"])
+	var panel := PanelContainer.new()
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	panel.add_child(row)
+	var swatch := ColorRect.new()
+	swatch.custom_minimum_size = Vector2(14, 0)
+	swatch.color = Color.from_string(str(r["color"]), Color.WHITE) if met else Color(1, 1, 1, 0.25)
+	row.add_child(swatch)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 2)
+	var name := Label.new()
+	name.text = r["name"] if met else "?"
+	name.add_theme_font_size_override("font_size", 18)
+	if met:
+		name.add_theme_color_override("font_color", Color.from_string(str(r["color"]), Color.WHITE))
+	info.add_child(name)
+	var bio := Label.new()
+	bio.text = r["bio"] if met else "Not met yet"
+	bio.add_theme_font_size_override("font_size", 13)
+	bio.modulate = DIM
+	bio.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	info.add_child(bio)
+	if met:
+		var fav := Label.new()
+		fav.text = Regulars.favorite_text(r, Game.db.species)
+		fav.add_theme_font_size_override("font_size", 14)
+		info.add_child(fav)
+	row.add_child(info)
+	if met:
+		var side := VBoxContainer.new()
+		side.add_theme_constant_override("separation", 2)
+		side.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var level := Regulars.level(int(st["loyalty"]), rules)
+		var hearts := Label.new()
+		hearts.text = Regulars.hearts(level, rules)
+		hearts.add_theme_font_size_override("font_size", 20)
+		hearts.add_theme_color_override("font_color", Color(0.85, 0.3, 0.4))
+		hearts.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		side.add_child(hearts)
+		var counts := Label.new()
+		counts.text = "%d visits · %d purchases" % [int(st["visits"]), int(st["purchases"])]
+		counts.add_theme_font_size_override("font_size", 13)
+		counts.modulate = DIM
+		counts.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		side.add_child(counts)
+		row.add_child(side)
+	else:
+		panel.modulate = Color(1, 1, 1, 0.6)
+	return panel
 
 
 ## One row per reputation level: what it gave (or gives), greyed until reached.

@@ -94,6 +94,14 @@ func _add_money(s: Dictionary) -> void:
 	if log["walked_out"] > 0:
 		people += "   ·   wandered off: %d" % log["walked_out"]
 	_line(people)
+	var met: Array = log.get("regulars_met", [])
+	if not met.is_empty():
+		_line("New regulars: %s" % ", ".join(met)).modulate = GOOD
+	var served: Array = log.get("regulars_served", [])
+	if not served.is_empty():
+		_line("Regulars served: %d (%s)" % [served.size(), ", ".join(served)])
+	if int(log.get("tips", 0)) > 0:
+		_line("Tips from regulars: $%d" % int(log["tips"])).modulate = GOOD
 
 
 ## "Fish show results": how your entry placed, the prize and the top rivals.

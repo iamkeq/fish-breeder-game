@@ -2,6 +2,23 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.27.0] - 2026-11-12
+
+### Added
+- **Regular customers:** eight named locals (Mrs Pike, Mr Okafor, Little
+  Ines, Professor Bell, Granny Rosa, Dev, Auntie Mei and Mr Lindqvist) start
+  dropping in from Day 3. Each has a favourite variety and a minimum star
+  rating, and asks for it when you have one, or puts it on back-order.
+- **Loyalty:** every purchase earns a regular loyalty (up to 5 hearts). Loyal
+  regulars tip up to 20% on fish they buy, and from 3 hearts they bring
+  special orders built around their favourite that pay 25% more. Tips never
+  apply to Market-priced goods, so buying to resell still loses money.
+- The counter shows a regular's name, hearts and greeting, and a note pops up
+  when one comes in. A new **Regulars** tab in the Goals window shows everyone
+  you've met. The day summary lists regulars served and tips earned.
+- Three new goals: Familiar faces (meet 3 regulars), Everybody's local (meet
+  all 8) and Part of the family (a regular reaches full loyalty).
+
 ## [0.26.0] - 2026-11-12
 
 ### Added
