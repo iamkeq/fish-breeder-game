@@ -47,6 +47,7 @@ var _orders_room: Control
 var _goals: ColorRect
 var _goals_button: Button
 var _pause_button: Button
+var _fullscreen_button: Button
 var _rep_label: Label
 var _toast: PanelContainer
 var _toast_label: Label
@@ -88,6 +89,10 @@ func _ready() -> void:
 	_pause_button.focus_mode = Control.FOCUS_NONE  # so Space isn't eaten by the button
 	_pause_button.pressed.connect(Game.toggle_pause)
 	_clock_label.add_sibling(_pause_button)
+	_fullscreen_button = Button.new()
+	_fullscreen_button.focus_mode = Control.FOCUS_NONE
+	_fullscreen_button.pressed.connect(_toggle_fullscreen)
+	_close_button.add_sibling(_fullscreen_button)
 	_rep_label = Label.new()
 	_rep_label.mouse_filter = Control.MOUSE_FILTER_STOP  # so the tooltip shows
 	_rep_label.add_theme_font_size_override("font_size", 18)
@@ -143,6 +148,33 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
 		Game.toggle_pause()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11:
+		_toggle_fullscreen()
+		get_viewport().set_input_as_handled()
+
+
+func _is_fullscreen() -> bool:
+	var mode := DisplayServer.window_get_mode()
+	return mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+
+
+## Full screen on and off (the button or F11). In the browser this has to come
+## from a click or key press, which it always does here.
+func _toggle_fullscreen() -> void:
+	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if _is_fullscreen()
+		else DisplayServer.WINDOW_MODE_FULLSCREEN)
+	_update_fullscreen_button.call_deferred()
+
+
+func _update_fullscreen_button() -> void:
+	_fullscreen_button.text = "Exit full screen" if _is_fullscreen() else "Full screen"
+	_fullscreen_button.tooltip_text = "Fill the whole screen (F11)."
+
+
+## The browser can leave full screen on its own (Esc), so keep the label honest.
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_SIZE_CHANGED and _fullscreen_button != null:
+		_update_fullscreen_button()
 
 
 func _show_room(room: Control) -> void:
@@ -161,6 +193,7 @@ func _update_top_bar() -> void:
 	_pause_button.set_pressed_no_signal(Game.manual_paused)
 	_pause_button.text = "Resume" if Game.manual_paused else "Pause"
 	_pause_button.tooltip_text = "Stop the clock so you can think (Space). Everything still works while paused."
+	_update_fullscreen_button()
 	if state.restocking:
 		_clock_label.text += "  ×%d" % int(state.restock_speed())
 	_restock_button.set_pressed_no_signal(state.restocking)

@@ -44,10 +44,11 @@ layout_mode = 2
 
 [node name="TopBar" type="HFlowContainer" parent="Margin/Layout/TopBarPanel"]
 layout_mode = 2
-theme_override_constants/h_separation = 9
+theme_override_constants/h_separation = 6
 theme_override_constants/v_separation = 6
 
 [node name="ShopName" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
+visible = false
 layout_mode = 2
 theme_override_font_sizes/font_size = 20
 text = "Fig Tree Fish Breeder"

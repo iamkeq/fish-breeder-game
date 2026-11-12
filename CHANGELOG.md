@@ -2,6 +2,17 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.25.0] - 2026-11-11
+
+### Added
+- **Full screen button** in the top bar (or press **F11**). Works in the
+  browser too; press it again, or Esc in the browser, to leave full screen.
+
+### Changed
+- The top bar no longer shows the shop name and its spacing is a little
+  tighter, so every button fits on one row at the normal window size and
+  leaves more room for the game below.
+
 ## [0.24.1] - 2026-11-11
 
 ### Changed
