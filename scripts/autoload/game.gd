@@ -332,8 +332,8 @@ func cancel_order(order_index: int) -> void:
 		changed.emit()
 
 
-func install_display_tank(tank_item_id: String) -> bool:
-	var ok := state.install_display_tank(tank_item_id)
+func install_display_tank(tank_item_id: String, location: String = Fish.DISPLAY) -> bool:
+	var ok := state.install_display_tank(tank_item_id, location)
 	if ok:
 		changed.emit()
 	return ok

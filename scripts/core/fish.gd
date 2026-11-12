@@ -7,6 +7,13 @@ const HOLDING := "holding"
 ## (see breeding_location()).
 const BREEDING := "breeding"
 const DISPLAY := "display"
+## The second display tank (bought as a shop expansion).
+const DISPLAY2 := "display2"
+
+
+## True for either shop-floor display tank (fish there are on show for customers).
+static func is_display(location: String) -> bool:
+	return location == DISPLAY or location == DISPLAY2
 
 
 ## Location name of breeding tank `index` (0-based): "breeding", "breeding2", ...

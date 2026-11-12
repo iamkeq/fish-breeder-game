@@ -2,6 +2,27 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.30.0] - 2026-11-12
+
+### Added
+- **Shop expansion** (a new section on the Market's Upgrades tab), big
+  purchases for a growing shop:
+  - **Second Display Tank** ($1,500, from reputation level 4 "Hobbyists'
+    Choice"): a second tank on the shop floor (Display 1 / Display 2 tabs).
+    Its fish are on sale and count for shop appeal, you can decorate it, and
+    tank customers can buy it (set up a spare tank afterwards, as with the
+    first).
+  - **Fresh Paint & Planters** ($500): customers come 15% more often.
+  - **Striped Awning** ($900): customers wait 25% longer and come 10% more
+    often.
+  - **Neon Fish Sign** ($1,600): customers come 20% more often and collectors
+    twice as often.
+  - **Comfy Reading Corner** ($1,200, from reputation level 3): regulars visit
+    50% more often.
+  Each one shows on the shopfront above the display tank.
+- Two new goals: Grand opening (own the second display tank) and Main street
+  star (buy every shop expansion). "Dream shop" now needs all 15 upgrades.
+
 ## [0.29.0] - 2026-11-12
 
 ### Added

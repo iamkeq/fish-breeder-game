@@ -77,6 +77,7 @@
 			"breeding_weight": 0.25,
 			"rare_trait_bonus": 1.5,
 			"looks_weight": 3.0,
+			"second_display_looks_share": 0.5,
 			"speedup_per_point": 0.04,
 			"max_speedup": 4.0
 		},

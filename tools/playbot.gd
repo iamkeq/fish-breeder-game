@@ -335,6 +335,7 @@ func _optimizer_morning() -> void:
 	_stock_shelf()
 	_buy_upgrades(["tank_heaters", "shop_sign", "bigger_breeding_tanks", "auto_feeder", "conditioning_food",
 		"window_display", "order_desk", "breeding_room_extension", "wholesale_contract", "waiting_bench"], 30, 99999, 3)
+	_buy_expansions()
 	_lab_scans(3, 150)
 	_hire_staff()
 	_favourites_and_pins()
@@ -448,7 +449,7 @@ func _stock_display() -> void:
 		func(f): return s.is_adult(f) and not f.favorite)
 	waiting.sort_custom(func(a: Fish, b: Fish): return _appeal(a) > _appeal(b))
 	for f in waiting:
-		if not s.move_fish(f.id, Fish.DISPLAY):
+		if not s.move_fish(f.id, Fish.DISPLAY) and not s.move_fish(f.id, Fish.DISPLAY2):
 			break
 
 
@@ -713,6 +714,15 @@ func _buy_upgrades(order: Array, reserve: int, max_cost: int, max_per_day: int) 
 				bought += 1
 		elif style == "optimizer" and cost <= s.money * 3:
 			break  # save up for the next one in value order
+
+
+## Optimizer only: the shop expansions, bought once money is over twice their cost.
+func _buy_expansions() -> void:
+	for id in db.upgrade_order:
+		if db.upgrades[id].get("group", "") != "expansion" or s.has_upgrade(id):
+			continue
+		if s.upgrade_blocker(id) == "" and s.money > 2 * int(db.upgrades[id]["cost"]):
+			_act("upgrades", func(): return s.buy_upgrade(id))
 
 
 func _hire_staff() -> void:

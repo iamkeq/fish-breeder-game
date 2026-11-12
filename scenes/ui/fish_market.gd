@@ -219,18 +219,25 @@ func _standing_order_row(item_id: String) -> Control:
 
 func _add_upgrades() -> void:
 	var state := Game.state
-	var header := Label.new()
-	header.text = "Shop upgrades  (%d of %d bought)" % [state.upgrades.size(), Game.db.upgrades.size()]
-	header.add_theme_font_size_override("font_size", 19)
-	_tiers.add_child(header)
-	var hint := Label.new()
-	hint.text = "Each one is bought once and lasts for good."
-	hint.add_theme_font_size_override("font_size", 13)
-	hint.modulate = Color(1, 1, 1, 0.7)
-	_tiers.add_child(hint)
-	for id in Game.db.upgrade_order:
-		_tiers.add_child(_upgrade_row(id))
-		_tiers.add_child(HSeparator.new())
+	# Plain upgrades first, then the bigger "Shop expansion" section.
+	for group in ["", "expansion"]:
+		var ids: Array = Game.db.upgrade_order.filter(
+			func(id): return Game.db.upgrades[id].get("group", "") == group)
+		if ids.is_empty():
+			continue
+		var bought := ids.filter(func(id): return state.has_upgrade(id)).size()
+		var header := Label.new()
+		header.text = "%s  (%d of %d bought)" % ["Shop expansion" if group == "expansion" else "Shop upgrades", bought, ids.size()]
+		header.add_theme_font_size_override("font_size", 19)
+		_tiers.add_child(header)
+		var hint := Label.new()
+		hint.text = "Big, optional improvements for a thriving shop. Bought once, no upkeep." if group == "expansion" else "Each one is bought once and lasts for good."
+		hint.add_theme_font_size_override("font_size", 13)
+		hint.modulate = Color(1, 1, 1, 0.7)
+		_tiers.add_child(hint)
+		for id in ids:
+			_tiers.add_child(_upgrade_row(id))
+			_tiers.add_child(HSeparator.new())
 
 
 func _upgrade_row(upgrade_id: String) -> Control:
@@ -252,7 +259,7 @@ func _upgrade_row(upgrade_id: String) -> Control:
 	what.modulate = Color(1, 1, 1, 0.7)
 	what.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(what)
-	if not owned and upgrade.has("requires") and not state.has_upgrade(upgrade["requires"]):
+	if not owned and blocker != "" and not blocker.begins_with("You need"):
 		var needs := Label.new()
 		needs.text = blocker
 		needs.add_theme_font_size_override("font_size", 13)

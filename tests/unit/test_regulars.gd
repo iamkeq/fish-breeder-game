@@ -50,7 +50,7 @@ func _make_loyal(gs: GameState, regular_id: String, points: int) -> void:
 func test_real_data_has_eight_valid_regulars() -> void:
 	assert_eq(db.errors, [] as Array[String])
 	assert_eq(db.regulars["regulars"].size(), 8)
-	assert_eq(db.goals.size(), 55)
+	assert_eq(db.goals.size(), 57)
 	var ids := db.goals.map(func(g): return g["id"])
 	for id in ["familiar_faces", "part_of_family", "everybodys_local"]:
 		assert_true(id in ids, id)

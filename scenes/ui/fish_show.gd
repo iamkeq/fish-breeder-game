@@ -140,7 +140,7 @@ func _entry_line(state: GameState) -> Control:
 		withdraw.pressed.connect(func(): Game.withdraw_show())
 		line.add_child(withdraw)
 	box.add_child(line)
-	if entered != null and entered.location == Fish.DISPLAY:
+	if entered != null and Fish.is_display(entered.location):
 		var warn := _label("It's in the display tank, so it may be sold before the show.", 12)
 		warn.modulate = Color(0.95, 0.7, 0.4)
 		box.add_child(warn)

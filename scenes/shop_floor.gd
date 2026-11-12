@@ -2,13 +2,15 @@ extends Control
 ## Shop floor: retail shelf, the display tank (with its fish and controls),
 ## and the counter where customers arrive and orders are delivered.
 
-## The player wants to open the aquascaping editor for the display tank.
-signal edit_tank_requested
+## The player wants to open the aquascaping editor for a display tank
+## (Fish.DISPLAY or Fish.DISPLAY2).
+signal edit_tank_requested(location: String)
 ## The player wants to build an order in the Orders room.
 signal orders_room_requested
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
 const StaffScreen := preload("res://scenes/ui/staff.gd")
+const ShopFront := preload("res://scenes/shop_front.gd")
 const TEXT_WIDTH := 262.0
 
 @onready var _items: VBoxContainer = %Items
@@ -24,9 +26,14 @@ var _wall: VBoxContainer
 var _wall_grid: GridContainer
 ## The Staff button and small avatar chips at the very foot of the shelf panel.
 var _staff_row: HBoxContainer
+## Which display tank the middle column shows (Fish.DISPLAY or Fish.DISPLAY2).
+var _display_loc: String = Fish.DISPLAY
+## "Display 1 / Display 2" tabs, shown once the second display is bought.
+var _display_tabs: HBoxContainer
 
 
 func _ready() -> void:
+	_build_shop_front()
 	_build_wall()
 	_build_staff_row()
 	Game.changed.connect(refresh)
@@ -40,6 +47,43 @@ func refresh() -> void:
 	_refresh_counter()
 	_refresh_wall()
 	_refresh_staff_row()
+
+
+# --- Shopfront strip and display tabs ------------------------------------------
+
+## The shopfront touches go above the tank title; the tab row goes under it.
+func _build_shop_front() -> void:
+	var column := $Columns/TankColumn
+	var front := ShopFront.new()
+	column.add_child(front)
+	column.move_child(front, 0)
+	_display_tabs = HBoxContainer.new()
+	_display_tabs.alignment = BoxContainer.ALIGNMENT_CENTER
+	_display_tabs.add_theme_constant_override("separation", 6)
+	column.add_child(_display_tabs)
+	column.move_child(_display_tabs, $Columns/TankColumn/TankTitle.get_index() + 1)
+
+
+func _refresh_display_tabs() -> void:
+	var state := Game.state
+	if not state.has_second_display():
+		_display_loc = Fish.DISPLAY
+	_clear(_display_tabs)
+	_display_tabs.visible = state.has_second_display()
+	$Columns/TankColumn/TankView.set_location(_display_loc)
+	if not _display_tabs.visible:
+		return
+	for entry in [[Fish.DISPLAY, "Display 1"], [Fish.DISPLAY2, "Display 2"]]:
+		var loc: String = entry[0]
+		var tank := state.tank_at(loc)
+		var count := tank.fish_ids.size() if tank != null else 0
+		var tab := UI.small_button("%s  (%d)" % [entry[1], count], "Show this display tank.")
+		tab.toggle_mode = true
+		tab.button_pressed = loc == _display_loc
+		tab.pressed.connect(func():
+			_display_loc = loc
+			refresh())
+		_display_tabs.add_child(tab)
 
 
 # --- Staff button ------------------------------------------------------------
@@ -133,7 +177,8 @@ func _refresh_shelf() -> void:
 
 func _refresh_tank() -> void:
 	var state := Game.state
-	var tank := state.display_tank
+	_refresh_display_tabs()
+	var tank := state.tank_at(_display_loc)
 	_clear(_tank_actions)
 	_clear(_display_fish)
 	if tank == null:
@@ -143,13 +188,13 @@ func _refresh_tank() -> void:
 			_tank_info.text += " Buy a tank in the Market to set up a new one."
 		for id in tanks:
 			var b := UI.small_button("Set up a new %s (have %d)" % [Game.db.items[id]["name"], state.inventory.count(id)])
-			b.pressed.connect(func(): Game.install_display_tank(id))
+			b.pressed.connect(func(): Game.install_display_tank(id, _display_loc))
 			_tank_actions.add_child(b)
 		return
 	_tank_info.text = "Looks %d/100   ·   %d/%d fish   ·   Worth $%d" % [
 		state.tank_aesthetics(tank), tank.fish_ids.size(), tank.capacity, state.tank_price(tank, true)]
 	var edit := UI.small_button("Edit tank", "Place substrate, rocks, wood, plants and decor from your stock.")
-	edit.pressed.connect(func(): edit_tank_requested.emit())
+	edit.pressed.connect(func(): edit_tank_requested.emit(_display_loc))
 	_tank_actions.add_child(edit)
 	if tank.fish_ids.is_empty():
 		var hint := _label("No fish on display. Move some here from the Back room. Fish on display bring customers in!")

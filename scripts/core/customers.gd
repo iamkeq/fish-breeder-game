@@ -13,7 +13,7 @@ static func fish_appeal(fish: Fish, species: Dictionary, rules: Dictionary) -> f
 
 ## Overall shop appeal. Fish for sale on display count fully, fish in holding
 ## partly, breeding stock a little; a good-looking display tank adds more.
-static func shop_appeal(display: Array, holding: Array, breeding: Array, display_looks: int,
+static func shop_appeal(display: Array, holding: Array, breeding: Array, display_looks: float,
 		species_db: Dictionary, rules: Dictionary) -> float:
 	var weights: Dictionary = rules["appeal"]
 	var total := 0.0
@@ -22,6 +22,13 @@ static func shop_appeal(display: Array, holding: Array, breeding: Array, display
 			total += fish_appeal(f, species_db[f.species_id], rules) * float(weights[group[1]])
 	total += display_looks / 100.0 * float(weights["looks_weight"])
 	return total
+
+
+## Looks of two display tanks as one score: the better one in full plus a share
+## (economy customers.appeal.second_display_looks_share) of the other.
+static func combined_looks(looks_a: int, looks_b: int, rules: Dictionary) -> float:
+	var share := float(rules["appeal"].get("second_display_looks_share", 0.5))
+	return maxi(looks_a, looks_b) + mini(looks_a, looks_b) * share
 
 
 ## Customers come this many times faster than the base rate (1 = base).
@@ -46,6 +53,7 @@ static func next_arrival_minutes(appeal: float, rules: Dictionary, rng: RandomNu
 ##   tank_for_sale: bool            display tank is decorated
 ##   can_take_request: bool         room for another order
 ##   collector_fish: Array[Fish]    bred-by-you, high-star fish a collector would buy
+##   collector_mult: float          optional, scales how often collectors come (1 = normal)
 ## Kinds: fish / item / tank (in stock), wish_item / wish_fish (out of stock:
 ## the player can back-order it), collector (wants one of your own show-quality
 ## fish, for a premium), request, browse.
@@ -79,7 +87,8 @@ static func make_walk_in(ctx: Dictionary, rules: Dictionary, rng: RandomNumberGe
 		options["wish_fish"] = float(wants.get("wish", 0.0)) * 0.5
 	var collector_fish: Array = ctx.get("collector_fish", [])
 	if not collector_fish.is_empty():
-		options["collector"] = float(wants.get("collector", 0.0))
+		# The Neon Fish Sign draws collectors more often (ctx collector_mult, 1 = normal).
+		options["collector"] = float(wants.get("collector", 0.0)) * float(ctx.get("collector_mult", 1.0))
 	options = _positive(options)
 	if options.is_empty():
 		customer["kind"] = "request" if can_request else "browse"

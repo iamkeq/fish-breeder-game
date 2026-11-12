@@ -58,7 +58,8 @@ const GOAL_METRICS := ["fish_sold", "fish_bred", "recipes", "mutations", "displa
 	"best_stars_sold", "total_earned", "customers_served", "third_gen_recipes", "collector_sales", "fish_named", "favorites",
 	"reputation_level", "fish_scanned", "best_purity_scanned", "shows_entered", "ribbons_first", "ribbons",
 	"grand_wins", "hall_of_fame", "pinned", "staff_hired", "staff_count", "staff_actions",
-	"standing_orders_active", "items_delivered", "regulars_met", "regulars_max_loyal"]
+	"standing_orders_active", "items_delivered", "regulars_met", "regulars_max_loyal",
+	"second_display", "expansions"]
 ## The jobs a hire can be given, in the order they run each night. See GameState.end_day().
 const STAFF_TASKS := ["feeder", "decorator", "stocker"]
 ## What a reputation level can change. See GameState.reputation_effect().
@@ -77,7 +78,8 @@ const CHALLENGE_RULES := ["starting_money", "market_fish_until_day", "mutation_c
 	"customers_buy_only_mutations"]
 const UPGRADE_FIELDS := ["id", "name", "description", "cost", "effects"]
 const UPGRADE_EFFECTS := ["customer_speed", "patience", "max_orders", "max_backorders",
-	"breeding_capacity", "auto_feed", "premium_food", "wholesale_fraction", "brood_nights"]
+	"breeding_capacity", "auto_feed", "premium_food", "wholesale_fraction", "brood_nights",
+	"collector_chance", "regular_visits", "second_display"]
 
 
 static func load_from_dir(root: String = "res://data") -> DataDB:
@@ -405,6 +407,8 @@ func validate() -> void:
 				errors.append("%s: unknown effect '%s'" % [upgrade_ctx, effect])
 		if u.has("requires") and not upgrades.has(u["requires"]):
 			errors.append("%s: requires unknown upgrade '%s'" % [upgrade_ctx, u["requires"]])
+		if u.has("requires_level") and not (u["requires_level"] is int or u["requires_level"] is float):
+			errors.append("%s: requires_level must be a number" % upgrade_ctx)
 	_validate_reputation()
 	_validate_shows()
 	_validate_staff()

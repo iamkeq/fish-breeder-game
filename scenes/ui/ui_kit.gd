@@ -33,7 +33,9 @@ static func _compact(b: BaseButton) -> void:
 
 static func location_name(location: String, state: GameState = null) -> String:
 	if location == Fish.DISPLAY:
-		return "Display tank"
+		return "Display tank 1" if state != null and state.has_second_display() else "Display tank"
+	if location == Fish.DISPLAY2:
+		return "Display tank 2"
 	if location == Fish.HOLDING:
 		return "Holding"
 	if Fish.is_order(location):
@@ -53,6 +55,8 @@ static func move_menu(state: GameState, f: Fish, on_move: Callable, text: String
 	_compact(menu)
 	var popup := menu.get_popup()
 	var places := [Fish.DISPLAY]
+	if state.has_second_display():
+		places.append(Fish.DISPLAY2)
 	for i in state.breeding_tanks.size():
 		places.append(Fish.breeding_location(i))
 	for order in state.orders:

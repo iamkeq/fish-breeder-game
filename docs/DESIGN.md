@@ -474,6 +474,15 @@ reputation. The design keeps room for all of these.
     order scoring; display-tank sale/delivery leaves them in holding. They
     cannot be moved into order tanks. Later features (gallery, shows) build
     on the favourite flag.
+- **2026-11-12 (v0.30.0), shop expansion:**
+  - Upgrades with `"group": "expansion"` are listed in their own section;
+    optional `requires_unlock` (reputation unlock id) and `requires_level`.
+    New effects: `second_display`, `collector_chance`, `regular_visits`.
+  - `display_tank_2` at `Fish.DISPLAY2`; `display_tanks()` / `display_fish()`
+    feed appeal (looks: best + `second_display_looks_share` of the other),
+    fish for sale, tank customers (`customer["tank_location"]`) and the
+    decorator. Selling it leaves the slot empty like display 1 (no free
+    replacement: that would be a money loop).
 - **2026-11-12 (v0.29.0), food buffs:**
   - `Fish.last_food` / `fed_day` (saved) are stamped on every fish in a group
     that eats a portion; `food_buff()` is active the day after

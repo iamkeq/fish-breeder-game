@@ -53,7 +53,9 @@ func refresh() -> void:
 		child.queue_free()
 	for i in state.breeding_tanks.size():
 		_add_section(Fish.breeding_location(i), "Breeding tank %d" % (i + 1), roles)
-	_add_section(Fish.DISPLAY, "Display tank (shop floor)", roles)
+	_add_section(Fish.DISPLAY, "Display tank 1 (shop floor)" if state.has_second_display() else "Display tank (shop floor)", roles)
+	if state.has_second_display():
+		_add_section(Fish.DISPLAY2, "Display tank 2 (shop floor)", roles)
 	for order in state.orders:
 		if order.get("tank") != null:
 			_add_section(Fish.order_location(order["id"]), "Order tank for %s" % order.get("customer", "a customer"), roles)

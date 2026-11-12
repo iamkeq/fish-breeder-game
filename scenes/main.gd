@@ -126,7 +126,7 @@ func _ready() -> void:
 		_show_room(_orders_room))
 	_close_button.pressed.connect(_on_close_pressed)
 	_market_button.pressed.connect(func(): _fish_market.open())
-	_shop_floor.edit_tank_requested.connect(func(): _tank_editor.open())
+	_shop_floor.edit_tank_requested.connect(func(loc: String): _tank_editor.open(loc))
 	_back_room.book_requested.connect(func(): _book.open())
 	_restock_button.toggled.connect(func(on: bool): Game.set_restocking(on))
 	_restock_button.visible = Game.state.restock_speed() > 0.0

@@ -42,14 +42,14 @@ func _ready() -> void:
 	Game.changed.connect(func(): if visible: _refresh())
 
 
-## Opens the editor on a tank: Fish.DISPLAY, or an order tank (Fish.order_location(id)).
+## Opens the editor on a tank: Fish.DISPLAY / Fish.DISPLAY2, or an order tank (Fish.order_location(id)).
 func open(p_location: String = Fish.DISPLAY) -> void:
 	if visible or Game.state.tank_at(p_location) == null:
 		return
 	location = p_location
 	_tank_view.set_location(location)
 	var order := _order()
-	_title.text = "Aquascaping · Display tank" if order.is_empty() 		else "Order tank for %s" % order.get("customer", "a customer")
+	_title.text = "Aquascaping · %s" % UI.location_name(location, Game.state) if order.is_empty() else "Order tank for %s" % order.get("customer", "a customer")
 	_request.visible = not order.is_empty()
 	if not order.is_empty():
 		_request.text = "They asked for: " + RequestGenerator.describe(order, Game.db.species[order["species_id"]])

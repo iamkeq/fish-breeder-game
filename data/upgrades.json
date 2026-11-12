@@ -9,6 +9,11 @@
 		{"id": "bigger_breeding_tanks", "name": "Bigger Breeding Tanks", "description": "Every breeding tank holds 4 more fish.", "cost": 200, "effects": {"breeding_capacity": 4}},
 		{"id": "breeding_room_extension", "name": "Breeding Room Extension", "description": "Every breeding tank holds another 4 fish.", "cost": 400, "requires": "bigger_breeding_tanks", "effects": {"breeding_capacity": 4}},
 		{"id": "conditioning_food", "name": "Conditioning Food", "description": "Well-fed fry are more likely to grow up a star better than their parents.", "cost": 300, "effects": {"premium_food": 1}},
-		{"id": "tank_heaters", "name": "Tank Heaters", "description": "Breeding pairs have a brood one night sooner.", "cost": 350, "effects": {"brood_nights": 1}}
+		{"id": "tank_heaters", "name": "Tank Heaters", "description": "Breeding pairs have a brood one night sooner.", "cost": 350, "effects": {"brood_nights": 1}},
+		{"id": "fresh_paint", "group": "expansion", "name": "Fresh Paint & Planters", "description": "A freshly painted front with flower planters. Customers come in 15% more often.", "cost": 500, "requires": "window_display", "effects": {"customer_speed": 0.15}},
+		{"id": "striped_awning", "group": "expansion", "name": "Striped Awning", "description": "Shade for browsers. Customers wait 25% longer and come in 10% more often.", "cost": 900, "requires": "fresh_paint", "effects": {"patience": 0.25, "customer_speed": 0.1}},
+		{"id": "neon_sign", "group": "expansion", "name": "Neon Fish Sign", "description": "Glows after dark. Customers come in 20% more often and collectors come twice as often.", "cost": 1600, "requires": "striped_awning", "effects": {"customer_speed": 0.2, "collector_chance": 1.0}},
+		{"id": "reading_corner", "group": "expansion", "name": "Comfy Reading Corner", "description": "A cosy armchair and a stack of fish books. Regulars visit 50% more often.", "cost": 1200, "requires_level": 3, "effects": {"regular_visits": 0.5}},
+		{"id": "second_display", "group": "expansion", "name": "Second Display Tank", "description": "A second display tank on the shop floor, with fish and decor for customers to admire. Unlocked at Hobbyists' Choice.", "cost": 1500, "requires_unlock": "second_display", "effects": {"second_display": 1}}
 	]
 }

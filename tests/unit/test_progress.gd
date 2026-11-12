@@ -315,3 +315,12 @@ func test_regulars_progress_is_saved_and_old_saves_load() -> void:
 	var old := SaveFile.parse(JSON.stringify(gs.to_dict()))
 	old.erase("regulars_state")
 	assert_eq(GameState.from_dict(F.db(), F.rng(99), old).regulars_state, {})
+
+
+func test_a_save_from_before_the_second_display_loads() -> void:
+	var old := SaveFile.parse(JSON.stringify(gs.to_dict()))
+	old.erase("display_tank_2")
+	var loaded := GameState.from_dict(F.db(), F.rng(99), old)
+	assert_true(loaded.display_tank_2 == null)
+	assert_true(loaded.display_tank != null)
+	assert_false(loaded.has_second_display())
