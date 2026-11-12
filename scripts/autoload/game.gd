@@ -38,6 +38,8 @@ const FAST_FORWARD := 20.0
 var db: DataDB
 var state: GameState
 var _pause_requests: int = 0
+## The player's own pause (the Pause button / Space). Menus never clear it.
+var manual_paused: bool = false
 ## Whether this run loads and writes the save file. Off for headless runs and
 ## scripted tools (tests, screenshots), so they never touch a real save.
 var persist: bool = true
@@ -119,6 +121,7 @@ func start_new_game(start_id: String, challenge_id: String) -> void:
 	loaded_from_save = false
 	needs_setup = false
 	_pause_requests = 0
+	manual_paused = false
 	get_tree().reload_current_scene()
 
 
@@ -192,7 +195,14 @@ func push_pause() -> void:
 
 func pop_pause() -> void:
 	_pause_requests = maxi(_pause_requests - 1, 0)
-	state.clock.paused = _pause_requests > 0
+	state.clock.paused = _pause_requests > 0 or manual_paused
+
+
+## Pause or resume the clock yourself, to think. Menus and the shop still work.
+func toggle_pause() -> void:
+	manual_paused = not manual_paused
+	state.clock.paused = _pause_requests > 0 or manual_paused
+	changed.emit()
 
 
 func notify_changed() -> void:

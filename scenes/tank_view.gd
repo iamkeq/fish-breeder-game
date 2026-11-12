@@ -62,6 +62,8 @@ func swim_rect() -> Rect2:
 func refresh() -> void:
 	var t := tank()
 	var ids: Array = t.fish_ids if t != null else []
+	if t == null and location == Fish.HOLDING:
+		ids = Game.state.inventory.fish_list(Fish.HOLDING).map(func(f: Fish): return f.id)
 	for fish_id in _sprites.keys():
 		if not fish_id in ids:
 			_sprites[fish_id].queue_free()
@@ -87,6 +89,9 @@ func _on_resized() -> void:
 func _draw() -> void:
 	var t := tank()
 	var font := get_theme_default_font()
+	if t == null and location == Fish.HOLDING:
+		_draw_holding()
+		return
 	if t == null:
 		var r := Rect2(Vector2(10, 26), size - Vector2(20, 36))
 		draw_rect(r, EMPTY_TEXT, false, 2.0)
@@ -110,6 +115,17 @@ func _draw() -> void:
 		_draw_slot_markers(t, w, font)
 
 	# Glass frame and lid.
+	draw_rect(w, GLASS.lerp(Color.WHITE, 0.3), false, 3.0)
+	draw_rect(Rect2(w.position.x - 6, w.position.y - 14, w.size.x + 12, 12), FRAME)
+	draw_rect(Rect2(w.position.x - 6, w.end.y, w.size.x + 12, 8), FRAME)
+
+
+## The holding tanks aren't a real tank (no decor): plain water in a frame.
+func _draw_holding() -> void:
+	var w := water_rect()
+	draw_polygon(PackedVector2Array([w.position, Vector2(w.end.x, w.position.y), w.end, Vector2(w.position.x, w.end.y)]),
+		PackedColorArray([WATER_TOP, WATER_TOP, WATER_BOTTOM, WATER_BOTTOM]))
+	draw_rect(Rect2(w.position, Vector2(w.size.x, 4)), Color(1, 1, 1, 0.5))
 	draw_rect(w, GLASS.lerp(Color.WHITE, 0.3), false, 3.0)
 	draw_rect(Rect2(w.position.x - 6, w.position.y - 14, w.size.x + 12, 12), FRAME)
 	draw_rect(Rect2(w.position.x - 6, w.end.y, w.size.x + 12, 8), FRAME)

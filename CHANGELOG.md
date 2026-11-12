@@ -2,6 +2,16 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.24.0] - 2026-11-11
+
+### Added
+- **Pause button** next to the clock (or press **Space**). It stops the
+  clock so you can sort through your fish and think; the top bar shows
+  "(paused)" and the button turns into Resume. Everything still works while
+  paused. Menus still pause the clock as before.
+- **Holding tab** in the Back room: click "Holding" beside the breeding tanks
+  to see the holding tank with its fish swimming in it.
+
 ## [0.23.0] - 2026-11-11
 
 ### Added

@@ -46,6 +46,7 @@ var _show_reminded := 0
 var _orders_room: Control
 var _goals: ColorRect
 var _goals_button: Button
+var _pause_button: Button
 var _rep_label: Label
 var _toast: PanelContainer
 var _toast_label: Label
@@ -82,6 +83,11 @@ func _ready() -> void:
 	_goals_button = Button.new()
 	_goals_button.pressed.connect(func(): _goals.open())
 	_market_button.add_sibling(_goals_button)
+	_pause_button = Button.new()
+	_pause_button.toggle_mode = true
+	_pause_button.focus_mode = Control.FOCUS_NONE  # so Space isn't eaten by the button
+	_pause_button.pressed.connect(Game.toggle_pause)
+	_clock_label.add_sibling(_pause_button)
 	_rep_label = Label.new()
 	_rep_label.mouse_filter = Control.MOUSE_FILTER_STOP  # so the tooltip shows
 	_rep_label.add_theme_font_size_override("font_size", 18)
@@ -133,6 +139,12 @@ func _ready() -> void:
 	_update_top_bar()
 
 
+func _unhandled_key_input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
+		Game.toggle_pause()
+		get_viewport().set_input_as_handled()
+
+
 func _show_room(room: Control) -> void:
 	_shop_floor.visible = room == _shop_floor
 	_back_room.visible = room == _back_room
@@ -144,6 +156,11 @@ func _update_top_bar() -> void:
 	var state := Game.state
 	_day_label.text = "Day %d" % state.day
 	_clock_label.text = state.clock.time_string() if state.clock.is_open else "Closed"
+	if Game.manual_paused and state.clock.is_open:
+		_clock_label.text += "  (paused)"
+	_pause_button.set_pressed_no_signal(Game.manual_paused)
+	_pause_button.text = "Resume" if Game.manual_paused else "Pause"
+	_pause_button.tooltip_text = "Stop the clock so you can think (Space). Everything still works while paused."
 	if state.restocking:
 		_clock_label.text += "  ×%d" % int(state.restock_speed())
 	_restock_button.set_pressed_no_signal(state.restocking)

@@ -20,8 +20,9 @@ const TAB_WIDTH := 150
 ## Adults listed under a tab before it says "+ N more".
 const MAX_LISTED := 4
 
-## Which breeding tank the big view shows (0-based).
+## Which breeding tank the big view shows (0-based), or HOLDING_TAB.
 var _selected_tank := 0
+const HOLDING_TAB := -1
 
 
 func _ready() -> void:
@@ -32,11 +33,16 @@ func _ready() -> void:
 func refresh() -> void:
 	var state := Game.state
 	_selected_tank = mini(_selected_tank, state.breeding_tanks.size() - 1)
-	_tank_view.set_location(Fish.breeding_location(_selected_tank))
+	var holding := _selected_tank == HOLDING_TAB
+	_tank_view.set_location(Fish.HOLDING if holding else Fish.breeding_location(_selected_tank))
 	var roles := _breeding_roles(state)
 	_refresh_tabs(state, roles)
-	_tank_title.text = "Breeding tank %d" % (_selected_tank + 1)
-	_brood_info.text = _brood_text(state, _selected_tank) + "   ·   Fish food: %d" % state.food_count()
+	if holding:
+		_tank_title.text = "Holding tanks"
+		_brood_info.text = "Fish waiting for a home. Move them to a breeding tank or the display.   ·   Fish food: %d" % state.food_count()
+	else:
+		_tank_title.text = "Breeding tank %d" % (_selected_tank + 1)
+		_brood_info.text = _brood_text(state, _selected_tank) + "   ·   Fish food: %d" % state.food_count()
 	for child in _fish_rows.get_children():
 		child.queue_free()
 	for i in state.breeding_tanks.size():
@@ -64,6 +70,13 @@ func _refresh_tabs(state: GameState, roles: Dictionary) -> void:
 		column.add_child(tab)
 		column.add_child(_tank_contents(state, tank, roles))
 		_tank_tabs.add_child(column)
+	var held := state.inventory.fish_list(Fish.HOLDING).size()
+	var holding_tab := UI.small_button("Holding  (%d)" % held, "The fish waiting in the holding tanks.")
+	holding_tab.toggle_mode = true
+	holding_tab.button_pressed = _selected_tank == HOLDING_TAB
+	holding_tab.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	holding_tab.pressed.connect(_select_tank.bind(HOLDING_TAB))
+	_tank_tabs.add_child(holding_tab)
 	var cost := state.next_breeding_tank_cost()
 	if cost >= 0:
 		var add := UI.small_button("+ Add tank $%d" % cost,
