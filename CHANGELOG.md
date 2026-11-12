@@ -2,6 +2,18 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.29.0] - 2026-11-12
+
+### Added
+- **Food icons over fish:** a little heart floats over fish that ate Spawning
+  Pellets last night, and a flexed arm over fish that ate Growth Flakes.
+  Nothing shows for regular Fish Food. The icon lasts for the day after the
+  meal, and also shows beside the fish in the Back room list (hover it for
+  what it does).
+- **Full-cycle Spawning Pellets:** a tank that eats Pellets every night until
+  its brood gets broods **50% bigger**. Pellets only on the brood night still
+  give 25%. The brood line shows when a tank is on track for the full bonus.
+
 ## [0.28.0] - 2026-11-12
 
 ### Added

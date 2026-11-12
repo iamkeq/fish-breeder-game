@@ -74,6 +74,10 @@ var scanned: bool = false
 var favorite: bool = false
 ## Fish show ribbons won: [{"place": 1-3, "show": show name, "day": int}].
 var ribbons: Array = []
+## The food item this fish last ate at night ("" = never) and the day number that
+## night belonged to (-1 = never). See GameState.food_buff().
+var last_food: String = ""
+var fed_day: int = -1
 
 
 func is_adult(species: Dictionary) -> bool:
@@ -113,6 +117,8 @@ func to_dict() -> Dictionary:
 		"purity": purity,
 		"scanned": scanned,
 		"ribbons": ribbons.duplicate(true),
+		"last_food": last_food,
+		"fed_day": fed_day,
 	}
 
 
@@ -134,6 +140,8 @@ static func from_dict(d: Dictionary, default_purity: int = 50) -> Fish:
 	f.favorite = bool(d.get("favorite", false))
 	f.purity = int(d.get("purity", default_purity))
 	f.scanned = bool(d.get("scanned", false))
+	f.last_food = str(d.get("last_food", ""))
+	f.fed_day = int(d.get("fed_day", -1))
 	for r in d.get("ribbons", []):
 		f.ribbons.append({"place": int(r.get("place", 3)), "show": str(r.get("show", "")), "day": int(r.get("day", 0))})
 	return f

@@ -1,8 +1,8 @@
 {
 	"items": [
 		{ "id": "fish_food", "name": "Fish Food", "category": "food", "cost": 2, "price": 3, "tags": [], "color": "#c2703d" },
-		{ "id": "growth_food", "name": "Growth Flakes", "category": "food", "cost": 8, "price": 10, "tags": [], "color": "#7fb04a", "growth_days": 2 },
-		{ "id": "spawning_food", "name": "Spawning Pellets", "category": "food", "cost": 8, "price": 10, "tags": [], "color": "#d9a441", "brood_multiplier": 1.25 },
+		{ "id": "growth_food", "name": "Growth Flakes", "category": "food", "cost": 8, "price": 10, "tags": [], "color": "#7fb04a", "growth_days": 2, "icon": "arm" },
+		{ "id": "spawning_food", "name": "Spawning Pellets", "category": "food", "cost": 8, "price": 10, "tags": [], "color": "#d9a441", "brood_multiplier": 1.25, "brood_multiplier_full": 1.5, "icon": "heart" },
 		{ "id": "tank_20l", "name": "20L Tank", "category": "tank", "cost": 25, "price": 29, "tags": [], "capacity": 6, "color": "#bfe3f2" }
 	]
 }

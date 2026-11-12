@@ -12,9 +12,9 @@ func _db(brood: Array = [4, 4]) -> DataDB:
 	species["mutation_chance"] = 0.0
 	var items := F.items()
 	items.append({"id": "flakes", "name": "Growth Flakes", "category": "food", "cost": 8, "price": 10,
-		"tags": [], "growth_days": 2})
+		"tags": [], "growth_days": 2, "icon": "arm"})
 	items.append({"id": "pellets", "name": "Spawning Pellets", "category": "food", "cost": 8, "price": 10,
-		"tags": [], "brood_multiplier": 1.25})
+		"tags": [], "brood_multiplier": 1.25, "brood_multiplier_full": 1.5, "icon": "heart"})
 	return DataDB.from_dicts([species], items, [F.template()], F.economy(), F.strains(), F.goals(),
 		F.upgrades(), [], [], F.reputation(), F.shows(), F.staff())
 
@@ -132,39 +132,134 @@ func test_pellets_with_fry_use_one_portion_and_grow_one_day() -> void:
 	assert_eq(s["spawning_food_used"], 1)
 
 
-func _brood_with(seed_value: int, use_pellets: bool, brood: Array) -> Dictionary:
+## Runs one brood cycle (2 nights). `pellets` says which nights the tank is set to pellets.
+func _brood_with(seed_value: int, pellets: Array, brood: Array) -> Dictionary:
 	_setup(seed_value, brood)
 	_pair()
-	if use_pellets:
-		gs.inventory.add("pellets", 5)
-		gs.set_food_choice(Fish.BREEDING, "pellets")
+	gs.inventory.add("pellets", 5)
 	var born := 0
 	var bonus := 0
-	for i in 2:  # days_between_broods is 2
+	for night in pellets.size():
+		gs.set_food_choice(Fish.BREEDING, "pellets" if pellets[night] else "food")
 		var s := gs.end_day()
 		born += int(s["fry_born"])
 		bonus += int(s["bonus_fry"])
 	return {"born": born, "bonus": bonus}
 
 
-func test_pellets_make_broods_about_a_quarter_bigger() -> void:
-	var plain := 0
-	var boosted := 0
-	var bonus := 0
+func _average(pellets: Array, brood: Array) -> float:
+	var total := 0
 	for seed_value in range(1, 121):
-		plain += _brood_with(seed_value, false, [6, 6])["born"]
-		var r := _brood_with(seed_value, true, [6, 6])
-		boosted += r["born"]
-		bonus += r["bonus"]
-	assert_eq(plain, 720)
-	assert_between(float(boosted) / 120.0, 7.2, 7.8, "6 x 1.25 = 7.5 on average")
-	assert_eq(boosted - plain, bonus, "bonus_fry counts exactly the extras")
+		total += _brood_with(seed_value, pellets, brood)["born"]
+	return float(total) / 120.0
+
+
+func test_pellets_on_the_brood_night_only_make_broods_a_quarter_bigger() -> void:
+	assert_between(_average([false, true], [6, 6]), 7.2, 7.8, "6 x 1.25 = 7.5 on average")
+
+
+func test_pellets_every_night_of_the_cycle_make_broods_half_again() -> void:
+	assert_between(_average([true, true], [5, 5]), 7.2, 7.8, "5 x 1.5 = 7.5 on average")
+	var r := _brood_with(5, [true, true], [6, 6])
+	assert_eq(r["born"], 9)
+	assert_eq(r["bonus"], 3)
+
+
+func test_a_missed_night_drops_the_bonus() -> void:
+	assert_eq(_brood_with(5, [true, false], [6, 6])["born"], 6, "not eaten on the brood night: no bonus")
+	assert_between(_average([true, false], [6, 6]), 5.99, 6.01)
+	assert_between(_average([false, true], [6, 6]), 7.2, 7.8, "eaten only on the brood night: 1.25x")
+
+
+func test_the_cycle_counter_resets_after_a_brood() -> void:
+	_setup(3, [6, 6])
+	_pair()
+	gs.inventory.add("pellets", 10)
+	gs.set_food_choice(Fish.BREEDING, "pellets")
+	gs.end_day()
+	assert_eq(gs.brood_food_nights[0], 1)
+	gs.end_day()
+	assert_eq(gs.brood_nights[0], 0)
+	assert_eq(gs.brood_food_nights[0], 0, "reset with the brood")
+	gs.end_day()
+	var s := gs.end_day()
+	assert_eq(s["fry_born"], 9, "a second full cycle gets the full bonus too")
+
+
+func test_counter_resets_when_the_group_breaks_up() -> void:
+	_pair()
+	gs.inventory.add("pellets", 5)
+	gs.set_food_choice(Fish.BREEDING, "pellets")
+	gs.end_day()
+	assert_eq(gs.brood_food_nights[0], 1)
+	gs.move_fish(gs.breeding_group()["father"].id, Fish.HOLDING)
+	gs.end_day()
+	assert_eq(gs.brood_food_nights[0], 0)
 
 
 func test_pellets_give_exact_whole_numbers_when_they_can() -> void:
-	var r := _brood_with(5, true, [4, 4])
+	var r := _brood_with(5, [false, true], [4, 4])
 	assert_eq(r["born"], 5)
 	assert_eq(r["bonus"], 1)
+
+
+func test_food_buff_lasts_the_day_after_the_feeding() -> void:
+	gs.inventory.add("flakes", 5)
+	gs.set_food_choice(Fish.BREEDING, "flakes")
+	var fry := _fry()
+	assert_eq(gs.food_buff(fry), "", "not fed yet")
+	var night := gs.day
+	fry.age_days = 0  # stays a fry, so it is fed every night
+	gs.end_day()
+	assert_eq(fry.fed_day, night)
+	assert_eq(gs.day, night + 1)
+	assert_eq(gs.food_buff(fry), "flakes", "all of the next day")
+	assert_eq(gs.food_buff_icon(fry), "arm")
+	gs.set_food_choice(Fish.BREEDING, "food")
+	gs.inventory.add("food", 1)
+	fry.age_days = 0  # stays a fry, so it is fed every night
+	gs.end_day()
+	assert_eq(gs.food_buff(fry), "", "fed regular food: nothing shown")
+	gs.inventory.remove("food", gs.inventory.count("food"))
+	gs.set_food_choice(Fish.BREEDING, "flakes")
+	fry.age_days = 0  # stays a fry, so it is fed every night
+	gs.end_day()
+	assert_eq(gs.food_buff(fry), "flakes", "fed flakes again")
+	gs.inventory.remove("flakes", gs.inventory.count("flakes"))
+	fry.age_days = 0  # stays a fry, so it is fed every night
+	gs.end_day()
+	assert_eq(gs.food_buff(fry), "", "a night without it, and it is gone")
+
+
+func test_whole_tank_gets_the_buff_including_adults_with_pellets() -> void:
+	_pair()
+	gs.inventory.add("pellets", 2)
+	gs.set_food_choice(Fish.BREEDING, "pellets")
+	gs.end_day()
+	for f in gs.tank_fish(gs.breeding_tank):
+		assert_eq(gs.food_buff(f), "pellets")
+		assert_eq(gs.food_buff_icon(f), "heart")
+	assert_true(gs.food_buff_text("pellets").contains("broods +25%"))
+
+
+func test_buff_and_cycle_counter_survive_save_and_load() -> void:
+	_pair()
+	gs.inventory.add("pellets", 2)
+	gs.set_food_choice(Fish.BREEDING, "pellets")
+	gs.end_day()
+	var loaded := GameState.from_dict(_db(), F.rng(99), SaveFile.parse(JSON.stringify(gs.to_dict())))
+	assert_eq(loaded.brood_food_nights[0], 1)
+	for f in loaded.tank_fish(loaded.breeding_tank):
+		assert_eq(loaded.food_buff(f), "pellets")
+	var d := gs.to_dict()
+	d.erase("brood_food_nights")
+	for fd in d["fish"]:
+		fd.erase("last_food")
+		fd.erase("fed_day")
+	var old := GameState.from_dict(_db(), F.rng(99), SaveFile.parse(JSON.stringify(d)))
+	assert_eq(old.brood_food_nights[0], 0)
+	for f in old.tank_fish(old.breeding_tank):
+		assert_eq(old.food_buff(f), "")
 
 
 func test_bonus_fry_are_real_offspring_and_capacity_still_limits() -> void:

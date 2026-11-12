@@ -9,7 +9,7 @@ who wander in. No fish ever die, nothing punishes you, and there's no rush.
 
 **Play it in your browser:** <https://figtreegames.itch.io/fish-breeder-job-simulator>
 
-Current version: **0.28.0** (see the [changelog](CHANGELOG.md)).
+Current version: **0.29.0** (see the [changelog](CHANGELOG.md)).
 
 | Shop floor | Back room |
 |---|---|
@@ -129,7 +129,7 @@ See [tests/README.md](tests/README.md) for details.
 with [butler](https://itch.io/docs/butler/):
 
 ```powershell
-.\tools\publish_web.ps1 0.28.0
+.\tools\publish_web.ps1 0.29.0
 ```
 
 `tools/publish_windows.ps1` does the same for the Windows download (a single
@@ -137,7 +137,7 @@ with [butler](https://itch.io/docs/butler/):
 templates installed (from the official 4.7.2 export templates):
 
 ```powershell
-.\tools\publish_windows.ps1 0.28.0
+.\tools\publish_windows.ps1 0.29.0
 ```
 
 ## Project layout

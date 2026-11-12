@@ -3,6 +3,8 @@ extends RefCounted
 ## Loads and validates all game data (JSON). Core logic receives the plain
 ## dictionaries held here, so tests can build a DataDB from hand-written data.
 
+## Icons a food may show over the fish that ate it (drawn by scenes/ui/food_icons.gd).
+const FOOD_ICONS := ["heart", "arm"]
 const ITEM_CATEGORIES := ["substrate", "rock", "driftwood", "plant", "decor", "food", "tank"]
 const PLACEABLE_CATEGORIES := ["rock", "driftwood", "plant", "decor"]
 const HEIGHTS := ["short", "medium", "tall"]
@@ -524,6 +526,12 @@ func _validate_item(item: Dictionary) -> void:
 	if item.has("brood_multiplier") and (not (item["brood_multiplier"] is int or item["brood_multiplier"] is float) \
 			or float(item["brood_multiplier"]) <= 1.0 or float(item["brood_multiplier"]) > 3.0):
 		errors.append("%s: brood_multiplier must be a number above 1 and at most 3" % ctx)
+	if item.has("brood_multiplier_full") and (not (item["brood_multiplier_full"] is int or item["brood_multiplier_full"] is float) \
+			or float(item["brood_multiplier_full"]) < float(item.get("brood_multiplier", 1.0)) \
+			or float(item["brood_multiplier_full"]) > 3.0):
+		errors.append("%s: brood_multiplier_full must be a number from brood_multiplier up to 3" % ctx)
+	if item.has("icon") and not item["icon"] in FOOD_ICONS:
+		errors.append("%s: icon must be one of %s" % [ctx, FOOD_ICONS])
 	if category in PLACEABLE_CATEGORIES and not item.get("height") in HEIGHTS:
 		errors.append("%s: placeable items need 'height' (short/medium/tall)" % ctx)
 	if category == "tank" and not item.has("capacity"):

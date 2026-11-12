@@ -3,6 +3,7 @@ extends Control
 ## swimming fish sprite for every fish inside it. Placeholder art only.
 
 const FishSprite := preload("res://scenes/fish_sprite.gd")
+const FoodIcons := preload("res://scenes/ui/food_icons.gd")
 const UI := preload("res://scenes/ui/ui_kit.gd")
 
 ## Back row first so the front row is drawn on top. x is a fraction of the water width.
@@ -77,6 +78,8 @@ func refresh() -> void:
 			_sprites[fish_id] = sprite
 		else:
 			_sprites[fish_id].set_bounds(swim_rect())  # fry may have grown
+		var fed: Fish = Game.state.inventory.get_fish(fish_id)
+		_sprites[fish_id].set_buff(FoodIcons.texture(Game.state.food_buff_icon(fed)))
 	queue_redraw()
 
 

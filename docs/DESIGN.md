@@ -474,6 +474,14 @@ reputation. The design keeps room for all of these.
     order scoring; display-tank sale/delivery leaves them in holding. They
     cannot be moved into order tanks. Later features (gallery, shows) build
     on the favourite flag.
+- **2026-11-12 (v0.29.0), food buffs:**
+  - `Fish.last_food` / `fed_day` (saved) are stamped on every fish in a group
+    that eats a portion; `food_buff()` is active the day after
+    (`fed_day == day - 1`) for non-default food. Icons are pixel maps drawn in
+    code (`scenes/ui/food_icons.gd`), so no emoji font is needed on web.
+  - `brood_food_nights` (saved, per breeding tank) counts brood-food nights in
+    the current cycle; a full cycle uses the food's `brood_multiplier_full`
+    (Pellets 1.5), the brood night alone `brood_multiplier` (1.25).
 - **2026-11-12 (v0.28.0), food per tank, Spawning Pellets:**
   - Saved `tank_food` maps a location to a food item; missing means
     `economy.default_food`. `_eat_food()` tries the choice, then the default,

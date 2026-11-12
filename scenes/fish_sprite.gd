@@ -49,6 +49,9 @@ var _alive := 0.0
 var _spots: Array[Vector3] = []
 ## Visual-only randomness; kept separate from the game RNG.
 var _rng := RandomNumberGenerator.new()
+## Little food-buff icon floating above the fish (see set_buff).
+var _buff: Sprite2D = null
+var _buff_t := 0.0
 ## Sprite mode: the sprite, and loaded sheets shared by every fish.
 var _sprite: Sprite2D = null
 var _anim_time := 0.0
@@ -91,7 +94,32 @@ func set_bounds(p_bounds: Rect2) -> void:
 
 # --- Movement ----------------------------------------------------------------
 
+## Shows `texture` floating above the fish (null removes it).
+func set_buff(texture: Texture2D) -> void:
+	if texture == null:
+		if _buff != null:
+			_buff.queue_free()
+			_buff = null
+		return
+	if _buff == null:
+		_buff = Sprite2D.new()
+		_buff.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		_buff.scale = Vector2(2, 2)
+		_buff.z_index = 5
+		_buff_t = _rng.randf() * TAU
+		add_child(_buff)
+	_buff.texture = texture
+
+
+func _update_buff(delta: float) -> void:
+	if _buff == null:
+		return
+	_buff_t += delta * 3.0
+	_buff.position = Vector2(0, -(_length() * 0.4 + 16.0) + sin(_buff_t) * 2.0)
+
+
 func _process(delta: float) -> void:
+	_update_buff(delta)
 	if not swims:
 		_wiggle += delta * 7.0
 		if _sprite != null:

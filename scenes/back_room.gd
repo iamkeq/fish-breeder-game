@@ -4,6 +4,7 @@ extends Control
 ## them and a button to sell them to the wholesaler.
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
+const FoodIcons := preload("res://scenes/ui/food_icons.gd")
 
 ## The player wants to open the breeding book.
 signal book_requested
@@ -263,7 +264,23 @@ func _fish_entry(f: Fish, roles: Dictionary) -> Control:
 	traits.visible = not state.is_adult(f) or species["traits"].size() > 1
 	traits.add_theme_font_size_override("font_size", 13)
 	traits.modulate = Color(1, 1, 1, 0.8)
-	info.add_child(title)
+	var buff := state.food_buff(f)
+	if buff == "":
+		info.add_child(title)
+	else:
+		var name_row := HBoxContainer.new()
+		name_row.add_theme_constant_override("separation", 6)
+		name_row.add_child(title)
+		var icon := TextureRect.new()
+		icon.texture = FoodIcons.texture(state.food_buff_icon(f))
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.custom_minimum_size = Vector2(22, 22)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_STOP
+		icon.tooltip_text = state.food_buff_text(buff)
+		name_row.add_child(icon)
+		info.add_child(name_row)
 	info.add_child(traits)
 	if state.is_adult(f):
 		var value := Label.new()
@@ -339,5 +356,11 @@ func _brood_text(state: GameState, tank_index: int) -> String:
 	var food_id := state.food_choice(Fish.breeding_location(tank_index))
 	var multiplier := state.food_brood_multiplier(food_id)
 	if multiplier > 1.0:
-		text += " · %s: broods +%d%%" % [state.db.items[food_id]["name"], roundi((multiplier - 1.0) * 100.0)]
+		var name: String = state.db.items[food_id]["name"]
+		# On track for the full bonus while every night of this cycle so far was fed.
+		if state.brood_food_nights[tank_index] == state.brood_nights[tank_index]:
+			text += " · %s every night: broods +%d%%" % [name,
+				roundi((state.food_brood_multiplier_full(food_id) - 1.0) * 100.0)]
+		else:
+			text += " · %s: broods +%d%%" % [name, roundi((multiplier - 1.0) * 100.0)]
 	return text

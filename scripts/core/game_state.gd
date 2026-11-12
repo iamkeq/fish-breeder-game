@@ -16,6 +16,8 @@ var display_tank: Tank = null
 var breeding_tanks: Array[Tank] = []
 ## Nights since each breeding tank's pair last had a brood.
 var brood_nights: Array[int] = []
+## Of those nights, how many the tank ate a brood food (Spawning Pellets).
+var brood_food_nights: Array[int] = []
 ## The food the player picked for a tank: location (a breeding tank or holding)
 ## -> food item id. A missing entry means the default food (Fish Food).
 var tank_food: Dictionary = {}
@@ -270,6 +272,7 @@ func buy_breeding_tank() -> bool:
 func _add_breeding_tank() -> void:
 	breeding_tanks.append(Tank.new("", breeding_capacity()))
 	brood_nights.append(0)
+	brood_food_nights.append(0)
 
 
 # --- Buying ------------------------------------------------------------------
@@ -1727,7 +1730,7 @@ func end_day() -> Dictionary:
 	for i in breeding_tanks.size():
 		var eaten := _night_feed_and_grow(summary, tank_fish(breeding_tanks[i]), "Tank %d" % (i + 1),
 			Fish.breeding_location(i), not breeding_group(i)["mothers"].is_empty())
-		_night_breed(summary, i, food_brood_multiplier(eaten))
+		_night_breed(summary, i, eaten)
 	_count("fish_bred", summary["fry_born"])
 	_staff_finish_night(summary)
 	# Last of all, so food used tonight is noticed. Placed orders arrive tomorrow morning.
@@ -1782,6 +1785,7 @@ func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "",
 			return ""
 		eaten = _eat_food(location)
 		_note_food_eaten(summary, eaten, 1)
+		_mark_fed(group, eaten)
 		return eaten
 	# Auto-feeders give a day's growth for free, unless the tank is set to a
 	# special food that is in stock: then they use one (the player bought it).
@@ -1796,6 +1800,7 @@ func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "",
 		growth = food_growth_days(eaten) if eaten != "" else 0
 		_staff_night["feeder_fry"] = int(_staff_night.get("feeder_fry", 0)) + fry.size()
 	_note_food_eaten(summary, eaten, growth)
+	_mark_fed(group, eaten)
 	if growth == 0 and place != "":
 		summary["unfed_places"].append(place)
 	for f in fry:
@@ -1814,6 +1819,42 @@ func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "",
 	return eaten
 
 
+## Every fish in the group ate this portion tonight (`day` is still tonight's number).
+func _mark_fed(group: Array, eaten: String) -> void:
+	if eaten == "":
+		return
+	for f in group:
+		f.last_food = eaten
+		f.fed_day = day
+
+
+## The special food (not the default) this fish ate last night, or "". The buff
+## shows for the day after the feeding only: fed on night N, it lasts all of day N+1.
+func food_buff(f: Fish) -> String:
+	if f.last_food == "" or f.fed_day != day - 1 or f.last_food == default_food() or not db.items.has(f.last_food):
+		return ""
+	return f.last_food
+
+
+## The icon name ("heart", "arm") for the fish's food buff, or "".
+func food_buff_icon(f: Fish) -> String:
+	var food := food_buff(f)
+	return str(db.items[food].get("icon", "")) if food != "" else ""
+
+
+## Tooltip for a food buff, from the food's data.
+func food_buff_text(item_id: String) -> String:
+	var parts := PackedStringArray()
+	var days := food_growth_days(item_id)
+	if days > 1:
+		parts.append("grows %d days a night" % days)
+	var multiplier := food_brood_multiplier(item_id)
+	if multiplier > 1.0:
+		parts.append("broods +%d%%" % roundi((multiplier - 1.0) * 100.0))
+	var text := "Ate %s last night" % db.items[item_id]["name"]
+	return text + (": " + ", ".join(parts) if not parts.is_empty() else "")
+
+
 ## Adds one eaten portion to the night's summary counters.
 func _note_food_eaten(summary: Dictionary, eaten: String, growth: int) -> void:
 	if eaten == "":
@@ -1826,19 +1867,27 @@ func _note_food_eaten(summary: Dictionary, eaten: String, growth: int) -> void:
 		summary["spawning_food_used"] += 1
 
 
-## `brood_multiplier` is what the food eaten tonight does to broods (1.0 = nothing).
-func _night_breed(summary: Dictionary, tank_index: int, brood_multiplier: float = 1.0) -> void:
+## `eaten` is the food the tank ate tonight ("" = none). A brood food gives its
+## `brood_multiplier`, or `brood_multiplier_full` if it was eaten every night of the cycle.
+func _night_breed(summary: Dictionary, tank_index: int, eaten: String = "") -> void:
 	var tank := breeding_tanks[tank_index]
 	var group := breeding_group(tank_index)
 	if group["mothers"].is_empty():
 		brood_nights[tank_index] = 0
+		brood_food_nights[tank_index] = 0
 		return
 	var father: Fish = group["father"]
 	var species := species_of(father)
 	brood_nights[tank_index] += 1
+	var brood_multiplier := food_brood_multiplier(eaten)
+	if brood_multiplier > 1.0:
+		brood_food_nights[tank_index] += 1
 	if brood_nights[tank_index] < brood_interval(species):
 		return
+	if brood_multiplier > 1.0 and brood_food_nights[tank_index] == brood_nights[tank_index]:
+		brood_multiplier = food_brood_multiplier_full(eaten)
 	brood_nights[tank_index] = 0
+	brood_food_nights[tank_index] = 0
 	var breeding_rules := breeding_species(species)
 	# Every mother has her own brood; fry fill the tank until it is full.
 	for mother in group["mothers"]:
@@ -2100,6 +2149,14 @@ func food_brood_multiplier(item_id: String) -> float:
 	if item_id == "" or not db.items.has(item_id):
 		return 1.0
 	return float(db.items[item_id].get("brood_multiplier", 1.0))
+
+
+## The brood multiplier when the food was eaten every night of the cycle
+## (items' `brood_multiplier_full`, else the normal one).
+func food_brood_multiplier_full(item_id: String) -> float:
+	if item_id == "" or not db.items.has(item_id):
+		return 1.0
+	return float(db.items[item_id].get("brood_multiplier_full", food_brood_multiplier(item_id)))
 
 
 ## The food tanks use unless the player picks another (data: economy.default_food).
@@ -2794,6 +2851,7 @@ func to_dict() -> Dictionary:
 		"display_tank": display_tank.to_dict() if display_tank != null else null,
 		"breeding_tanks": breeding_tanks.map(func(t): return t.to_dict()),
 		"brood_nights": Array(brood_nights),
+		"brood_food_nights": Array(brood_food_nights),
 		"tank_food": tank_food.duplicate(),
 		"orders": saved_orders,
 		"next_order_id": _next_order_id,
@@ -2896,6 +2954,10 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	for tank_data in d["breeding_tanks"]:
 		s.breeding_tanks.append(Tank.from_dict(tank_data))
 		s.brood_nights.append(0)
+		s.brood_food_nights.append(0)
+	var food_nights: Array = d.get("brood_food_nights", [])
+	for i in mini(food_nights.size(), s.brood_food_nights.size()):
+		s.brood_food_nights[i] = int(food_nights[i])
 	var nights: Array = d.get("brood_nights", [])
 	for i in mini(nights.size(), s.brood_nights.size()):
 		s.brood_nights[i] = int(nights[i])
