@@ -103,12 +103,22 @@ static func brood_size(species: Dictionary, rng: RandomNumberGenerator) -> int:
 	return rng.randi_range(int(range_[0]), int(range_[1]))
 
 
+## `size` overrides the rolled brood size (-1 = roll one), e.g. a bigger brood
+## from Spawning Pellets. Every fry is a real offspring of this mother and sire.
 static func breed(mother: Fish, father: Fish, species: Dictionary,
-		rng: RandomNumberGenerator) -> Array[Fish]:
+		rng: RandomNumberGenerator, size: int = -1) -> Array[Fish]:
 	var brood: Array[Fish] = []
-	for i in brood_size(species, rng):
+	for i in (brood_size(species, rng) if size < 0 else size):
 		brood.append(make_offspring(mother, father, species, rng))
 	return brood
+
+
+## `size` times `multiplier`, with the fraction rounded up or down at random
+## (6 x 1.25 = 7.5 gives 7 or 8, half each).
+static func scale_brood(size: int, multiplier: float, rng: RandomNumberGenerator) -> int:
+	var scaled := float(size) * multiplier
+	var whole := int(floor(scaled))
+	return whole + (1 if rng.randf() < scaled - float(whole) else 0)
 
 
 ## A random adult fish, e.g. for the breeding-stock market.

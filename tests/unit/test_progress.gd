@@ -78,6 +78,16 @@ func test_loaded_game_keeps_playing() -> void:
 	assert_true(newest.id > pair[0].id and newest.id > pair[1].id, "new fish get fresh ids")
 
 
+func test_food_choices_are_saved_and_old_saves_default() -> void:
+	assert_true(gs.set_food_choice(Fish.HOLDING, "food"))
+	var d := gs.to_dict()
+	assert_true(d.has("tank_food"))
+	d.erase("tank_food")
+	var loaded := GameState.from_dict(F.db(), F.rng(99), SaveFile.parse(JSON.stringify(d)))
+	assert_eq(loaded.food_choice(Fish.BREEDING), "food")
+	assert_eq(loaded.food_choice(Fish.HOLDING), "food")
+
+
 func test_save_from_another_version_is_refused() -> void:
 	var data := gs.to_dict()
 	data["version"] = 999

@@ -16,6 +16,9 @@ var display_tank: Tank = null
 var breeding_tanks: Array[Tank] = []
 ## Nights since each breeding tank's pair last had a brood.
 var brood_nights: Array[int] = []
+## The food the player picked for a tank: location (a breeding tank or holding)
+## -> food item id. A missing entry means the default food (Fish Food).
+var tank_food: Dictionary = {}
 ## The first breeding tank.
 var breeding_tank: Tank:
 	get:
@@ -1713,16 +1716,18 @@ func end_day() -> Dictionary:
 	var summary := {
 		"day": day, "earned": earned_today, "food_used": 0,
 		"fry_unfed": 0, "unfed_places": [], "growth_food_used": 0, "fry_grown_up": 0, "fry_born": 0,
+		"spawning_food_used": 0, "bonus_fry": 0,
 		"log": day_log.duplicate(true), "money_end": money,
 		"born_ids": [], "grown_ids": [], "mutations": [], "discoveries": [], "book_bonuses": [],
 	}
 	# Fry moved out to holding (to make room) are fed first, so they don't go
 	# hungry while a breeding tank takes the last portion.
-	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING), "Holding")
+	_night_feed_and_grow(summary, inventory.fish_list(Fish.HOLDING), "Holding", Fish.HOLDING)
 	# Each breeding tank is separate: its own food, growth and pair.
 	for i in breeding_tanks.size():
-		_night_feed_and_grow(summary, tank_fish(breeding_tanks[i]), "Tank %d" % (i + 1))
-		_night_breed(summary, i)
+		var eaten := _night_feed_and_grow(summary, tank_fish(breeding_tanks[i]), "Tank %d" % (i + 1),
+			Fish.breeding_location(i), not breeding_group(i)["mothers"].is_empty())
+		_night_breed(summary, i, food_brood_multiplier(eaten))
 	_count("fish_bred", summary["fry_born"])
 	_staff_finish_night(summary)
 	# Last of all, so food used tonight is noticed. Placed orders arrive tomorrow morning.
@@ -1754,36 +1759,43 @@ func end_day() -> Dictionary:
 	return summary
 
 
-## Feeds one group of fish (a breeding tank, or holding): if it has fry, it
-## uses one portion of food and they all grow (a day, or more with a dearer
-## food), never past adulthood. No food = no growth tonight, but no harm.
-## `place` names the group in the summary if it goes hungry.
-func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "") -> void:
+## Feeds one group of fish (a breeding tank, or holding) with the food chosen
+## for `location` (see _eat_food). If it has fry it uses one portion and they
+## all grow (a day, or more with a dearer food), never past adulthood. No food
+## = no growth tonight, but no harm. A breeding tank set to a brood food
+## (Spawning Pellets) also eats one a night with no fry, while it has a
+## breeding group. `place` names the group in the summary if it goes hungry.
+## Returns the food item id eaten ("" = none), so breeding can use its effect.
+func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "",
+		location: String = "", has_breeding_group: bool = false) -> String:
 	var fry: Array[Fish] = []
 	for f in group:
 		if not is_adult(f):
 			fry.append(f)
-	if fry.is_empty():
-		return
-	# Auto-feeders give a day's growth for free, unless Growth Flakes are in
-	# stock: then they use one (the player bought them to grow fry faster).
-	var auto := upgrade_effect("auto_feed") > 0.0
+	var choice := food_choice(location)
+	# A special food (not the default) the player picked and still has.
+	var special_ready := choice != default_food() and inventory.count(choice) > 0
+	var eaten := ""
 	var growth := 0
-	var used_food := false
-	if not auto or _best_food_growth() > 1:
-		growth = _use_food()
-		used_food = growth > 0
+	if fry.is_empty():
+		if not (has_breeding_group and special_ready and food_brood_multiplier(choice) > 1.0):
+			return ""
+		eaten = _eat_food(location)
+		_note_food_eaten(summary, eaten, 1)
+		return eaten
+	# Auto-feeders give a day's growth for free, unless the tank is set to a
+	# special food that is in stock: then they use one (the player bought it).
+	var auto := upgrade_effect("auto_feed") > 0.0
+	if not auto or special_ready:
+		eaten = _eat_food(location)
+		growth = food_growth_days(eaten) if eaten != "" else 0
 	if growth == 0 and auto:
 		growth = 1
 	if growth == 0 and _staff_buys_food():
-		growth = _use_food()
-		used_food = growth > 0
+		eaten = _eat_food(location)
+		growth = food_growth_days(eaten) if eaten != "" else 0
 		_staff_night["feeder_fry"] = int(_staff_night.get("feeder_fry", 0)) + fry.size()
-	if used_food:
-		summary["food_used"] += 1
-		if growth > 1:
-			summary["growth_food_used"] += 1
-			summary["growth_food_days"] = maxi(int(summary.get("growth_food_days", 0)), growth)
+	_note_food_eaten(summary, eaten, growth)
 	if growth == 0 and place != "":
 		summary["unfed_places"].append(place)
 	for f in fry:
@@ -1799,9 +1811,23 @@ func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "")
 			_record("best_bred", f.stars, _fish_label(f), _variety_value(f))
 			summary["fry_grown_up"] += 1
 			summary["grown_ids"].append(f.id)
+	return eaten
 
 
-func _night_breed(summary: Dictionary, tank_index: int) -> void:
+## Adds one eaten portion to the night's summary counters.
+func _note_food_eaten(summary: Dictionary, eaten: String, growth: int) -> void:
+	if eaten == "":
+		return
+	summary["food_used"] += 1
+	if growth > 1:
+		summary["growth_food_used"] += 1
+		summary["growth_food_days"] = maxi(int(summary.get("growth_food_days", 0)), growth)
+	if food_brood_multiplier(eaten) > 1.0:
+		summary["spawning_food_used"] += 1
+
+
+## `brood_multiplier` is what the food eaten tonight does to broods (1.0 = nothing).
+func _night_breed(summary: Dictionary, tank_index: int, brood_multiplier: float = 1.0) -> void:
 	var tank := breeding_tanks[tank_index]
 	var group := breeding_group(tank_index)
 	if group["mothers"].is_empty():
@@ -1816,9 +1842,17 @@ func _night_breed(summary: Dictionary, tank_index: int) -> void:
 	var breeding_rules := breeding_species(species)
 	# Every mother has her own brood; fry fill the tank until it is full.
 	for mother in group["mothers"]:
-		for fry in Genetics.breed(mother, father, breeding_rules, rng):
+		var base_size := Genetics.brood_size(breeding_rules, rng)
+		var size := base_size
+		if brood_multiplier > 1.0:
+			size = Genetics.scale_brood(base_size, brood_multiplier, rng)
+		var born := 0
+		for fry in Genetics.breed(mother, father, breeding_rules, rng, size):
 			if not tank.has_room_for_fish():
 				return
+			born += 1
+			if born > base_size:
+				summary["bonus_fry"] += 1
 			fry.purity = Purity.offspring_purity(mother, father, fry, db.economy["purity"])
 			fry.location = Fish.breeding_location(tank_index)
 			inventory.add_fish(fry)
@@ -2029,22 +2063,30 @@ func food_count() -> int:
 	return total
 
 
-## A guess at how many portions of fish food tonight's feeding will use: one for
-## every group of fish (each breeding tank, and holding) that has fry. The
-## auto-feeder upgrade uses none. Matches _night_feed_and_grow(). (Holding is
-## fed first, then each breeding tank; that matters only when food runs short.)
+## A guess at how many portions of food tonight's feeding will use: one for
+## every group of fish (each breeding tank, and holding) that has fry, plus one
+## for each breeding group whose tank is set to a brood food (Spawning Pellets)
+## that is in stock. The auto-feeder upgrade uses none, except for a special
+## food the tank is set to. Matches _night_feed_and_grow(). (Holding is fed
+## first, then each breeding tank; that matters only when food runs short.)
 func food_use_per_night() -> int:
-	if upgrade_effect("auto_feed") > 0.0:
-		return 0
-	var groups: Array = []
-	for tank in breeding_tanks:
-		groups.append(tank_fish(tank))
-	groups.append(inventory.fish_list(Fish.HOLDING))
+	var auto := upgrade_effect("auto_feed") > 0.0
 	var used := 0
-	for group in groups:
-		if group.any(func(f): return not is_adult(f)):
-			used += 1
+	for i in breeding_tanks.size():
+		used += _tank_food_use(tank_fish(breeding_tanks[i]), Fish.breeding_location(i),
+			not breeding_group(i)["mothers"].is_empty(), auto)
+	used += _tank_food_use(inventory.fish_list(Fish.HOLDING), Fish.HOLDING, false, auto)
 	return used
+
+
+func _tank_food_use(group: Array, location: String, has_breeding_group: bool, auto: bool) -> int:
+	var choice := food_choice(location)
+	var special_ready := choice != default_food() and inventory.count(choice) > 0
+	if group.any(func(f): return not is_adult(f)):
+		return 0 if auto and not special_ready else 1
+	if has_breeding_group and special_ready and food_brood_multiplier(choice) > 1.0:
+		return 1
+	return 0
 
 
 ## Growth days one portion of this food gives (items' `growth_days`, default 1).
@@ -2052,27 +2094,55 @@ func food_growth_days(item_id: String) -> int:
 	return maxi(1, int(db.items[item_id].get("growth_days", 1)))
 
 
-## The best growth any food in stock gives (0 if there is none).
-func _best_food_growth() -> int:
-	var best := 0
-	for item_id in db.items_in_category("food"):
-		if inventory.count(item_id) > 0:
-			best = maxi(best, food_growth_days(item_id))
-	return best
+## What one portion of this food does to a brood (items' `brood_multiplier`,
+## default 1.0 = nothing). "" gives 1.0.
+func food_brood_multiplier(item_id: String) -> float:
+	if item_id == "" or not db.items.has(item_id):
+		return 1.0
+	return float(db.items[item_id].get("brood_multiplier", 1.0))
 
 
-## Uses one portion of the food that grows fry fastest. Returns the days of
-## growth it gives (0 = no food in stock).
-func _use_food() -> int:
-	var best_id := ""
-	var best := 0
-	for item_id in db.items_in_category("food"):
-		if inventory.count(item_id) > 0 and food_growth_days(item_id) > best:
-			best = food_growth_days(item_id)
-			best_id = item_id
-	if best_id != "" and inventory.remove(best_id):
-		return best
-	return 0
+## The food tanks use unless the player picks another (data: economy.default_food).
+func default_food() -> String:
+	var wanted := str(db.economy.get("default_food", ""))
+	if db.items.has(wanted) and db.items[wanted]["category"] == "food":
+		return wanted
+	var foods := db.items_in_category("food")
+	return foods[0] if not foods.is_empty() else ""
+
+
+## The food chosen for a breeding tank location (or Fish.HOLDING); the default food if none.
+func food_choice(location: String) -> String:
+	var chosen := str(tank_food.get(location, ""))
+	if db.items.has(chosen) and db.items[chosen]["category"] == "food":
+		return chosen
+	return default_food()
+
+
+## Picks the food a tank (or holding) uses. Only food items; false if it isn't one.
+func set_food_choice(location: String, item_id: String) -> bool:
+	if not db.items.has(item_id) or db.items[item_id]["category"] != "food":
+		return false
+	var index := Fish.breeding_index(location)
+	if location != Fish.HOLDING and not (index >= 0 and index < breeding_tanks.size()):
+		return false
+	if item_id == default_food():
+		tank_food.erase(location)
+	else:
+		tank_food[location] = item_id
+	return true
+
+
+## Uses one portion of the food for `location`: its chosen food if in stock,
+## else the default food, else any other food (so fry never go hungry just
+## because the choice ran out). Returns the item id eaten ("" = no food in stock).
+func _eat_food(location: String) -> String:
+	var order: Array = [food_choice(location), default_food()]
+	order.append_array(db.items_in_category("food"))
+	for item_id in order:
+		if item_id != "" and inventory.remove(item_id):
+			return item_id
+	return ""
 
 
 # --- Standing orders -----------------------------------------------------------
@@ -2301,11 +2371,11 @@ func staff_wage_bill() -> int:
 func _staff_buys_food() -> bool:
 	if staff_for_task("feeder").is_empty():
 		return false
-	var foods := db.items_in_category("food")
-	if foods.is_empty() or not buy_item(foods[0]):
+	var food := default_food()
+	if food == "" or not buy_item(food):
 		return false
 	_staff_night["feeder_bought"] = int(_staff_night.get("feeder_bought", 0)) + 1
-	_staff_night["feeder_spent"] = int(_staff_night.get("feeder_spent", 0)) + int(db.items[foods[0]]["cost"])
+	_staff_night["feeder_spent"] = int(_staff_night.get("feeder_spent", 0)) + int(db.items[food]["cost"])
 	return true
 
 
@@ -2724,6 +2794,7 @@ func to_dict() -> Dictionary:
 		"display_tank": display_tank.to_dict() if display_tank != null else null,
 		"breeding_tanks": breeding_tanks.map(func(t): return t.to_dict()),
 		"brood_nights": Array(brood_nights),
+		"tank_food": tank_food.duplicate(),
 		"orders": saved_orders,
 		"next_order_id": _next_order_id,
 		"backorders": backorders.duplicate(true),
@@ -2828,6 +2899,10 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	var nights: Array = d.get("brood_nights", [])
 	for i in mini(nights.size(), s.brood_nights.size()):
 		s.brood_nights[i] = int(nights[i])
+	var foods: Dictionary = d.get("tank_food", {})
+	for location in foods:
+		if p_db.items.has(foods[location]):
+			s.tank_food[str(location)] = str(foods[location])
 	for order_data in d.get("orders", []):
 		var order: Dictionary = order_data.duplicate(true)
 		order["tank"] = Tank.from_dict(order_data["tank"]) if order_data.get("tank") != null else null

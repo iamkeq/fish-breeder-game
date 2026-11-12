@@ -412,6 +412,11 @@ func set_order_money_floor(amount: int) -> void:
 	changed.emit()
 
 
+## Picks the food a breeding tank (or Fish.HOLDING) uses. See GameState.set_food_choice().
+func set_food_choice(location: String, item_id: String) -> bool:
+	return _changed_if(state.set_food_choice(location, item_id))
+
+
 func buy_breeding_tank() -> bool:
 	return _changed_if(state.buy_breeding_tank())
 

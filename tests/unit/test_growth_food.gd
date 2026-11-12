@@ -21,9 +21,10 @@ func _fry(age: int = 0) -> Fish:
 	return f
 
 
-func test_flakes_preferred_over_normal_food() -> void:
+func test_chosen_flakes_used_instead_of_normal_food() -> void:
 	gs.inventory.add("food", 3)
 	gs.inventory.add("flakes", 1)
+	assert_true(gs.set_food_choice(Fish.BREEDING, "flakes"))
 	var fry := _fry()
 	var s := gs.end_day()
 	assert_eq(gs.inventory.count("flakes"), 0)
@@ -50,9 +51,10 @@ func test_normal_food_when_flakes_run_out() -> void:
 	assert_eq(s["growth_food_used"], 0)
 
 
-func test_auto_feeder_uses_a_flake_when_in_stock() -> void:
+func test_auto_feeder_uses_a_flake_when_chosen_and_in_stock() -> void:
 	gs.money = 100
 	assert_true(gs.buy_upgrade("feeder"))
+	assert_true(gs.set_food_choice(Fish.BREEDING, "flakes"))
 	var plain := _fry()
 	var s := gs.end_day()
 	assert_eq(plain.age_days, 1, "free day of growth, no food used")
@@ -67,6 +69,8 @@ func test_auto_feeder_uses_a_flake_when_in_stock() -> void:
 func test_summary_counts_flakes_used() -> void:
 	gs.inventory.add("flakes", 2)
 	gs.buy_breeding_tank()
+	gs.set_food_choice(Fish.BREEDING, "flakes")
+	gs.set_food_choice("breeding2", "flakes")
 	var a := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
 	var b := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
 	gs.move_fish(a.id, Fish.BREEDING)

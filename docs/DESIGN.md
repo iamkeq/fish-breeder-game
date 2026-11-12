@@ -474,6 +474,14 @@ reputation. The design keeps room for all of these.
     order scoring; display-tank sale/delivery leaves them in holding. They
     cannot be moved into order tanks. Later features (gallery, shows) build
     on the favourite flag.
+- **2026-11-12 (v0.28.0), food per tank, Spawning Pellets:**
+  - Saved `tank_food` maps a location to a food item; missing means
+    `economy.default_food`. `_eat_food()` tries the choice, then the default,
+    then any food. Pellet tanks with a breeding group eat every night even
+    without fry.
+  - Food items may have `brood_multiplier`; `Genetics.breed()` takes an
+    explicit size and `scale_brood()` rounds the fraction at random, so extra
+    fry are real offspring of that pair. Capacity still limits the brood.
 - **2026-11-12 (v0.27.0), regular customers:**
   - `data/regulars.json` holds the rules and 8 characters (favourite
     trait/value, min stars). `scripts/core/regulars.gd` is the pure maths

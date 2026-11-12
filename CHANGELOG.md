@@ -2,6 +2,23 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.28.0] - 2026-11-12
+
+### Added
+- **Choose the food for each tank.** Every breeding tank and the holding tank
+  has a Food menu in the Back room. It starts on Fish Food. If the food you
+  picked runs out, the tank eats Fish Food instead, then anything else you
+  have, so fry never go hungry. Tank tabs show the food when it isn't Fish
+  Food.
+- **Spawning Pellets** (Market, $8): in a tank set to Pellets, the breeding
+  fish eat them every night and broods are 25% bigger (a brood of 4 becomes
+  5). Every extra fry is a real child of that pair. The day summary shows the
+  extra fry.
+
+### Changed
+- Growth Flakes are now only eaten in tanks you set to Growth Flakes (before,
+  every tank ate them first whenever you had some).
+
 ## [0.27.0] - 2026-11-12
 
 ### Added

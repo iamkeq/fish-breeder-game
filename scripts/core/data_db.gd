@@ -521,6 +521,9 @@ func _validate_item(item: Dictionary) -> void:
 	if item.has("growth_days") and (not (item["growth_days"] is int or item["growth_days"] is float) \
 			or int(item["growth_days"]) < 1 or float(item["growth_days"]) != float(int(item["growth_days"]))):
 		errors.append("%s: growth_days must be a whole number of 1 or more" % ctx)
+	if item.has("brood_multiplier") and (not (item["brood_multiplier"] is int or item["brood_multiplier"] is float) \
+			or float(item["brood_multiplier"]) <= 1.0 or float(item["brood_multiplier"]) > 3.0):
+		errors.append("%s: brood_multiplier must be a number above 1 and at most 3" % ctx)
 	if category in PLACEABLE_CATEGORIES and not item.get("height") in HEIGHTS:
 		errors.append("%s: placeable items need 'height' (short/medium/tall)" % ctx)
 	if category == "tank" and not item.has("capacity"):
@@ -594,6 +597,9 @@ func _validate_purity() -> void:
 func _validate_economy() -> void:
 	if not _require(economy, ECONOMY_FIELDS, "economy"):
 		return
+	if economy.has("default_food") and not (items.has(economy["default_food"])
+			and items[economy["default_food"]]["category"] == "food"):
+		errors.append("economy: 'default_food' must be a food item")
 	if _require(economy["tank_pricing"], ["premium", "looks_bonus_max"], "economy/tank_pricing"):
 		for key in ["premium", "looks_bonus_max"]:
 			var value = economy["tank_pricing"][key]

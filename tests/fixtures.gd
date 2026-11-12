@@ -45,6 +45,7 @@ static func template() -> Dictionary:
 
 static func economy() -> Dictionary:
 	return {
+		"default_food": "food",
 		"quality_multipliers": {"1": 0.6, "2": 0.8, "3": 1.0, "4": 1.5, "5": 2.25},
 		"offspring_quality_nudge": {"normal": [0.2, 0.6, 0.2], "fed": [0.1, 0.6, 0.3], "premium": [0.0, 0.0, 1.0]},
 		"purity": {
