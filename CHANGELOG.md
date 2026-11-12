@@ -2,6 +2,16 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.23.0] - 2026-11-11
+
+### Added
+- **Up to 10 breeding tanks** (was 4). Tanks 5 to 10 cost $200, $250, $300,
+  $350, $400 and $450.
+- New goal **Fish farm**: own all 10 breeding tanks ($250).
+
+### Changed
+- The goal "Full back room" is now "Back room regular" (own 4 tanks).
+
 ## [0.22.1] - 2026-11-11
 
 ### Fixed

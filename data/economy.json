@@ -48,9 +48,9 @@
 	"gallery": {"pin_slots": 6},
 	"breeding_tank_capacity": 12,
 	"breeding_tanks": {
-		"max": 4,
+		"max": 10,
 		"max_mothers": 3,
-		"extra_costs": [75, 100, 150],
+		"extra_costs": [75, 100, 150, 200, 250, 300, 350, 400, 450],
 		"substrate": "fine_sand",
 		"air_stone": {"sheet": "res://assets/decor/air_stone.png", "sprite": [720, 354, 180, 126], "frames": [[0, 0, 180, 480], [180, 0, 180, 480], [360, 0, 180, 480], [540, 0, 180, 480], [720, 0, 180, 480]], "body_height": 128, "fps": 4, "height": "short", "x": 0.93}
 	},
