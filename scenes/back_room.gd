@@ -8,7 +8,7 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 ## The player wants to open the breeding book.
 signal book_requested
 
-@onready var _tank_tabs: HBoxContainer = %TankTabs
+@onready var _tank_tabs: HFlowContainer = %TankTabs
 @onready var _tank_title: Label = %TankTitle
 @onready var _tank_view: Control = %TankView
 @onready var _brood_info: Label = %BroodInfo

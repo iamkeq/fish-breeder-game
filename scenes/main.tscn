@@ -42,9 +42,10 @@ theme_override_constants/separation = 12
 [node name="TopBarPanel" type="PanelContainer" parent="Margin/Layout"]
 layout_mode = 2
 
-[node name="TopBar" type="HBoxContainer" parent="Margin/Layout/TopBarPanel"]
+[node name="TopBar" type="HFlowContainer" parent="Margin/Layout/TopBarPanel"]
 layout_mode = 2
-theme_override_constants/separation = 9
+theme_override_constants/h_separation = 9
+theme_override_constants/v_separation = 6
 
 [node name="ShopName" type="Label" parent="Margin/Layout/TopBarPanel/TopBar"]
 layout_mode = 2

@@ -2,6 +2,13 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.22.1] - 2026-11-11
+
+### Fixed
+- The top menu bar and the back room's tank tab row no longer get cut off
+  in a narrow window. Both now wrap onto a second line when they run out of
+  room.
+
 ## [0.22.0] - 2026-11-11
 
 ### Changed (balance, from a 100-day bot test)
