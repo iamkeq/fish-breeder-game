@@ -132,6 +132,14 @@ with [butler](https://itch.io/docs/butler/):
 .\tools\publish_web.ps1 0.25.0
 ```
 
+`tools/publish_windows.ps1` does the same for the Windows download (a single
+`FishBreeder.exe`, itch channel `windows`). It needs Godot's Windows export
+templates installed (from the official 4.7.2 export templates):
+
+```powershell
+.\tools\publish_windows.ps1 0.25.0
+```
+
 ## Project layout
 
 ```

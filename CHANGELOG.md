@@ -7,6 +7,8 @@ All notable changes to Fish Breeder Job Simulator. Newest first.
 ### Added
 - **Full screen button** in the top bar (or press **F11**). Works in the
   browser too; press it again, or Esc in the browser, to leave full screen.
+- **Windows download** on itch: a single `FishBreeder.exe` to play outside
+  the browser. Built with the new `tools/publish_windows.ps1`.
 
 ### Changed
 - The top bar no longer shows the shop name and its spacing is a little
