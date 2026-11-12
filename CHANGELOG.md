@@ -2,6 +2,13 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.24.1] - 2026-11-11
+
+### Changed
+- In the tank editor, the "Add fish" list is now ordered by where each fish
+  is coming from: the holding tank first, then breeding tank 1, 2, 3 and so
+  on, then the display tank. Each entry still shows its tank in brackets.
+
 ## [0.24.0] - 2026-11-11
 
 ### Added

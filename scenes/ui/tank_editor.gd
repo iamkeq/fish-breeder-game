@@ -359,6 +359,15 @@ func _section_label(text: String) -> Label:
 
 
 
+## Sort key for where a fish is coming from: holding, breeding tanks 1..N, then the rest.
+func _source_rank(loc: String) -> int:
+	if loc == Fish.HOLDING:
+		return 0
+	if Fish.is_breeding(loc):
+		return 1 + Fish.breeding_index(loc)
+	return 100
+
+
 ## The order this editor is working on ({} for the display tank).
 func _order() -> Dictionary:
 	var i := Game.state.order_index_by_id(Fish.order_id(location))
@@ -394,6 +403,11 @@ func _refresh_fish(t: Tank) -> void:
 	for f in state.inventory.fish_list():
 		if f.location != location and state.is_adult(f) and not Fish.is_order(f.location):
 			candidates.append(f)
+	# Holding tank first, then each breeding tank in order, then the display tank.
+	candidates.sort_custom(func(a: Fish, b: Fish) -> bool:
+		var ka := _source_rank(a.location)
+		var kb := _source_rank(b.location)
+		return ka < kb if ka != kb else a.id < b.id)
 	for f in candidates:
 		var index := popup.item_count
 		popup.add_item("%s %s%s %s  (%s)" % [UI.sex_symbol(f), f.nickname if f.nickname != "" else UI.traits_text(f),
