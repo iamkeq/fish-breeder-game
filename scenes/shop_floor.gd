@@ -185,7 +185,18 @@ func _refresh_tank() -> void:
 		_tank_info.text = "The display stand is empty."
 		var tanks := Game.db.items_in_category("tank").filter(func(id): return state.inventory.count(id) > 0)
 		if tanks.is_empty():
-			_tank_info.text += " Buy a tank in the Market to set up a new one."
+			# No spare tank in stock: buy one right here and set it up in one go.
+			_tank_info.text += " You have no spare tank."
+			for id in Game.db.items_in_category("tank"):
+				var cost := state.item_cost(id)
+				var afford := state.can_afford(cost)
+				var buy := UI.small_button("Buy a %s ($%d) and set it up" % [Game.db.items[id]["name"], cost],
+					"" if afford else "You need $%d." % cost)
+				buy.disabled = not afford
+				buy.pressed.connect(func():
+					if Game.buy_item(id):
+						Game.install_display_tank(id, _display_loc))
+				_tank_actions.add_child(buy)
 		for id in tanks:
 			var b := UI.small_button("Set up a new %s (have %d)" % [Game.db.items[id]["name"], state.inventory.count(id)])
 			b.pressed.connect(func(): Game.install_display_tank(id, _display_loc))

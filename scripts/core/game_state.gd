@@ -1839,7 +1839,8 @@ func end_day() -> Dictionary:
 ## Feeds one group of fish (a breeding tank, or holding) with the food chosen
 ## for `location` (see _eat_food). If it has fry it uses one portion and they
 ## all grow (a day, or more with a dearer food), never past adulthood. No food
-## = no growth tonight, but no harm. A breeding tank set to a brood food
+## = no growth tonight, but no harm, except in holding: fry there always grow at
+## least a day a night, food or not (and aren't counted as hungry). A breeding tank set to a brood food
 ## (Spawning Pellets) also eats one a night with no fry, while it has a
 ## breeding group. `place` names the group in the summary if it goes hungry.
 ## Returns the food item id eaten ("" = none), so breeding can use its effect.
@@ -1875,6 +1876,8 @@ func _night_feed_and_grow(summary: Dictionary, group: Array, place: String = "",
 		_staff_night["feeder_fry"] = int(_staff_night.get("feeder_fry", 0)) + fry.size()
 	_note_food_eaten(summary, eaten, growth)
 	_mark_fed(group, eaten)
+	if growth == 0 and location == Fish.HOLDING:
+		growth = 1  # holding fry grow at the regular rate even with no food left
 	if growth == 0 and place != "":
 		summary["unfed_places"].append(place)
 	for f in fry:

@@ -2,6 +2,24 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.31.0] - 2026-11-13
+
+Rules and features from the 3D version, brought across.
+
+### Added
+- **Speed button** next to Pause in the top bar: the clock runs at 1x, 2x or
+  4x while the shop stays open and customers keep coming. Click it, or press
+  T, to step through the speeds. It isn't saved, so each session starts at 1x.
+- **Buy a tank from the empty display stand:** with no spare tank in stock,
+  the Display tank column offers "Buy a 20L Tank ($25) and set it up". It's
+  greyed out, with the price as a tooltip, when you can't afford it.
+
+### Changed
+- **Fry in the holding tank always grow** at least a day each night, even with
+  no food left, and no longer count as going hungry. If there is food they
+  still eat it, so Growth Flakes still speed them up. Fry in breeding tanks
+  still need food to grow.
+
 ## [0.30.0] - 2026-11-12
 
 ### Added

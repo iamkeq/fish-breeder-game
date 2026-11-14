@@ -48,6 +48,7 @@ var _orders_room: Control
 var _goals: ColorRect
 var _goals_button: Button
 var _pause_button: Button
+var _speed_button: Button
 var _fullscreen_button: Button
 var _rep_label: Label
 var _toast: PanelContainer
@@ -90,6 +91,12 @@ func _ready() -> void:
 	_pause_button.focus_mode = Control.FOCUS_NONE  # so Space isn't eaten by the button
 	_pause_button.pressed.connect(Game.toggle_pause)
 	_clock_label.add_sibling(_pause_button)
+	# Speed: 1x / 2x / 4x while the shop is open, next to Pause.
+	_speed_button = Button.new()
+	_speed_button.focus_mode = Control.FOCUS_NONE
+	_speed_button.tooltip_text = "Run the clock faster while the shop is open: 1x, 2x or 4x. Click to change (or press T)."
+	_speed_button.pressed.connect(Game.cycle_speed)
+	_pause_button.add_sibling(_speed_button)
 	_fullscreen_button = Button.new()
 	_fullscreen_button.focus_mode = Control.FOCUS_NONE
 	_fullscreen_button.pressed.connect(_toggle_fullscreen)
@@ -153,6 +160,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_SPACE:
 		Game.toggle_pause()
 		get_viewport().set_input_as_handled()
+	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_T:
+		Game.cycle_speed()
+		get_viewport().set_input_as_handled()
 	elif event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F11:
 		_toggle_fullscreen()
 		get_viewport().set_input_as_handled()
@@ -198,6 +208,9 @@ func _update_top_bar() -> void:
 	_pause_button.set_pressed_no_signal(Game.manual_paused)
 	_pause_button.text = "Resume" if Game.manual_paused else "Pause"
 	_pause_button.tooltip_text = "Stop the clock so you can think (Space). Everything still works while paused."
+	_speed_button.text = "Speed %dx" % int(Game.speed_multiplier)
+	_speed_button.add_theme_color_override("font_color",
+		Color.WHITE if Game.speed_multiplier == 1.0 else Color("#fff1a8"))
 	_update_fullscreen_button()
 	if state.restocking:
 		_clock_label.text += "  ×%d" % int(state.restock_speed())

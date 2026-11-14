@@ -20,8 +20,11 @@ func _reload(state: GameState) -> GameState:
 
 
 ## A fry in holding (it needs one portion of food a night to grow).
+## A fry in the breeding tank (holding fry grow without food, so they can't go hungry).
 func _fry() -> Fish:
-	return gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	var f := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 0))
+	gs.move_fish(f.id, Fish.BREEDING)
+	return f
 
 
 func _no_food() -> void:

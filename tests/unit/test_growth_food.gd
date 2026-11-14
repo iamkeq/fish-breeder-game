@@ -90,3 +90,29 @@ func test_holding_is_fed_before_breeding_tanks() -> void:
 	assert_eq(in_tank.age_days, 0)
 	assert_eq(s["fry_unfed"], 1)
 	assert_eq(s["unfed_places"], ["Tank 1"])
+
+
+func _holding_fry(age: int = 0) -> Fish:
+	var f := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, age))
+	gs.move_fish(f.id, Fish.HOLDING)
+	return f
+
+
+func test_holding_fry_grow_a_day_without_food() -> void:
+	var fry := _holding_fry()
+	var bred := _fry()
+	var s := gs.end_day()
+	assert_eq(fry.location, Fish.HOLDING)
+	assert_eq(fry.age_days, 1, "holding fry grow at the regular rate with no food")
+	assert_true(fry.fed_every_night, "not counted as going hungry")
+	assert_eq(bred.age_days, 0, "breeding-tank fry still need food")
+	assert_false("Holding" in s["unfed_places"])
+
+
+func test_holding_fry_still_eat_food_when_there_is_some() -> void:
+	gs.inventory.add("flakes", 1)
+	assert_true(gs.set_food_choice(Fish.HOLDING, "flakes"))
+	var fry := _holding_fry()
+	gs.end_day()
+	assert_eq(fry.age_days, 2, "flakes still speed them up")
+	assert_eq(gs.inventory.count("flakes"), 0)

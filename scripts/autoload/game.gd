@@ -40,6 +40,10 @@ const FAST_FORWARD := 20.0
 var db: DataDB
 var state: GameState
 var _pause_requests: int = 0
+## The speed button: the clock runs this many times faster while the shop is open
+## (1, 2 or 4; see cycle_speed()). Not saved: every session starts at normal speed.
+const SPEEDS := [1.0, 2.0, 4.0]
+var speed_multiplier: float = 1.0
 ## The player's own pause (the Pause button / Space). Menus never clear it.
 var manual_paused: bool = false
 ## Whether this run loads and writes the save file. Off for headless runs and
@@ -138,11 +142,18 @@ func _check_goals() -> void:
 		reputation_level_up.emit(level, state.reputation_levels()[level]["name"])
 
 
+## Next speed: 1x -> 2x -> 4x -> 1x.
+func cycle_speed() -> void:
+	var i := SPEEDS.find(speed_multiplier)
+	speed_multiplier = SPEEDS[(i + 1) % SPEEDS.size()]
+	clock_ticked.emit()
+
+
 func _process(delta: float) -> void:
 	var clock := state.clock
 	if not clock.is_open:
 		return
-	var speed := state.time_scale()
+	var speed := state.time_scale() * speed_multiplier
 	if OS.is_debug_build() and Input.is_key_pressed(KEY_F):
 		speed *= FAST_FORWARD
 	var minutes := clock.advance(delta * speed)

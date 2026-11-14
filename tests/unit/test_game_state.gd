@@ -818,12 +818,12 @@ func test_holding_uses_its_own_food_portion() -> void:
 	assert_eq(s["fry_in_tank"], 2, "the summary counts fry in holding too")
 
 
-func test_unfed_fry_in_holding_pause_but_are_fine() -> void:
+func test_fry_in_holding_grow_even_with_no_food() -> void:
 	gs.inventory.remove("food", gs.inventory.count("food"))
 	var fry := gs.inventory.add_fish(F.fish(Fish.MALE, "grey", 0, 1))
 	var s := gs.end_day()
-	assert_eq(s["fry_unfed"], 1)
-	assert_eq(fry.age_days, 1)
+	assert_eq(s["fry_unfed"], 0)
+	assert_eq(fry.age_days, 2)
 	assert_true(gs.inventory.has_fish(fry.id))
 
 
