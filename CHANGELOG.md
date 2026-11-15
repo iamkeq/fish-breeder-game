@@ -1,5 +1,7 @@
 # Changelog
 
+All notable changes to Fish Breeder Job Simulator. Newest first.
+
 ## [0.32.0] - 2026-11-14
 
 ### Added
@@ -15,8 +17,6 @@
   breeding tanks.
 - The day summary shows goldfish sold, new goldfish, and the next goldfish brood.
   (Ported from the 3D game, v0.5.0.)
-
-All notable changes to Fish Breeder Job Simulator. Newest first.
 
 ## [0.31.0] - 2026-11-13
 
