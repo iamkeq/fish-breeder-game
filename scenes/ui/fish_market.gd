@@ -3,7 +3,8 @@ extends ColorRect
 ## visible), Decorations (plants, rocks, driftwood, decor), Supplies (tanks,
 ## fish food, substrate), Upgrades (one-off improvements to the shop) and
 ## Standing orders (the shop reorders supplies by itself).
-## Pauses the shop clock while open. Bought fish go to the holding tanks.
+## Pauses the shop clock while open. Bought fish go to the holding tanks, except
+## goldfish, which go straight into the goldfish tank on the shop floor.
 
 const UI := preload("res://scenes/ui/ui_kit.gd")
 
@@ -304,6 +305,8 @@ func _add_fish_tiers() -> void:
 			note.add_theme_font_size_override("font_size", 16)
 			_tiers.add_child(note)
 			return
+	if not state.goldfish_rules().is_empty():
+		_add_goldfish()
 	for tier in state.market_tiers():
 		var ids := state.strains_in_tier(int(tier["tier"]))
 		if ids.is_empty():
@@ -315,6 +318,60 @@ func _add_fish_tiers() -> void:
 		for id in ids:
 			_tiers.add_child(_strain_row(id))
 		_tiers.add_child(HSeparator.new())
+
+
+## Goldfish for the goldfish tank: bought by the handful, never sexed or moved.
+func _add_goldfish() -> void:
+	var state := Game.state
+	var header := Label.new()
+	header.text = "Goldfish tank"
+	header.add_theme_font_size_override("font_size", 19)
+	_tiers.add_child(header)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	var info := VBoxContainer.new()
+	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info.add_theme_constant_override("separation", 1)
+	var name := Label.new()
+	name.text = "Goldfish   %d / %d in the tank" % [state.goldfish, state.goldfish_capacity()]
+	var terms := Label.new()
+	terms.text = "$%d each from the Market, customers pay $%d. They eat regular fish food only." % [
+		state.goldfish_restock_cost(), state.goldfish_price()]
+	terms.add_theme_font_size_override("font_size", 13)
+	var brood := Label.new()
+	var nights := state.goldfish_nights_until_brood()
+	brood.text = "Need two or more to breed." if nights < 0 else \
+		"Next brood (3 to 4 fry) in %d night%s, if they're fed." % [nights, "" if nights == 1 else "s"]
+	brood.add_theme_font_size_override("font_size", 13)
+	brood.modulate = Color(1, 1, 1, 0.7)
+	info.add_child(name)
+	info.add_child(terms)
+	info.add_child(brood)
+	row.add_child(info)
+	var fill := state.goldfish_space()
+	for qty in [1, 5, fill]:
+		if qty <= 0 or (qty == fill and qty in [1, 5]):
+			continue
+		var label := "Fill (%d) $%d" % [qty, qty * state.goldfish_restock_cost()] if qty == fill \
+			else "Buy %d  $%d" % [qty, qty * state.goldfish_restock_cost()]
+		var blocker := state.goldfish_buy_blocker(qty)
+		var b := UI.small_button(label, blocker)
+		b.disabled = blocker != ""
+		b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		b.pressed.connect(_on_buy_goldfish.bind(qty))
+		row.add_child(b)
+	if fill <= 0:
+		var full := Label.new()
+		full.text = "Tank full"
+		full.modulate = Color(1, 1, 1, 0.6)
+		row.add_child(full)
+	_tiers.add_child(row)
+	_tiers.add_child(HSeparator.new())
+
+
+func _on_buy_goldfish(qty: int) -> void:
+	if Game.buy_goldfish(qty):
+		_status.text = "Bought %d goldfish. They're in the goldfish tank on the shop floor." % qty
 
 
 func _strain_row(strain_id: String) -> Control:

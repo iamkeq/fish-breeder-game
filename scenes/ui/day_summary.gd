@@ -7,7 +7,7 @@ const UI := preload("res://scenes/ui/ui_kit.gd")
 const SALE_NAMES := {
 	"fish": "Fish sold", "item": "Shelf items sold", "tank": "Tanks sold",
 	"order": "Orders delivered", "backorder": "Back-orders handed over", "wholesale": "Sold to wholesaler",
-	"collector": "Sold to collectors",
+	"collector": "Sold to collectors", "goldfish": "Goldfish sold",
 }
 const GENERATION_NAMES := ["first", "second", "third"]
 const GOOD := Color(0.25, 0.5, 0.35)
@@ -208,6 +208,10 @@ func _add_back_room(s: Dictionary) -> void:
 		if not s.get("unfed_places", []).is_empty():
 			places = " (%s)" % ", ".join(s["unfed_places"])
 		_line("%d fry had no food tonight%s, so they didn't grow. Restock fish food and they'll carry on." % [s["fry_unfed"], places]).modulate = WARN
+	if int(s.get("goldfish_born", 0)) > 0:
+		_line("Goldfish tank: %d new goldfish." % int(s["goldfish_born"])).modulate = GOOD
+	if bool(s.get("goldfish_unfed", false)):
+		_line("The goldfish had no fish food tonight, so they won't breed until they're fed again.").modulate = WARN
 
 
 func _add_tomorrow(s: Dictionary) -> void:
@@ -226,6 +230,9 @@ func _add_tomorrow(s: Dictionary) -> void:
 			parts.append("Tank %d: %s" % [i + 1, "no pair" if nights < 0 else
 				"brood in %d night%s" % [nights, "" if nights == 1 else "s"]])
 		_line("   ·   ".join(parts))
+	var goldfish_nights := int(s.get("goldfish_outlook", -1))
+	if goldfish_nights > 0:
+		_line("Goldfish brood in %d night%s." % [goldfish_nights, "" if goldfish_nights == 1 else "s"])
 	var food := _line("Fish food: %d left" % s["food_left"])
 	if s["fry_in_tank"] > 0 and s["food_left"] < 2:
 		food.text += ". Running low! Fry only grow on nights they're fed."

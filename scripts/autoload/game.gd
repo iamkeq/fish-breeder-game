@@ -350,6 +350,14 @@ func install_display_tank(tank_item_id: String, location: String = Fish.DISPLAY)
 	return ok
 
 
+## Buys goldfish from the Market straight into the goldfish tank.
+func buy_goldfish(qty: int = 1) -> bool:
+	var ok := state.buy_goldfish(qty)
+	if ok:
+		changed.emit()
+	return ok
+
+
 func buy_item(item_id: String, qty: int = 1) -> bool:
 	var ok := state.buy_item(item_id, qty)
 	if ok:

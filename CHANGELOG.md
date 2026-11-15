@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.32.0] - 2026-11-14
+
+### Added
+- A goldfish tank, shown at the top of the shop's stock list. It holds up to 20
+  plain goldfish, which sell for $2 each to the odd customer (they're not a
+  popular buy). Restock them from the Market's Fish tab at $1 each (Buy 1, Buy 5
+  or Fill). Every new game, and every older save, starts with 6.
+- The goldfish breed by themselves: 3 to 4 more every 4 nights while there are at
+  least two, up to what the tank holds. They eat one portion of regular fish food
+  a night (never Growth Flakes or Spawning Pellets); a night without food holds
+  their brood back a night. The Auto-Feeders upgrade feeds them for free.
+- Goldfish never leave their tank: they can't be moved to the display, holding or
+  breeding tanks.
+- The day summary shows goldfish sold, new goldfish, and the next goldfish brood.
+  (Ported from the 3D game, v0.5.0.)
+
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
 ## [0.31.0] - 2026-11-13

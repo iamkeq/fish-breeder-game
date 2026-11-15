@@ -156,6 +156,7 @@ func _refresh_shelf() -> void:
 	var stock := Game.state.inventory.stock()
 	var ids := stock.keys()
 	ids.sort_custom(func(a, b): return Game.db.items[a]["name"] < Game.db.items[b]["name"])
+	_add_goldfish_row()
 	if ids.is_empty():
 		_items.add_child(_label("The shelf is empty."))
 	for id in ids:
@@ -171,6 +172,31 @@ func _refresh_shelf() -> void:
 		row.add_child(name)
 		row.add_child(price)
 		_items.add_child(row)
+
+
+## The goldfish tank, at the top of the stock list: how many are left and their price.
+func _add_goldfish_row() -> void:
+	var state := Game.state
+	if state.goldfish_rules().is_empty():
+		return
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	var swatch := ColorRect.new()
+	swatch.color = Color("#f08a24")
+	swatch.custom_minimum_size = Vector2(34, 28)
+	var name := _label("Goldfish tank ×%d" % state.goldfish)
+	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if state.goldfish == 0:
+		name.modulate = Color(0.85, 0.45, 0.2)
+	var price := _label("$%d" % state.goldfish_price())
+	price.modulate = Color(1, 1, 1, 0.7)
+	row.tooltip_text = "Plain goldfish, %d max. Restock them from the Market's Fish tab ($%d each)." % [
+		state.goldfish_capacity(), state.goldfish_restock_cost()]
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(swatch)
+	row.add_child(name)
+	row.add_child(price)
+	_items.add_child(row)
 
 
 # --- Display tank ------------------------------------------------------------
@@ -316,6 +342,9 @@ func _add_customer_card() -> void:
 				_counter.add_child(card)
 		"item":
 			text = "%s would like to buy some %s." % [who, Game.db.items[c["item_id"]]["name"]]
+		"goldfish":
+			text = "%s would like a goldfish from the goldfish tank ($%d). You have %d." % [
+				who, state.goldfish_price(), state.goldfish]
 		"tank":
 			text = "%s wants to buy your whole display tank, fish and all!" % who
 		"request":

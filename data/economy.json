@@ -69,7 +69,7 @@
 		"auto_sell_shelf_items": true,
 		"request_chance": 0.25,
 		"patience_minutes": 90,
-		"wants": { "fish": 3, "item": 2, "tank": 1, "wish": 1.5, "collector": 1.5 },
+		"wants": { "fish": 3, "item": 2, "tank": 1, "wish": 1.5, "collector": 1.5, "goldfish": 0.5 },
 		"collector": { "min_stars": 4, "price_multipliers": { "4": 1.5, "5": 2.0 } },
 		"appeal": {
 			"display_weight": 1.0,
@@ -100,6 +100,15 @@
 		"bred_price_multiplier": 2.0,
 		"bred_wait_days": 7,
 		"bred_reference_stars": 3
+	},
+	"goldfish_tank": {
+		"price": 2,
+		"restock_cost": 1,
+		"capacity": 20,
+		"starting": 6,
+		"days_between_broods": 4,
+		"brood_size": [3, 4],
+		"min_to_breed": 2
 	},
 	"wholesale": {
 		"fraction": 0.4,

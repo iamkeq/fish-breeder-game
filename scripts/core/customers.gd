@@ -54,9 +54,10 @@ static func next_arrival_minutes(appeal: float, rules: Dictionary, rng: RandomNu
 ##   can_take_request: bool         room for another order
 ##   collector_fish: Array[Fish]    bred-by-you, high-star fish a collector would buy
 ##   collector_mult: float          optional, scales how often collectors come (1 = normal)
+##   goldfish_for_sale: bool        the goldfish tank has a fish in it
 ## Kinds: fish / item / tank (in stock), wish_item / wish_fish (out of stock:
 ## the player can back-order it), collector (wants one of your own show-quality
-## fish, for a premium), request, browse.
+## fish, for a premium), goldfish (one from the goldfish tank), request, browse.
 static func make_walk_in(ctx: Dictionary, rules: Dictionary, rng: RandomNumberGenerator) -> Dictionary:
 	var names: Array = rules.get("names", ["A customer"])
 	var customer := {
@@ -89,6 +90,8 @@ static func make_walk_in(ctx: Dictionary, rules: Dictionary, rng: RandomNumberGe
 	if not collector_fish.is_empty():
 		# The Neon Fish Sign draws collectors more often (ctx collector_mult, 1 = normal).
 		options["collector"] = float(wants.get("collector", 0.0)) * float(ctx.get("collector_mult", 1.0))
+	if ctx.get("goldfish_for_sale", false):
+		options["goldfish"] = float(wants.get("goldfish", 0.0))
 	options = _positive(options)
 	if options.is_empty():
 		customer["kind"] = "request" if can_request else "browse"

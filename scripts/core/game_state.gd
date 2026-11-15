@@ -103,6 +103,11 @@ var _regulars_today: Array = []
 ## standard ones). See data/new_game.json.
 var start_id: String = ""
 var challenge_id: String = ""
+## The goldfish tank on the shop floor: just a count of plain goldfish, for sale
+## at a fixed price. They breed among themselves and never leave that tank.
+var goldfish: int = 0
+## Nights since the goldfish tank's last brood.
+var goldfish_nights: int = 0
 
 const SAVE_VERSION := 1
 ## A challenge can raise a species' mutation chance, but never above this.
@@ -131,6 +136,7 @@ static func new_game(p_db: DataDB, p_rng: RandomNumberGenerator, options: Dictio
 	s.display_tank = s._make_tank(start["display_tank"])
 	s._add_breeding_tank()
 	s._apply_starter_layout(s.display_tank, start.get("display_tank_layout", {}))
+	s.goldfish = mini(int(s.goldfish_rules().get("starting", 0)), s.goldfish_capacity())
 	for fish_data in s._starting_fish(chosen_start):
 		var f := Fish.from_dict(fish_data, int(p_db.economy["purity"]["market"]))
 		f.location = Fish.HOLDING
@@ -773,6 +779,112 @@ func sell_item(item_id: String) -> int:
 	return price
 
 
+# --- Goldfish tank --------------------------------------------------------------
+
+## Rules from economy["goldfish_tank"] ({} if the game has no goldfish tank).
+func goldfish_rules() -> Dictionary:
+	return db.economy.get("goldfish_tank", {})
+
+
+func goldfish_price() -> int:
+	return int(goldfish_rules().get("price", 0))
+
+
+func goldfish_restock_cost() -> int:
+	return int(goldfish_rules().get("restock_cost", 0))
+
+
+func goldfish_capacity() -> int:
+	return int(goldfish_rules().get("capacity", 0))
+
+
+## How many more goldfish the tank can take.
+func goldfish_space() -> int:
+	return maxi(goldfish_capacity() - goldfish, 0)
+
+
+## Why `qty` goldfish can't be bought from the Market right now, or "" if they can.
+func goldfish_buy_blocker(qty: int = 1) -> String:
+	if qty <= 0:
+		return "Nothing to buy."
+	if not market_fish_open():
+		return "The Market has stopped selling fish."
+	if goldfish_space() == 0:
+		return "The goldfish tank is full."
+	if qty > goldfish_space():
+		return "There's only room for %d more." % goldfish_space()
+	if not can_afford(goldfish_restock_cost() * qty):
+		return "Not enough money."
+	return ""
+
+
+## Buys `qty` goldfish from the Market into the goldfish tank. False if it couldn't.
+func buy_goldfish(qty: int = 1) -> bool:
+	if goldfish_buy_blocker(qty) != "":
+		return false
+	_spend(goldfish_restock_cost() * qty)
+	goldfish += qty
+	_count("goldfish_bought", qty)
+	return true
+
+
+## Sells one goldfish from the tank. Returns the money earned (0 if it's empty).
+func sell_goldfish() -> int:
+	if goldfish <= 0:
+		return 0
+	goldfish -= 1
+	if goldfish < int(goldfish_rules().get("min_to_breed", 2)):
+		goldfish_nights = 0
+	var price := goldfish_price()
+	_earn(price, "goldfish")
+	_count("goldfish_sold")
+	return price
+
+
+## Nights until the goldfish breed (-1 if there aren't enough of them to breed).
+func goldfish_nights_until_brood() -> int:
+	var rules := goldfish_rules()
+	if rules.is_empty() or goldfish < int(rules.get("min_to_breed", 2)):
+		return -1
+	return maxi(int(rules.get("days_between_broods", 4)) - goldfish_nights, 1)
+
+
+## Whether tonight's goldfish feeding uses a portion of food (the auto-feeder
+## feeds them for free).
+func goldfish_food_use() -> int:
+	return 1 if goldfish > 0 and upgrade_effect("auto_feed") <= 0.0 else 0
+
+
+## The goldfish eat one portion of the regular fish food a night (never Growth
+## Flakes or Spawning Pellets), after every other tank has been fed. Fed, they
+## breed every few nights while there are enough of them, up to what the tank
+## holds; unfed, the brood waits a night. Notes what happened in `summary`.
+func _night_goldfish(summary: Dictionary) -> void:
+	var rules := goldfish_rules()
+	summary["goldfish_born"] = 0
+	summary["goldfish_unfed"] = false
+	if rules.is_empty() or goldfish <= 0:
+		goldfish_nights = 0
+		return
+	if goldfish_food_use() > 0:
+		if inventory.remove(default_food()):
+			summary["food_used"] = int(summary.get("food_used", 0)) + 1
+		else:
+			summary["goldfish_unfed"] = true
+			return
+	if goldfish < int(rules.get("min_to_breed", 2)):
+		goldfish_nights = 0
+		return
+	goldfish_nights += 1
+	if goldfish_nights < int(rules.get("days_between_broods", 4)):
+		return
+	goldfish_nights = 0
+	var size: Array = rules.get("brood_size", [3, 4])
+	var born := mini(rng.randi_range(int(size[0]), int(size[1])), goldfish_space())
+	goldfish += born
+	summary["goldfish_born"] = born
+
+
 ## Sells an adult fish from wherever it is. Returns the money earned (0 if it couldn't).
 ## `tip_rate` is a regular's extra share on top of the price (0 for everyone else).
 func sell_fish(fish_id: int, tip_rate: float = 0.0) -> int:
@@ -1209,6 +1321,8 @@ func customer_price() -> int:
 		"collector":
 			var cf := inventory.get_fish(customer["fish_id"])
 			return collector_price(cf) + Regulars.tip_amount(collector_price(cf), customer_tip_rate()) if cf != null else 0
+		"goldfish":
+			return goldfish_price()
 	return 0
 
 
@@ -1226,6 +1340,9 @@ func customer_blocker() -> String:
 		"item":
 			if inventory.count(customer["item_id"]) <= 0:
 				return "That's out of stock now."
+		"goldfish":
+			if goldfish <= 0:
+				return "The goldfish tank is empty."
 		"tank":
 			if tank_at(str(customer.get("tank_location", Fish.DISPLAY))) == null:
 				return "There's no display tank any more."
@@ -1258,6 +1375,8 @@ func serve_customer() -> int:
 			earned = sell_display_tank(customer.get("with_fish", true), str(customer.get("tank_location", Fish.DISPLAY)))
 		"collector":
 			earned = _sell_to_collector(customer["fish_id"], tip_rate)
+		"goldfish":
+			earned = sell_goldfish()
 	if earned > 0:
 		# Reputation comes only from selling to customers, never from buying.
 		_rep("sale", _star_bonus(fish_sold.stars) if fish_sold != null else 0)
@@ -1595,6 +1714,7 @@ func _new_customer() -> Dictionary:
 		"tank_for_sale": tank_for_sale, "can_take_request": can_accept_request(),
 		"collector_fish": collector_fish(),
 		"collector_mult": 1.0 + upgrade_effect("collector_chance"),
+		"goldfish_for_sale": goldfish > 0 and not bool(challenge_rule("customers_buy_only_mutations", false)),
 	}
 	if not can_backorder():
 		ctx["all_items"] = []
@@ -1806,6 +1926,7 @@ func end_day() -> Dictionary:
 			Fish.breeding_location(i), not breeding_group(i)["mothers"].is_empty())
 		_night_breed(summary, i, eaten)
 	_count("fish_bred", summary["fry_born"])
+	_night_goldfish(summary)
 	_staff_finish_night(summary)
 	# Last of all, so food used tonight is noticed. Placed orders arrive tomorrow morning.
 	process_standing_orders()
@@ -1828,6 +1949,7 @@ func end_day() -> Dictionary:
 	summary["brood_outlook"] = []
 	for i in breeding_tanks.size():
 		summary["brood_outlook"].append(nights_until_brood(i))
+	summary["goldfish_outlook"] = goldfish_nights_until_brood()
 	summary["food_left"] = food_count()
 	summary["fry_in_tank"] = (breeding_fish() + inventory.fish_list(Fish.HOLDING)) \
 		.filter(func(f): return not is_adult(f)).size()
@@ -2192,8 +2314,8 @@ func food_count() -> int:
 ## A guess at how many portions of food tonight's feeding will use: one for
 ## every group of fish (each breeding tank, and holding) that has fry, plus one
 ## for each breeding group whose tank is set to a brood food (Spawning Pellets)
-## that is in stock. The auto-feeder upgrade uses none, except for a special
-## food the tank is set to. Matches _night_feed_and_grow(). (Holding is fed
+## that is in stock, plus one for the goldfish tank (regular food only). The
+## auto-feeder upgrade uses none, except for a special food the tank is set to. Matches _night_feed_and_grow(). (Holding is fed
 ## first, then each breeding tank; that matters only when food runs short.)
 func food_use_per_night() -> int:
 	var auto := upgrade_effect("auto_feed") > 0.0
@@ -2202,7 +2324,7 @@ func food_use_per_night() -> int:
 		used += _tank_food_use(tank_fish(breeding_tanks[i]), Fish.breeding_location(i),
 			not breeding_group(i)["mothers"].is_empty(), auto)
 	used += _tank_food_use(inventory.fish_list(Fish.HOLDING), Fish.HOLDING, false, auto)
-	return used
+	return used + goldfish_food_use()
 
 
 func _tank_food_use(group: Array, location: String, has_breeding_group: bool, auto: bool) -> int:
@@ -2970,6 +3092,8 @@ func to_dict() -> Dictionary:
 		"order_money_floor": order_money_floor,
 		"deliveries": deliveries.duplicate(true),
 		"regulars_state": regulars_state.duplicate(true),
+		"goldfish": goldfish,
+		"goldfish_nights": goldfish_nights,
 	}
 
 
@@ -3005,6 +3129,9 @@ static func from_dict(p_db: DataDB, p_rng: RandomNumberGenerator, d: Dictionary)
 	s.records = d.get("records", {}).duplicate(true)
 	s.start_id = str(d.get("start_id", ""))
 	s.challenge_id = str(d.get("challenge_id", ""))
+	# Older saves had no goldfish tank: it arrives stocked.
+	s.goldfish = clampi(int(d.get("goldfish", s.goldfish_rules().get("starting", 0))), 0, s.goldfish_capacity())
+	s.goldfish_nights = maxi(int(d.get("goldfish_nights", 0)), 0)
 	s.completed_goals = d.get("completed_goals", {}).duplicate()
 	s.show_entry = int(d.get("show_entry", 0))
 	s.shows_held = int(d.get("shows_held", 0))
