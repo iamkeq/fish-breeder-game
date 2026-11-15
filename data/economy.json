@@ -108,7 +108,8 @@
 		"starting": 6,
 		"days_between_broods": 4,
 		"brood_size": [3, 4],
-		"min_to_breed": 2
+		"min_to_breed": 2,
+		"look": { "species": "guppy", "variety": "gold" }
 	},
 	"wholesale": {
 		"fraction": 0.4,

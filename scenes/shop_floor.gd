@@ -181,9 +181,14 @@ func _add_goldfish_row() -> void:
 		return
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
-	var swatch := ColorRect.new()
-	swatch.color = Color("#f08a24")
-	swatch.custom_minimum_size = Vector2(34, 28)
+	var look := state.goldfish_look_species()
+	var swatch: Control
+	if look.is_empty():
+		swatch = ColorRect.new()
+		swatch.color = Color("#f08a24")
+		swatch.custom_minimum_size = Vector2(34, 28)
+	else:
+		swatch = UI.fish_preview(state.goldfish_look_fish(), look, Vector2(34, 28), 0.32)
 	var name := _label("Goldfish tank ×%d" % state.goldfish)
 	name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	if state.goldfish == 0:

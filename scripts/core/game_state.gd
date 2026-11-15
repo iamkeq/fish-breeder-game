@@ -841,6 +841,28 @@ func sell_goldfish() -> int:
 	return price
 
 
+## The species whose sprites the goldfish are drawn with (economy
+## goldfish_tank.look: until there's goldfish art, a gold guppy). {} if none.
+func goldfish_look_species() -> Dictionary:
+	var look: Dictionary = goldfish_rules().get("look", {})
+	return db.species.get(str(look.get("species", "")), {})
+
+
+## A stand-in fish for drawing one of the goldfish (it isn't in any tank).
+## `index` just keeps the stand-ins apart.
+func goldfish_look_fish(index: int = 0) -> Fish:
+	var look: Dictionary = goldfish_rules().get("look", {})
+	var species := goldfish_look_species()
+	var f := Fish.new()
+	f.id = 900000 + index
+	f.species_id = str(species.get("id", ""))
+	f.sex = Fish.MALE if index % 2 == 0 else Fish.FEMALE
+	if species.has("sprites"):
+		f.traits = {species["sprites"]["trait"]: str(look.get("variety", ""))}
+	f.age_days = int(species.get("days_to_adult", 1))
+	return f
+
+
 ## Nights until the goldfish breed (-1 if there aren't enough of them to breed).
 func goldfish_nights_until_brood() -> int:
 	var rules := goldfish_rules()

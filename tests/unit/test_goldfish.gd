@@ -200,3 +200,19 @@ func test_older_save_gets_a_stocked_goldfish_tank() -> void:
 	var loaded := GameState.from_dict(gs.db, F.rng(), d)
 	assert_eq(loaded.goldfish, 6)
 	assert_eq(loaded.goldfish_nights, 0)
+
+
+func test_goldfish_are_drawn_as_gold_guppies() -> void:
+	var db := DataDB.load_from_dir("res://data")
+	var real := GameState.new_game(db, F.rng())
+	var species := real.goldfish_look_species()
+	assert_eq(species.get("id"), "guppy")
+	var f := real.goldfish_look_fish(3)
+	assert_eq(f.species_id, "guppy")
+	assert_eq(f.get_trait("variety"), "gold")
+	assert_true(species["sprites"]["varieties"].has("gold"), "the gold guppy has its own sprite")
+	assert_true(f.age_days >= int(species["days_to_adult"]), "drawn full size")
+
+
+func test_goldfish_without_a_look_have_no_look_species() -> void:
+	assert_eq(gs.goldfish_look_species(), {})

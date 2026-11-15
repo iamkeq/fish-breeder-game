@@ -2,6 +2,12 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.32.1] - 2026-11-15
+
+### Changed
+- The goldfish tank's row in the stock list shows a little gold guppy sprite
+  instead of an orange square. (A stand-in until there is goldfish art.)
+
 ## [0.32.0] - 2026-11-14
 
 ### Added
