@@ -2,6 +2,12 @@
 
 All notable changes to Fish Breeder Job Simulator. Newest first.
 
+## [0.32.2] - 2026-11-16
+
+### Added
+- A Market button on the Special orders screen. The Market opens on top of it,
+  and closing the Market brings you straight back to your orders.
+
 ## [0.32.1] - 2026-11-15
 
 ### Changed

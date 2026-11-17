@@ -128,6 +128,7 @@ func _ready() -> void:
 	_back_room_button.pressed.connect(_show_room.bind(_back_room))
 	_orders_button.pressed.connect(_show_room.bind(_orders_room))
 	_orders_room.edit_requested.connect(func(loc: String): _tank_editor.open(loc))
+	_orders_room.market_requested.connect(func(): _fish_market.open())
 	_shop_floor.orders_room_requested.connect(func():
 		_orders_button.button_pressed = true
 		_show_room(_orders_room))

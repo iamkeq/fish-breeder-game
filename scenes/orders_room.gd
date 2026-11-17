@@ -8,6 +8,8 @@ const TankViewScene := preload("res://scenes/tank_view.tscn")
 
 ## Ask the main scene to open the tank editor on an order tank.
 signal edit_requested(location: String)
+## Ask the main scene to open the Market (to buy fish for an order).
+signal market_requested
 
 var _columns: HBoxContainer
 var _news: Label
@@ -21,10 +23,19 @@ func _ready() -> void:
 	box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	box.add_theme_constant_override("separation", 8)
 	add_child(box)
+	var heading := HBoxContainer.new()
+	heading.add_theme_constant_override("separation", 12)
+	box.add_child(heading)
 	var title := Label.new()
 	title.text = "Special orders"
 	title.add_theme_font_size_override("font_size", 20)
-	box.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	heading.add_child(title)
+	# The Market opens on top of this screen; closing it comes straight back here.
+	var market := UI.small_button("Market", "Buy fish for an order without leaving Special orders.")
+	market.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	market.pressed.connect(func(): market_requested.emit())
+	heading.add_child(market)
 	var hint := Label.new()
 	hint.text = "Build each order in its own tank here, or deliver your display tank from the counter instead."
 	hint.add_theme_font_size_override("font_size", 13)
